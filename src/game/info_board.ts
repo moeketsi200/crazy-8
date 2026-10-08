@@ -4,10 +4,15 @@ import { CrazyEightsGame } from './logic'
 import { update3DTable } from './table'
 import { updateScoreBoardText } from './score_board'
 
+export let buttonEntity: Entity
+export let buttonTextEntity: Entity
+let cachedGameEngine: CrazyEightsGame | null = null
+
 export function buildInfoBoard(parentHouse: Entity, gameEngine: CrazyEightsGame) {
+  cachedGameEngine = gameEngine
   createBoardBackground(parentHouse)
   createRulesText(parentHouse)
-  createStartButton(parentHouse, gameEngine)
+  createStartButton(parentHouse)
 }
 
 function createBoardBackground(parentHouse: Entity) {
@@ -53,26 +58,62 @@ function createRulesText(parentHouse: Entity) {
   })
 }
 
-function createStartButton(parentHouse: Entity, gameEngine: CrazyEightsGame) {
-  const btnEnt = engine.addEntity()
-  Transform.create(btnEnt, {
+export function showGameButton(text: string, actionType: 'START' | 'CONTINUE') {
+  if (buttonEntity && buttonTextEntity) {
+    Transform.getMutable(buttonEntity).scale = Vector3.create(3.0, 0.6, 1.0)
+    Transform.getMutable(buttonTextEntity).scale = Vector3.create(1, 1, 1)
+    
+    TextShape.getMutable(buttonTextEntity).text = text
+    
+    pointerEventsSystem.onPointerDown(
+      { entity: buttonEntity, opts: { button: InputAction.IA_POINTER, hoverText: text } },
+      () => handleButtonClick(actionType)
+    )
+    pointerEventsSystem.onPointerDown(
+      { entity: buttonTextEntity, opts: { button: InputAction.IA_POINTER, hoverText: text } },
+      () => handleButtonClick(actionType)
+    )
+  }
+}
+
+function handleButtonClick(actionType: 'START' | 'CONTINUE') {
+  const gameEngine = cachedGameEngine
+  if (!gameEngine) return
+
+  if (actionType === 'START') {
+    gameEngine.startGame()
+  } else if (actionType === 'CONTINUE') {
+    gameEngine.startNextRound()
+  }
+
+  update3DTable(gameEngine)
+  
+  updateScoreBoardText(`SCOREBOARD\n\nRound ${gameEngine.roundNumber}\n\nGame is running!\nLet's go!`)
+
+  Transform.getMutable(buttonEntity).scale = Vector3.Zero()
+  Transform.getMutable(buttonTextEntity).scale = Vector3.Zero()
+}
+
+function createStartButton(parentHouse: Entity) {
+  buttonEntity = engine.addEntity()
+  Transform.create(buttonEntity, {
     parent: parentHouse,
     position: Vector3.create(6.65, 1.3, -2),
     scale: Vector3.create(3.0, 0.6, 1.0),
     rotation: Quaternion.fromEulerDegrees(0, -90, 0)
   })
-  MeshRenderer.setPlane(btnEnt)
-  MeshCollider.setPlane(btnEnt)
-  Material.setPbrMaterial(btnEnt, { albedoColor: Color4.fromHexString('#C91D1D') })
+  MeshRenderer.setPlane(buttonEntity)
+  MeshCollider.setPlane(buttonEntity)
+  Material.setPbrMaterial(buttonEntity, { albedoColor: Color4.fromHexString('#C91D1D') })
 
-  const btnText = engine.addEntity()
-  Transform.create(btnText, {
+  buttonTextEntity = engine.addEntity()
+  Transform.create(buttonTextEntity, {
     parent: parentHouse,
     position: Vector3.create(6.64, 1.3, -2),
     scale: Vector3.create(1, 1, 1), 
     rotation: Quaternion.fromEulerDegrees(0, 90, 0) 
   })
-  TextShape.create(btnText, {
+  TextShape.create(buttonTextEntity, {
     text: 'START THE GAME',
     fontSize: 2.0,
     textColor: Color4.White(),
@@ -80,27 +121,15 @@ function createStartButton(parentHouse: Entity, gameEngine: CrazyEightsGame) {
     outlineColor: Color4.Black(),
     outlineWidth: 0.1
   })
-  MeshCollider.setBox(btnText)
+  MeshCollider.setBox(buttonTextEntity)
 
-  const clickHandler = () => {
-    if (!gameEngine.isStarted) {
-      console.log("Starting game from 3D button!")
-      gameEngine.startGame()
-      update3DTable(gameEngine)
-      
-      updateScoreBoardText(`SCOREBOARD\n\nRound ${gameEngine.roundNumber}\n\nGame is running!\nLet's go!`)
-
-      Transform.getMutable(btnEnt).scale = Vector3.Zero()
-      Transform.getMutable(btnText).scale = Vector3.Zero()
-    }
-  }
-
+  // Attach default start logic initially
   pointerEventsSystem.onPointerDown(
-    { entity: btnEnt, opts: { button: InputAction.IA_POINTER, hoverText: 'Start The Game' } },
-    clickHandler
+    { entity: buttonEntity, opts: { button: InputAction.IA_POINTER, hoverText: 'Start The Game' } },
+    () => handleButtonClick('START')
   )
   pointerEventsSystem.onPointerDown(
-    { entity: btnText, opts: { button: InputAction.IA_POINTER, hoverText: 'Start The Game' } },
-    clickHandler
+    { entity: buttonTextEntity, opts: { button: InputAction.IA_POINTER, hoverText: 'Start The Game' } },
+    () => handleButtonClick('START')
   )
 }

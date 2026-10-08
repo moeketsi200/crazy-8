@@ -22,12 +22,58 @@ export class CrazyEightsGame {
   public safeDeclared: Set<PlayerId> = new Set()
   public onNotification?: (message: string) => void
   public onBotTurnStart?: () => void
+  public onStateSync?: () => void
+  public onStateChanged?: () => void
+
+  public serialize(): string {
+    return JSON.stringify({
+      players: Array.from(this.players.entries()),
+      playerOrder: this.playerOrder,
+      drawPile: this.drawPile,
+      discardPile: this.discardPile,
+      currentTurnIndex: this.currentTurnIndex,
+      activeSuit: this.activeSuit,
+      isStarted: this.isStarted,
+      roundNumber: this.roundNumber,
+      gameOver: this.gameOver,
+      turnDirection: this.turnDirection,
+      pendingDraws: this.pendingDraws,
+      eliminatedPlayers: Array.from(this.eliminatedPlayers),
+      scores: Array.from(this.scores.entries()),
+      safeDeclared: Array.from(this.safeDeclared)
+    })
+  }
+
+  public deserialize(json: string) {
+    try {
+      const state = JSON.parse(json)
+      this.players = new Map(state.players)
+      this.playerOrder = state.playerOrder
+      this.drawPile = state.drawPile
+      this.discardPile = state.discardPile
+      this.currentTurnIndex = state.currentTurnIndex
+      this.activeSuit = state.activeSuit
+      this.isStarted = state.isStarted
+      this.roundNumber = state.roundNumber
+      this.gameOver = state.gameOver
+      this.turnDirection = state.turnDirection
+      this.pendingDraws = state.pendingDraws
+      this.eliminatedPlayers = new Set(state.eliminatedPlayers)
+      this.scores = new Map(state.scores)
+      this.safeDeclared = new Set(state.safeDeclared)
+
+      if (this.onStateSync) this.onStateSync()
+    } catch (e) {
+      console.error("Failed to deserialize game state:", e)
+    }
+  }
 
   public addPlayer(playerId: PlayerId) {
     if (!this.isStarted && !this.players.has(playerId)) {
       this.players.set(playerId, [])
       this.playerOrder.push(playerId)
       this.scores.set(playerId, 0)
+      this.onStateChanged?.()
     }
   }
 
@@ -42,11 +88,44 @@ export class CrazyEightsGame {
     this.eliminatedPlayers.clear()
     this.safeDeclared.clear()
     
+    // Clear hands and reset scores
+    for (const playerId of this.playerOrder) {
+      this.players.set(playerId, [])
+      this.scores.set(playerId, 0)
+    }
+    
     this.dealInitialCards()
     this.setupInitialDiscard()
     
     this.isStarted = true
     this.currentTurnIndex = 0
+    this.roundNumber = 1
+    this.onStateChanged?.()
+  }
+
+  public startNextRound() {
+    const activePlayers = this.playerOrder.filter(p => !this.eliminatedPlayers.has(p))
+    if (activePlayers.length < 2) return
+
+    this.drawPile = shuffleDeck(generateDeck())
+    this.discardPile = []
+    this.pendingDraws = 0
+    this.turnDirection = 1
+    this.gameOver = false
+    this.safeDeclared.clear()
+    
+    // Clear hands
+    for (const playerId of activePlayers) {
+      this.players.set(playerId, [])
+    }
+    
+    this.dealInitialCards()
+    this.setupInitialDiscard()
+    
+    this.isStarted = true
+    this.currentTurnIndex = 0
+    this.roundNumber++
+    this.onStateChanged?.()
   }
 
   private dealInitialCards() {
@@ -78,6 +157,7 @@ export class CrazyEightsGame {
     if (this.isHandVulnerable(hand)) {
       this.safeDeclared.add(playerId)
       if (this.onNotification) this.onNotification(`${playerId.toUpperCase()} declares: "I have ${hand!.length} card(s) left!"`)
+      this.onStateChanged?.()
       return true
     }
     return false
@@ -96,6 +176,7 @@ export class CrazyEightsGame {
       this.drawOne(targetId)
       this.drawOne(targetId)
       if (this.onNotification) this.onNotification(`🚨 CAUGHT! ${challengerId} caught ${targetId} failing to declare! 2 Penalty Cards!`)
+      this.onStateChanged?.()
       return true
     } else {
       if (this.onNotification) this.onNotification(`❌ False alarm! ${targetId} is safe.`)
@@ -149,6 +230,7 @@ export class CrazyEightsGame {
       this.nextTurn(skipNext ? 2 : 1)
     }
 
+    this.onStateChanged?.()
     return true
   }
 
@@ -193,11 +275,13 @@ export class CrazyEightsGame {
       }
       this.pendingDraws = 0
       this.nextTurn(1)
+      this.onStateChanged?.()
       return true
     }
 
     this.drawOne(playerId)
     this.nextTurn(1)
+    this.onStateChanged?.()
     return true
   }
 

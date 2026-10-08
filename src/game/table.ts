@@ -1,6 +1,7 @@
 import { engine, Transform, MeshRenderer, MeshCollider, ColliderLayer, TextShape, Material, pointerEventsSystem, InputAction, Entity, AvatarModifierArea, AvatarModifierType } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion, Color4 } from '@dcl/sdk/math'
 import { movePlayerTo, triggerEmote, stopEmote } from '~system/RestrictedActions'
+import { getPlayer } from '@dcl/sdk/src/players'
 import { CrazyEightsGame } from './logic'
 import { buildPrimitiveChair } from './chairs'
 import { buildPrimitiveTable } from './table_visuals'
@@ -61,9 +62,9 @@ export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
   pointerEventsSystem.onPointerDown(
     { entity: drawPile, opts: { button: InputAction.IA_PRIMARY, hoverText: 'Draw Card' } },
     () => {
-      const success = game.drawCard('player1')
+      const success = game.drawCard(getPlayer()?.userId || 'player1')
       if (success) {
-        console.log(`You drew a card! Your hand now has ${game.players.get('player1')?.length} cards.`)
+        console.log(`You drew a card! Your hand now has ${game.players.get(getPlayer()?.userId || 'player1')?.length} cards.`)
         update3DTable(game)
       } else {
         console.log("It's not your turn, or the deck is empty!")
@@ -101,7 +102,7 @@ export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
   }
 
   // 4. ADD PLAYERS
-  game.addPlayer('player1')
+  game.addPlayer(getPlayer()?.userId || 'player1')
   game.addPlayer('bot')
   
   // 5. BOT THINKING DELAY
@@ -165,6 +166,7 @@ class CasinoChair {
   }
 
   private occupy() {
+    setPlayerSeated(true)
     movePlayerTo({
       newRelativePosition: this.sitPosition,
       cameraTarget: this.lookAtPosition,
@@ -180,6 +182,24 @@ class CasinoChair {
         })
       }
     })
+  }
+}
+
+let _isPlayerSeated = false
+let _timeSeated = 0
+
+export function getPlayerSeated() {
+  return _isPlayerSeated
+}
+
+export function getTimeSeated() {
+  return _timeSeated
+}
+
+export function setPlayerSeated(value: boolean) {
+  _isPlayerSeated = value
+  if (value) {
+    _timeSeated = Date.now()
   }
 }
 
@@ -232,12 +252,14 @@ function clearOpponentCards() {
 }
 
 function spawnSingleOpponentHand(playerId: string, numCards: number) {
-  const chairAssignments: Record<string, number> = {
-    'player1': 0,
-    'bot': 4
+  let slot = 2
+  if (globalGame) {
+    const idx = globalGame.playerOrder.indexOf(playerId)
+    if (idx !== -1) {
+      slot = idx * 2 // spread out nicely
+    }
   }
   
-  const slot = chairAssignments[playerId] ?? 2
   const angleRad = slot * (Math.PI / 4) + (Math.PI / 2)
   const angleDeg = angleRad * (180 / Math.PI)
   
@@ -265,7 +287,7 @@ function spawnSingleOpponentHand(playerId: string, numCards: number) {
       { entity: cardEnt, opts: { button: InputAction.IA_PRIMARY, hoverText: `Challenge ${playerId}!` } },
       () => {
         if (globalGame) {
-          globalGame.challengePlayer('player1', playerId)
+          globalGame.challengePlayer(getPlayer()?.userId || 'player1', playerId)
           update3DTable(globalGame)
         }
       }
@@ -279,7 +301,7 @@ function spawnOpponentCardsVisuals(game: CrazyEightsGame) {
   clearOpponentCards()
 
   for (const [playerId, hand] of game.players.entries()) {
-    if (playerId !== 'player1') {
+    if (playerId !== (getPlayer()?.userId || 'player1')) {
       spawnSingleOpponentHand(playerId, hand.length)
     }
   }

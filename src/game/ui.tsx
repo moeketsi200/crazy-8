@@ -2,7 +2,8 @@ import ReactEcs, { ReactEcsRenderer, UiEntity } from '@dcl/sdk/react-ecs'
 import { Color4, Vector3 } from '@dcl/sdk/math'
 import { engine, Transform } from '@dcl/sdk/ecs'
 import { CrazyEightsGame } from './logic'
-import { update3DTable } from './table'
+import { update3DTable, getPlayerSeated, setPlayerSeated, getTimeSeated } from './table'
+import { getPlayer } from '@dcl/sdk/src/players'
 import { Card } from './deck'
 
 let activeGame: CrazyEightsGame | null = null
@@ -137,7 +138,9 @@ let pendingWildCardIndex: number | null = null
 
 function TableArea() {
   if (!activeGame) return null
-  const isMyTurn = activeGame.playerOrder[activeGame.currentTurnIndex] === 'player1'
+  const player = getPlayer()
+  const myId = player ? player.userId : 'player1'
+  const isMyTurn = activeGame.playerOrder[activeGame.currentTurnIndex] === myId
   const topCard = activeGame.getTopDiscard()
 
   return (
@@ -150,7 +153,7 @@ function TableArea() {
           if (!activeGame) return
           if (!isMyTurn) return
           if (pendingWildCardIndex !== null) return
-          const success = activeGame.drawCard('player1')
+          const success = activeGame.drawCard(myId)
           if (success) update3DTable(activeGame)
         }}
       />
@@ -172,7 +175,24 @@ function TopBannerNotification() {
 
 function GameInfoBar() {
   if (!activeGame) return null
-  const isMyTurn = activeGame.playerOrder[activeGame.currentTurnIndex] === 'player1'
+  if (activeGame.gameOver) {
+    return (
+      <UiEntity
+        uiTransform={{ width: '100%', height: 35, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', margin: { bottom: 15 } }}
+        uiBackground={{ color: Color4.fromHexString('#000000cc') }}
+      >
+        <UiEntity
+          uiText={{
+            value: `GAME OVER!`,
+            fontSize: 18, color: Color4.White(), textAlign: 'middle-center'
+          }}
+        />
+      </UiEntity>
+    )
+  }
+
+  const myId = getPlayer()?.userId || 'player1';
+  const isMyTurn = activeGame.playerOrder[activeGame.currentTurnIndex] === myId
   const activeSuit = activeGame.activeSuit
 
   return (
@@ -191,9 +211,9 @@ function GameInfoBar() {
 }
 
 function DeclareButton({ myHand }: { myHand: Card[] }) {
-  if (!activeGame) return null
+  if (!activeGame || activeGame.gameOver) return null
   const isVulnerable = myHand.length > 0 && myHand.length <= 3
-  const hasDeclared = activeGame.safeDeclared.has('player1')
+  const hasDeclared = activeGame.safeDeclared.has(getPlayer()?.userId || 'player1')
   
   if (!isVulnerable || hasDeclared) return null
 
@@ -201,7 +221,7 @@ function DeclareButton({ myHand }: { myHand: Card[] }) {
     <UiEntity
       uiTransform={{ width: 300, height: 50, margin: { bottom: 10 }, justifyContent: 'center', alignItems: 'center' }}
       uiBackground={{ color: Color4.fromHexString('#ff2222ff') }}
-      onMouseDown={() => { if (activeGame) activeGame.declareLowCards('player1') }}
+      onMouseDown={() => { if (activeGame) activeGame.declareLowCards(getPlayer()?.userId || 'player1') }}
     >
       <UiEntity uiText={{ value: `DECLARE ${myHand.length} CARD(S)!`, fontSize: 22, color: Color4.White() }} />
     </UiEntity>
@@ -210,7 +230,8 @@ function DeclareButton({ myHand }: { myHand: Card[] }) {
 
 function PlayerHandArea({ myHand }: { myHand: Card[] }) {
   if (!activeGame) return null
-  const isMyTurn = activeGame.playerOrder[activeGame.currentTurnIndex] === 'player1'
+  const myId = getPlayer()?.userId || 'player1';
+  const isMyTurn = activeGame.playerOrder[activeGame.currentTurnIndex] === myId && !activeGame.gameOver
   const isChoosingSuit = pendingWildCardIndex !== null
 
   return (
@@ -230,7 +251,7 @@ function PlayerHandArea({ myHand }: { myHand: Card[] }) {
                 if (card.action === 'Wild') {
                   pendingWildCardIndex = index
                 } else {
-                  const success = activeGame.playCard('player1', index)
+                  const success = activeGame.playCard(getPlayer()?.userId || 'player1', index)
                   if (success) update3DTable(activeGame)
                 }
               }
@@ -267,7 +288,7 @@ function SuitPickerModal() {
               uiBackground={{ color: Color4.White() }}
               onMouseDown={() => {
                 if (activeGame && pendingWildCardIndex !== null) {
-                  activeGame.playCard('player1', pendingWildCardIndex, suit as any)
+                  activeGame.playCard(getPlayer()?.userId || 'player1', pendingWildCardIndex, suit as any)
                   pendingWildCardIndex = null
                   update3DTable(activeGame)
                 }
@@ -285,7 +306,25 @@ function SuitPickerModal() {
 function uiComponent() {
   if (!activeGame || !activeGame.isStarted) return null
 
-  const myHand = activeGame.players.get('player1') || []
+  // Check if player is seated
+  const playerTransform = Transform.getOrNull(engine.PlayerEntity)
+  if (!playerTransform) return null
+  
+  const pos = playerTransform.position
+  const tableCenter = Vector3.create(16, pos.y, 25)
+  const dist = Vector3.distance(pos, tableCenter)
+  
+  // Chairs are at ~2m radius. Give 3.5m leeway so we don't accidentally hide it due to camera/avatar offsets!
+  // We add a 1 second grace period to prevent teleport race conditions!
+  if (dist > 3.5 && Date.now() - getTimeSeated() > 1000) {
+    setPlayerSeated(false)
+  }
+
+  // Hide the UI until they click the chair to sit!
+  if (!getPlayerSeated()) return null
+
+  const myId = getPlayer()?.userId || 'player1';
+  const myHand = activeGame.players.get(myId) || []
 
   return (
     <UiEntity
@@ -300,3 +339,5 @@ function uiComponent() {
     </UiEntity>
   )
 }
+
+

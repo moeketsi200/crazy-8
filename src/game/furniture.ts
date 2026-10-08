@@ -1,10 +1,11 @@
-import { engine, Transform, MeshRenderer, Material, Entity } from '@dcl/sdk/ecs'
+import { engine, Transform, MeshRenderer, MeshCollider, Material, Entity, TextShape, TextAlignMode } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion, Color4 } from '@dcl/sdk/math'
 
 function createBox(parent: Entity, pos: Vector3, scale: Vector3, color: Color4, rot: Quaternion = Quaternion.Identity()) {
     const ent = engine.addEntity()
     Transform.create(ent, { parent, position: pos, scale, rotation: rot })
     MeshRenderer.setBox(ent)
+    MeshCollider.setBox(ent) // Added collider
     Material.setPbrMaterial(ent, { albedoColor: color })
     return ent
 }
@@ -13,6 +14,7 @@ function createCylinder(parent: Entity, pos: Vector3, scale: Vector3, color: Col
     const ent = engine.addEntity()
     Transform.create(ent, { parent, position: pos, scale, rotation: rot })
     MeshRenderer.setCylinder(ent)
+    MeshCollider.setCylinder(ent) // Added collider
     Material.setPbrMaterial(ent, { albedoColor: color })
     return ent
 }
@@ -52,87 +54,115 @@ function buildMediaUnit(houseEntity: Entity) {
     createBox(mediaUnit, Vector3.create(stand_x - 0.47, 1.85, stand_y - 0.35), Vector3.create(0.01, 1.33, 2.40), colorTVScreen)
 }
 
-function buildDJBooth(houseEntity: Entity) {
-    const colorGlossWhite = Color4.White()
-    const colorChrome = Color4.fromHexString('#D9D9D9')
-
-    const djBooth = engine.addEntity()
-    Transform.create(djBooth, {
+export function buildDJBooth(houseEntity: Entity) {
+    const djGroup = engine.addEntity()
+    Transform.create(djGroup, {
         parent: houseEntity,
-        position: Vector3.create(5.20, 0, 1.0),
+        position: Vector3.create(5.20, 0, 1.0), // Main position
         scale: Vector3.create(1.0, 1.0, 1.0)
     })
 
-    const ik_x = 0
-    const ik_y = 0
+    const colorDarkGrey = Color4.fromHexString('#1a1a1c')
+    const colorBlack = Color4.fromHexString('#0a0a0c')
+    const colorNeonBlue = Color4.fromHexString('#00f3ff')
+    const colorNeonPink = Color4.fromHexString('#ff007b')
+    const colorChrome = Color4.fromHexString('#8c92a1')
 
-    buildDJBoothStructure(djBooth, ik_x, ik_y, colorChrome, colorGlossWhite)
-    buildDJEquipment(djBooth, ik_x, ik_y, colorChrome, colorGlossWhite)
-}
+    // 1. DJ PLATFORM (Raised floor)
+    createBox(djGroup, Vector3.create(0, 0.1, 0), Vector3.create(3.0, 0.2, 2.5), colorBlack)
+    // Platform LED Strip (Pink)
+    const platLed = createBox(djGroup, Vector3.create(-1.48, 0.2, 0), Vector3.create(0.05, 0.02, 2.5), colorBlack)
+    Material.setPbrMaterial(platLed, { albedoColor: colorNeonPink, emissiveColor: colorNeonPink, emissiveIntensity: 2.0 })
 
-function buildDJBoothStructure(djBooth: Entity, ik_x: number, ik_y: number, colorChrome: Color4, colorGlossWhite: Color4) {
-    for (const leg_x of [ik_x - 0.16, ik_x + 0.16]) {
-        for (const leg_y of [ik_y - 0.85, ik_y + 0.85]) {
-            createCylinder(djBooth, Vector3.create(leg_x, 0.075, leg_y), Vector3.create(0.05, 0.15, 0.05), colorChrome)
-        }
+    // 2. MAIN BOOTH STRUCTURE (Angled Front)
+    // Base block
+    createBox(djGroup, Vector3.create(-0.6, 0.65, 0), Vector3.create(0.8, 0.9, 2.0), colorDarkGrey)
+    // Angled Front Panel
+    const frontPanel = createBox(djGroup, Vector3.create(-1.05, 0.65, 0), Vector3.create(0.1, 0.9, 1.9), colorBlack, Quaternion.fromEulerDegrees(0, 0, 15))
+    // Thick Countertop
+    createBox(djGroup, Vector3.create(-0.65, 1.12, 0), Vector3.create(1.0, 0.08, 2.1), colorBlack)
+    
+    // Front LED Strips (Top and Bottom of panel)
+    const ledTop = createBox(djGroup, Vector3.create(-1.12, 1.05, 0), Vector3.create(0.02, 0.02, 1.9), colorBlack, Quaternion.fromEulerDegrees(0, 0, 15))
+    Material.setPbrMaterial(ledTop, { albedoColor: colorNeonBlue, emissiveColor: colorNeonBlue, emissiveIntensity: 2.5 })
+    const ledBot = createBox(djGroup, Vector3.create(-0.90, 0.25, 0), Vector3.create(0.02, 0.02, 1.9), colorBlack, Quaternion.fromEulerDegrees(0, 0, 15))
+    Material.setPbrMaterial(ledBot, { albedoColor: colorNeonBlue, emissiveColor: colorNeonBlue, emissiveIntensity: 2.5 })
+
+    // FRONT LOGO TEXT
+    const logoText = engine.addEntity()
+    Transform.create(logoText, {
+        parent: djGroup,
+        position: Vector3.create(-1.08, 0.65, 0),
+        rotation: Quaternion.fromEulerDegrees(0, -90, -15),
+        scale: Vector3.create(0.2, 0.2, 0.2)
+    })
+    TextShape.create(logoText, {
+        text: 'THE EIGHTS OASIS',
+        textColor: colorNeonBlue,
+        fontSize: 3,
+        textAlign: TextAlignMode.TAM_MIDDLE_CENTER
+    })
+
+    // 3. DJ EQUIPMENT (Mixer, CDJs, Laptop)
+    const desk_z = 1.16 + 0.02
+
+    // 4-Channel Mixer (Center)
+    const mixer = createBox(djGroup, Vector3.create(-0.65, desk_z, 0), Vector3.create(0.35, 0.04, 0.25), colorBlack)
+    const mixerGlow = createBox(djGroup, Vector3.create(-0.65, desk_z + 0.021, 0), Vector3.create(0.28, 0.01, 0.20), colorBlack)
+    Material.setPbrMaterial(mixerGlow, { albedoColor: colorBlack, emissiveColor: colorNeonPink, emissiveIntensity: 1.2 })
+
+    // CDJs (Left and Right)
+    for (const offset of [-0.35, 0.35]) {
+        // Deck body
+        createBox(djGroup, Vector3.create(-0.65, desk_z, offset), Vector3.create(0.35, 0.04, 0.30), colorBlack)
+        // Jog Wheel
+        const jogWheel = createCylinder(djGroup, Vector3.create(-0.65, desk_z + 0.02, offset), Vector3.create(0.22, 0.02, 0.22), colorChrome)
+        // Glowing ring around jog wheel
+        const jogGlow = createCylinder(djGroup, Vector3.create(-0.65, desk_z + 0.021, offset), Vector3.create(0.18, 0.02, 0.18), colorBlack)
+        Material.setPbrMaterial(jogGlow, { albedoColor: colorNeonBlue, emissiveColor: colorNeonBlue, emissiveIntensity: 1.0 })
+        // Small screen on CDJ
+        const cdjScreen = createBox(djGroup, Vector3.create(-0.75, desk_z + 0.025, offset), Vector3.create(0.08, 0.01, 0.15), colorBlack)
+        Material.setPbrMaterial(cdjScreen, { albedoColor: colorBlack, emissiveColor: Color4.fromHexString('#ffaa00'), emissiveIntensity: 1.0 })
     }
 
-    const unit_w = 0.42, unit_l = 1.84, unit_h = 0.88
-    const elev_z = 0.15 + (unit_h / 2.0)
+    // Laptop on Stand
+    // Stand
+    createBox(djGroup, Vector3.create(-0.85, desk_z + 0.15, 0), Vector3.create(0.15, 0.3, 0.02), colorChrome, Quaternion.fromEulerDegrees(0, 0, -20))
+    // Laptop Base
+    createBox(djGroup, Vector3.create(-0.85, desk_z + 0.3, 0), Vector3.create(0.2, 0.01, 0.3), colorChrome, Quaternion.fromEulerDegrees(0, 0, 10))
+    // Laptop Screen
+    const laptopScreen = createBox(djGroup, Vector3.create(-0.95, desk_z + 0.4, 0), Vector3.create(0.01, 0.2, 0.3), colorBlack, Quaternion.fromEulerDegrees(0, 0, -10))
+    Material.setPbrMaterial(laptopScreen, { albedoColor: colorBlack, emissiveColor: colorNeonBlue, emissiveIntensity: 2.0 })
+    const laptopText = engine.addEntity()
+    Transform.create(laptopText, {
+        parent: laptopScreen,
+        position: Vector3.create(0.01, 0, 0),
+        rotation: Quaternion.fromEulerDegrees(0, 90, 0),
+        scale: Vector3.create(0.05, 0.05, 0.05)
+    })
+    TextShape.create(laptopText, {
+        text: 'SERATO\n||||||||',
+        textColor: colorNeonBlue,
+        fontSize: 2
+    })
 
-    for (const z_pos of [0.15 + 0.025, 0.15 + unit_h - 0.025]) {
-        createBox(djBooth, Vector3.create(ik_x, z_pos, ik_y), Vector3.create(unit_w, 0.05, unit_l), colorGlossWhite)
-    }
-    for (const y_pos of [ik_y - unit_l/2 + 0.025, ik_y + unit_l/2 - 0.025]) {
-        createBox(djBooth, Vector3.create(ik_x, elev_z, y_pos), Vector3.create(unit_w, unit_h - 0.10, 0.05), colorGlossWhite)
-    }
-    createBox(djBooth, Vector3.create(ik_x - unit_w/2 + 0.01, elev_z, ik_y), Vector3.create(0.02, unit_h - 0.10, unit_l - 0.08), colorGlossWhite)
-    createBox(djBooth, Vector3.create(ik_x, elev_z, ik_y), Vector3.create(unit_w - 0.02, 0.03, unit_l - 0.10), colorGlossWhite)
+    // Microphone on stand
+    createCylinder(djGroup, Vector3.create(-0.65, desk_z + 0.15, -0.6), Vector3.create(0.02, 0.3, 0.02), colorChrome)
+    createCylinder(djGroup, Vector3.create(-0.7, desk_z + 0.3, -0.6), Vector3.create(0.03, 0.08, 0.03), colorBlack, Quaternion.fromEulerDegrees(0, 0, -45))
 
-    const cell_step = (unit_l - 0.10) / 4.0
-    for (const v_div of [-cell_step, 0.0, cell_step]) {
-        createBox(djBooth, Vector3.create(ik_x, elev_z, ik_y + v_div), Vector3.create(unit_w - 0.02, unit_h - 0.10, 0.03), colorGlossWhite)
-    }
-}
-
-function buildDJEquipment(djBooth: Entity, ik_x: number, ik_y: number, colorChrome: Color4, colorGlossWhite: Color4) {
-    const colorTVScreen = Color4.Black()
-    const colorDJBlack = Color4.fromHexString('#080809')
-    const colorAluminum = Color4.fromHexString('#A6ABB3')
-    const colorPVCBlack = Color4.fromHexString('#050506')
-    const colorKRKYellow = Color4.fromHexString('#FFC70A')
-
-    const unit_h = 0.88
-    const desk_z = 0.15 + unit_h + 0.025
-    createBox(djBooth, Vector3.create(ik_x + 0.04, desk_z, ik_y), Vector3.create(0.34, 0.04, 0.72), colorDJBlack)
-
-    for (const j_offset of [-0.24, 0.24]) {
-        createCylinder(djBooth, Vector3.create(ik_x + 0.04, desk_z + 0.025, ik_y + j_offset), Vector3.create(0.17, 0.015, 0.17), colorAluminum)
-    }
-    createBox(djBooth, Vector3.create(ik_x + 0.04, desk_z + 0.022, ik_y), Vector3.create(0.28, 0.01, 0.18), colorPVCBlack)
-
-    for (const b_offset of [-0.60, 0.60]) {
-        createCylinder(djBooth, Vector3.create(ik_x - 0.08, desk_z + 0.10, ik_y + b_offset), Vector3.create(0.036, 0.22, 0.036), colorChrome, Quaternion.fromEulerDegrees(0, 0, -12))
-    }
-
-    const shelf_z = desk_z + 0.22
-    createBox(djBooth, Vector3.create(ik_x - 0.06, shelf_z, ik_y), Vector3.create(0.26, 0.04, 1.84), colorGlossWhite)
-
-    for (const [spk_sign, spk_y] of [[-1, ik_y - 0.72], [1, ik_y + 0.72]]) {
-        createCylinder(djBooth, Vector3.create(ik_x - 0.06, shelf_z + 0.06, spk_y), Vector3.create(0.04, 0.10, 0.04), colorChrome)
+    // 4. BIG CLUB SPEAKERS (Left and Right)
+    for (const spkPos of [-1.5, 1.5]) {
+        // Subwoofer (Bottom)
+        createBox(djGroup, Vector3.create(-1.2, 0.5, spkPos), Vector3.create(0.6, 0.6, 0.6), colorDarkGrey, Quaternion.fromEulerDegrees(0, spkPos > 0 ? -15 : 15, 0))
+        // Main Cabinet (Top)
+        const topCab = createBox(djGroup, Vector3.create(-1.2, 1.25, spkPos), Vector3.create(0.5, 0.9, 0.5), colorBlack, Quaternion.fromEulerDegrees(0, spkPos > 0 ? -15 : 15, 0))
         
-        const yaw = -(180 - 14 * spk_sign)
-        createBox(djBooth, Vector3.create(ik_x - 0.04, shelf_z + 0.25, spk_y), Vector3.create(0.22, 0.28, 0.18), colorDJBlack, Quaternion.fromEulerDegrees(0, yaw, 0))
-
-        const ang_rad = Math.PI + (-14 * spk_sign * Math.PI / 180)
-        const cone_x = (ik_x - 0.04) + 0.115 * Math.cos(ang_rad)
-        const cone_y = spk_y + 0.115 * Math.sin(ang_rad)
-        
-        createCylinder(djBooth, Vector3.create(cone_x, shelf_z + 0.20, cone_y), Vector3.create(0.10, 0.015, 0.10), colorKRKYellow, Quaternion.fromEulerDegrees(90, -(yaw - 90), 0))
+        // Woofer Cone
+        createCylinder(topCab, Vector3.create(-0.25, -0.15, 0), Vector3.create(0.02, 0.35, 0.35), colorDarkGrey, Quaternion.fromEulerDegrees(0, 0, 90))
+        // Tweeter
+        createCylinder(topCab, Vector3.create(-0.25, 0.3, 0), Vector3.create(0.02, 0.15, 0.15), colorChrome, Quaternion.fromEulerDegrees(0, 0, 90))
     }
 
-    createBox(djBooth, Vector3.create(ik_x - 0.04, shelf_z + 0.03, ik_y), Vector3.create(0.20, 0.012, 0.28), colorAluminum)
-    createBox(djBooth, Vector3.create(ik_x - 0.14, shelf_z + 0.12, ik_y), Vector3.create(0.01, 0.18, 0.28), colorTVScreen, Quaternion.fromEulerDegrees(0, 18, 0))
-    createBox(djBooth, Vector3.create(ik_x - 0.04, shelf_z + 0.035, ik_y + 0.28), Vector3.create(0.16, 0.025, 0.14), colorDJBlack)
-    createBox(djBooth, Vector3.create(ik_x - 0.04, shelf_z + 0.04, ik_y - 0.28), Vector3.create(0.15, 0.012, 0.20), colorTVScreen, Quaternion.fromEulerDegrees(0, -20, 0))
+    // 5. GIANT SCREEN BEHIND DJ
+    // Removed because it blocks the rules board and looked like a giant solid pink block.
 }

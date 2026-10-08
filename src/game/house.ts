@@ -2,36 +2,35 @@ import { engine, Transform, MeshRenderer, MeshCollider, Material, Entity } from 
 import { Vector3, Quaternion, Color4 } from '@dcl/sdk/math'
 
 export function buildHouse() {
-  // Create a master entity to hold the entire house so we can easily scale and rotate it!
   const houseEntity = engine.addEntity()
   Transform.create(houseEntity, {
     position: Vector3.create(16, 0.05, 25),
-    // Rotate 180 degrees just like the end of your Blender script
     rotation: Quaternion.fromEulerDegrees(0, 180, 0),
-    // We scale it up to 90% (0.9)! This is nearly double the previous 55% size.
-    // We placed it at Z=25 so the 27m long patio doesn't slice through the boundaries.
     scale: Vector3.create(0.9, 0.9, 0.9)
   })
 
-  // --- COLORS BASED ON YOUR BLENDER MATERIALS ---
   const colorWood = Color4.fromHexString('#2E1A11')
   const colorNavy = Color4.fromHexString('#1A222E')
   const colorFlagstone = Color4.fromHexString('#8C8070')
-  const colorStone = Color4.fromHexString('#665C54')
-  const colorWater = Color4.create(0.1, 0.7, 0.9, 0.6) // Semi-transparent cyan
+  const colorStone = Color4.fromHexString('#333333') // Darker for modern look
+  const colorWater = Color4.create(0.0, 0.6, 0.9, 0.8) 
   const colorFire = Color4.fromHexString('#FF5905')
+  const colorNeonCyan = Color4.fromHexString('#00f3ff')
+  const colorNeonPink = Color4.fromHexString('#ff007b')
 
-  // --- HELPER FUNCTION FOR CUBES ---
-  function addBlock(pos: Vector3, scale: Vector3, color: Color4): Entity {
+  function addBlock(pos: Vector3, scale: Vector3, color: Color4, emissive?: Color4): Entity {
     const ent = engine.addEntity()
     Transform.create(ent, { parent: houseEntity, position: pos, scale: scale })
     MeshRenderer.setBox(ent)
     MeshCollider.setBox(ent)
-    Material.setPbrMaterial(ent, { albedoColor: color })
+    if (emissive) {
+      Material.setPbrMaterial(ent, { albedoColor: color, emissiveColor: emissive, emissiveIntensity: 2.0 })
+    } else {
+      Material.setPbrMaterial(ent, { albedoColor: color })
+    }
     return ent
   }
 
-  // --- HELPER FUNCTION FOR CYLINDERS ---
   function addCylinder(pos: Vector3, scale: Vector3, color: Color4): Entity {
     const ent = engine.addEntity()
     Transform.create(ent, { parent: houseEntity, position: pos, scale: scale })
@@ -43,23 +42,19 @@ export function buildHouse() {
 
   // 1. FLOOR & PIT
   addBlock(Vector3.create(0, -0.2, 0), Vector3.create(14.0, 0.4, 12.0), colorWood)
-  // We use a flat cylinder for the sunken pit center
   addCylinder(Vector3.create(0, 0.01, -0.15), Vector3.create(6.4, 0.02, 6.4), colorNavy)
 
-  // 2. MAIN WALLS (8m tall!)
-  addBlock(Vector3.create(-6.9, 4.0, 0), Vector3.create(0.2, 8.0, 12.0), colorNavy) // Left
-  addBlock(Vector3.create(6.9, 4.0, 0), Vector3.create(0.2, 8.0, 12.0), colorNavy)  // Right
+  // 2. MAIN WALLS
+  addBlock(Vector3.create(-6.9, 4.0, 0), Vector3.create(0.2, 8.0, 12.0), colorNavy) 
+  addBlock(Vector3.create(6.9, 4.0, 0), Vector3.create(0.2, 8.0, 12.0), colorNavy)  
 
   // 3. FRONT & BACK STUB WALLS
-  // Back Wall (Y=5.9 in blender -> Z=5.9)
   addBlock(Vector3.create(-5.8, 4.0, 5.9), Vector3.create(2.4, 8.0, 0.2), colorNavy)
   addBlock(Vector3.create(5.8, 4.0, 5.9), Vector3.create(2.4, 8.0, 0.2), colorNavy)
-  addBlock(Vector3.create(0, 6.75, 5.9), Vector3.create(9.2, 2.50, 0.22), colorNavy) // Lintel
-
-  // Front Wall (Y=-5.9 in blender -> Z=-5.9)
+  addBlock(Vector3.create(0, 6.75, 5.9), Vector3.create(9.2, 2.50, 0.22), colorNavy) 
   addBlock(Vector3.create(-5.8, 4.0, -5.9), Vector3.create(2.4, 8.0, 0.2), colorNavy)
   addBlock(Vector3.create(5.8, 4.0, -5.9), Vector3.create(2.4, 8.0, 0.2), colorNavy)
-  addBlock(Vector3.create(0, 6.75, -5.9), Vector3.create(9.2, 2.50, 0.22), colorNavy) // Lintel
+  addBlock(Vector3.create(0, 6.75, -5.9), Vector3.create(9.2, 2.50, 0.22), colorNavy) 
 
   // 4. ROOF
   addBlock(Vector3.create(0, 8.1, 0), Vector3.create(14.5, 0.2, 12.5), colorNavy)
@@ -67,19 +62,57 @@ export function buildHouse() {
   // 5. CHILLERS OASIS PATIO
   addBlock(Vector3.create(0, -0.22, 16.5), Vector3.create(22.0, 0.38, 21.0), colorFlagstone)
 
-  // 6. LAGOON POOL
-  addCylinder(Vector3.create(0, -0.02, 15.5), Vector3.create(11.0, 0.15, 8.0), colorStone) // Coping
-  addCylinder(Vector3.create(0, 0.05, 15.5), Vector3.create(10.2, 0.02, 7.2), colorWater)  // Water
+  // 6. NEON LUXURY POOL (Hollow Rectangular)
+  const poolX = 1.0, poolZ = 14.5
+  const poolW = 9.0, poolD = 5.0
+  const wallThick = 0.4
+  const poolH = 0.5 
+  const waterH = 0.35 
+  
+  // Floor
+  addBlock(Vector3.create(poolX, 0.05, poolZ), Vector3.create(poolW + wallThick*2, 0.1, poolD + wallThick*2), colorNavy)
+  // Walls
+  addBlock(Vector3.create(poolX, 0.05 + poolH/2, poolZ - poolD/2 - wallThick/2), Vector3.create(poolW + wallThick*2, poolH, wallThick), colorStone)
+  addBlock(Vector3.create(poolX, 0.05 + poolH/2, poolZ + poolD/2 + wallThick/2), Vector3.create(poolW + wallThick*2, poolH, wallThick), colorStone)
+  addBlock(Vector3.create(poolX - poolW/2 - wallThick/2, 0.05 + poolH/2, poolZ), Vector3.create(wallThick, poolH, poolD), colorStone)
+  addBlock(Vector3.create(poolX + poolW/2 + wallThick/2, 0.05 + poolH/2, poolZ), Vector3.create(wallThick, poolH, poolD), colorStone)
+  
+  // LED glowing strip inside the pool rim
+  addBlock(Vector3.create(poolX, 0.05 + poolH, poolZ - poolD/2 + 0.05), Vector3.create(poolW, 0.02, 0.1), colorNeonCyan, colorNeonCyan)
+  addBlock(Vector3.create(poolX, 0.05 + poolH, poolZ + poolD/2 - 0.05), Vector3.create(poolW, 0.02, 0.1), colorNeonCyan, colorNeonCyan)
+  addBlock(Vector3.create(poolX - poolW/2 + 0.05, 0.05 + poolH, poolZ), Vector3.create(0.1, 0.02, poolD), colorNeonCyan, colorNeonCyan)
+  addBlock(Vector3.create(poolX + poolW/2 - 0.05, 0.05 + poolH, poolZ), Vector3.create(0.1, 0.02, poolD), colorNeonCyan, colorNeonCyan)
+
+  // Water
+  const mainWater = addBlock(Vector3.create(poolX, waterH, poolZ), Vector3.create(poolW, 0.02, poolD), colorWater)
+  MeshCollider.deleteFrom(mainWater)
 
   // 7. FIREPLACE
-  addBlock(Vector3.create(6.5, 0.9, 16.5), Vector3.create(3.2, 1.8, 1.4), colorStone)
-  addBlock(Vector3.create(6.5, 2.6, 16.5), Vector3.create(1.8, 1.8, 1.1), colorStone)
-  addBlock(Vector3.create(6.5, 0.55, 16.05), Vector3.create(1.4, 0.8, 0.6), colorNavy) // Sunken part
-  addBlock(Vector3.create(6.5, 0.60, 15.85), Vector3.create(1.1, 0.4, 0.2), colorFire) // Embers
+  addBlock(Vector3.create(7.5, 0.9, 16.5), Vector3.create(3.2, 1.8, 1.4), colorStone)
+  addBlock(Vector3.create(7.5, 2.6, 16.5), Vector3.create(1.8, 1.8, 1.1), colorStone)
+  addBlock(Vector3.create(7.5, 0.55, 16.05), Vector3.create(1.4, 0.8, 0.6), colorNavy) 
+  addBlock(Vector3.create(7.5, 0.60, 15.85), Vector3.create(1.1, 0.4, 0.2), colorFire, colorFire) 
 
-  // 8. JACUZZI
-  addCylinder(Vector3.create(-4.6, 0.5, 16.8), Vector3.create(3.3, 1.0, 3.3), colorStone)
-  addCylinder(Vector3.create(-4.6, 1.01, 16.8), Vector3.create(2.7, 0.02, 2.7), colorWater)
+  // 8. NEON SQUARE JACUZZI
+  const jacX = -4.8, jacZ = 16.5
+  const jacW = 2.5, jacD = 2.5
+  const jacH = 0.8
+  const jacWaterH = 0.65
+  
+  addBlock(Vector3.create(jacX, 0.05, jacZ), Vector3.create(jacW + wallThick*2, 0.1, jacD + wallThick*2), colorNavy)
+  addBlock(Vector3.create(jacX, 0.05 + jacH/2, jacZ - jacD/2 - wallThick/2), Vector3.create(jacW + wallThick*2, jacH, wallThick), colorStone)
+  addBlock(Vector3.create(jacX, 0.05 + jacH/2, jacZ + jacD/2 + wallThick/2), Vector3.create(jacW + wallThick*2, jacH, wallThick), colorStone)
+  addBlock(Vector3.create(jacX - jacW/2 - wallThick/2, 0.05 + jacH/2, jacZ), Vector3.create(wallThick, jacH, jacD), colorStone)
+  addBlock(Vector3.create(jacX + jacW/2 + wallThick/2, 0.05 + jacH/2, jacZ), Vector3.create(wallThick, jacH, jacD), colorStone)
+  
+  // Jacuzzi LED glowing strip
+  addBlock(Vector3.create(jacX, 0.05 + jacH, jacZ - jacD/2 + 0.05), Vector3.create(jacW, 0.02, 0.1), colorNeonPink, colorNeonPink)
+  addBlock(Vector3.create(jacX, 0.05 + jacH, jacZ + jacD/2 - 0.05), Vector3.create(jacW, 0.02, 0.1), colorNeonPink, colorNeonPink)
+  addBlock(Vector3.create(jacX - jacW/2 + 0.05, 0.05 + jacH, jacZ), Vector3.create(0.1, 0.02, jacD), colorNeonPink, colorNeonPink)
+  addBlock(Vector3.create(jacX + jacW/2 - 0.05, 0.05 + jacH, jacZ), Vector3.create(0.1, 0.02, jacD), colorNeonPink, colorNeonPink)
+
+  const jacWater = addBlock(Vector3.create(jacX, jacWaterH, jacZ), Vector3.create(jacW, 0.02, jacD), colorWater)
+  MeshCollider.deleteFrom(jacWater)
 
   return houseEntity
 }
