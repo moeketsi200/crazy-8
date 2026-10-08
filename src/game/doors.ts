@@ -56,7 +56,7 @@ function doorSensorSystem(dt: number) {
   const doorLocation = Vector3.create(16, 1, 30.31)
   
   const distance = Vector3.distance(playerTransform.position, doorLocation)
-  const shouldBeOpen = distance < 8.0 // Increased detection range for the big house
+  const shouldBeOpen = distance < 2.5 // Reduced detection range so you have to be much closer to trigger it
 
   if (shouldBeOpen && !isDoorOpen) isDoorOpen = true
   else if (!shouldBeOpen && isDoorOpen) isDoorOpen = false

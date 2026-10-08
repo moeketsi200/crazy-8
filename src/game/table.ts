@@ -26,6 +26,9 @@ export function timerSystem(dt: number) {
 }
 engine.addSystem(timerSystem)
 
+export function setGameTimer(seconds: number, callback: () => void) {
+  timers.push({ timeLeft: seconds, callback })
+}
 
 // ==========================================
 // TABLE SETUP
@@ -34,7 +37,13 @@ const drawPile = engine.addEntity()
 const discardPile = engine.addEntity()
 const discardText = engine.addEntity()
 
+let globalHouseEntity: Entity
+let spawnedOpponentCards: Entity[] = []
+
 export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
+  globalHouseEntity = furnitureRoot
+  globalGame = game
+  
   // 0. GENERATE THE 3D VISUAL TABLE AND CARDS
   buildPrimitiveTable(furnitureRoot)
 
@@ -91,11 +100,19 @@ export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
     new CasinoChair(angleRad, angleDeg, furnitureRoot) // furnitureRoot is now houseEntity!
   }
 
-  // 4. START A TEST GAME
+  // 4. ADD PLAYERS
   game.addPlayer('player1')
   game.addPlayer('bot')
-  game.startGame()
-  update3DTable(game)
+  
+  // 5. BOT THINKING DELAY
+  // This gives the human 5 seconds to press their DECLARE button before the bot strikes!
+  game.onBotTurnStart = () => {
+    setGameTimer(5.0, () => {
+      game.runBotTurn()
+    })
+  }
+
+  // Game will be started via the UI button!
 }
 
 // ==========================================
@@ -166,19 +183,109 @@ class CasinoChair {
   }
 }
 
-export function update3DTable(game: CrazyEightsGame) {
-  if (game.discardPile.length > 0) {
-    const topCard = game.getTopDiscard()
-    let symbol = ''
-    let color = Color4.Black()
-    
-    if (topCard.suit === 'Hearts') { symbol = '♥'; color = Color4.Red() }
-    if (topCard.suit === 'Diamonds') { symbol = '♦'; color = Color4.Red() }
-    if (topCard.suit === 'Clubs') { symbol = '♣'; color = Color4.Black() }
-    if (topCard.suit === 'Spades') { symbol = '♠'; color = Color4.Black() }
+// System to automatically update the 3D table when the bot (or anyone) plays a card
+let lastTopCardStr = ''
+let lastBotHandSize = -1
+let globalGame: CrazyEightsGame | null = null
 
-    const mutableText = TextShape.getMutable(discardText)
-    mutableText.text = `${topCard.rank}\n${symbol}`
-    mutableText.textColor = color
+export function autoUpdateTableSystem(dt: number) {
+  if (!globalGame || !globalGame.isStarted || globalGame.discardPile.length === 0) return
+
+  const topCard = globalGame.getTopDiscard()
+  const currentTopCardStr = `${topCard.suit}-${topCard.rank}`
+  const currentBotHandSize = globalGame.players.get('bot')?.length || 0
+
+  if (currentTopCardStr !== lastTopCardStr || currentBotHandSize !== lastBotHandSize) {
+    lastTopCardStr = currentTopCardStr
+    lastBotHandSize = currentBotHandSize
+    update3DTable(globalGame)
   }
+}
+engine.addSystem(autoUpdateTableSystem)
+
+function getSuitVisuals(suit: string): { symbol: string, color: Color4 } {
+  switch (suit) {
+    case 'Hearts': return { symbol: '♥', color: Color4.Red() }
+    case 'Diamonds': return { symbol: '♦', color: Color4.Red() }
+    case 'Clubs': return { symbol: '♣', color: Color4.Black() }
+    case 'Spades': return { symbol: '♠', color: Color4.Black() }
+    default: return { symbol: '', color: Color4.Black() }
+  }
+}
+
+function updateDiscardPileVisual(game: CrazyEightsGame) {
+  if (game.discardPile.length === 0) return
+  
+  const topCard = game.getTopDiscard()
+  const visuals = getSuitVisuals(topCard.suit)
+  
+  const mutableText = TextShape.getMutable(discardText)
+  mutableText.text = `${topCard.rank}\n${visuals.symbol}`
+  mutableText.textColor = visuals.color
+}
+
+function clearOpponentCards() {
+  for (const ent of spawnedOpponentCards) {
+    engine.removeEntity(ent)
+  }
+  spawnedOpponentCards = []
+}
+
+function spawnSingleOpponentHand(playerId: string, numCards: number) {
+  const chairAssignments: Record<string, number> = {
+    'player1': 0,
+    'bot': 4
+  }
+  
+  const slot = chairAssignments[playerId] ?? 2
+  const angleRad = slot * (Math.PI / 4) + (Math.PI / 2)
+  const angleDeg = angleRad * (180 / Math.PI)
+  
+  const handCx = 1.15 * Math.cos(angleRad)
+  const handCz = 1.15 * Math.sin(angleRad)
+
+  for (let i = 0; i < numCards; i++) {
+    const offset = (i - (numCards - 1) / 2) * 0.05
+    
+    const shiftX = offset * Math.cos(angleRad - Math.PI / 2)
+    const shiftZ = offset * Math.sin(angleRad - Math.PI / 2)
+    
+    const cardEnt = engine.addEntity()
+    Transform.create(cardEnt, {
+      parent: globalHouseEntity,
+      position: Vector3.create(handCx + shiftX, 0.791 + (i * 0.001), handCz + shiftZ),
+      scale: Vector3.create(0.063, 0.001, 0.088),
+      rotation: Quaternion.fromEulerDegrees(0, -(angleDeg + 15 + (offset * 100)), 0)
+    })
+    MeshRenderer.setBox(cardEnt)
+    Material.setPbrMaterial(cardEnt, { albedoColor: Color4.fromHexString('#BF0D0D') }) 
+    
+    MeshCollider.setBox(cardEnt, ColliderLayer.CL_POINTER)
+    pointerEventsSystem.onPointerDown(
+      { entity: cardEnt, opts: { button: InputAction.IA_PRIMARY, hoverText: `Challenge ${playerId}!` } },
+      () => {
+        if (globalGame) {
+          globalGame.challengePlayer('player1', playerId)
+          update3DTable(globalGame)
+        }
+      }
+    )
+
+    spawnedOpponentCards.push(cardEnt)
+  }
+}
+
+function spawnOpponentCardsVisuals(game: CrazyEightsGame) {
+  clearOpponentCards()
+
+  for (const [playerId, hand] of game.players.entries()) {
+    if (playerId !== 'player1') {
+      spawnSingleOpponentHand(playerId, hand.length)
+    }
+  }
+}
+
+export function update3DTable(game: CrazyEightsGame) {
+  updateDiscardPileVisual(game)
+  spawnOpponentCardsVisuals(game)
 }

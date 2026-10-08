@@ -43,22 +43,6 @@ export function buildPrimitiveTable(houseEntity: Entity) {
     // 3. Emerald Felt Playing Surface
     createCylinder(houseEntity, Vector3.create(0, 0.78, 0), Vector3.create(2.84, 0.02, 2.84), colorFelt)
 
-    // 4. Player Hands (2 cards for all 8 positions)
-    for (let i = 0; i < 8; i++) {
-        const angleRad = i * (Math.PI / 4) + (Math.PI / 2)
-        const angleDeg = angleRad * (180 / Math.PI)
-
-        // First Card
-        const handCx = 1.15 * Math.cos(angleRad)
-        const handCz = 1.15 * Math.sin(angleRad) // Blender Y is DCL Z
-        createCard(houseEntity, handCx, 0.791, handCz, angleDeg + 15, false)
-
-        // Second Card (slightly offset)
-        const shiftX = 0.03 * Math.cos(angleRad - Math.PI / 2)
-        const shiftZ = 0.03 * Math.sin(angleRad - Math.PI / 2)
-        createCard(houseEntity, handCx + shiftX, 0.792, handCz + shiftZ, angleDeg + 5, false)
-    }
-
     // We will also spawn the decorative second card of the discard pile here!
     createCard(houseEntity, 0.12, 0.791, 0.05, -42, false)
 }

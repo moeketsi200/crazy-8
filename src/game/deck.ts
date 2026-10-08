@@ -30,7 +30,7 @@ export function generateDeck(): Card[] {
           break
         case '8':
           action = 'Wild'
-          points = 12
+          points = 8
           break
         case 'J':
           action = 'Reverse'
@@ -43,7 +43,7 @@ export function generateDeck(): Card[] {
           points = 13
           break
         case 'A':
-          points = 11
+          points = 1
           break
       }
 
@@ -63,7 +63,7 @@ export function generateDeck(): Card[] {
       id: `Joker-${i}`,
       suit: 'None',
       rank: 'Joker',
-      points: 20,
+      points: 25,
       action: 'Draw4'
     })
   }

@@ -1,22 +1,29 @@
-import { Card, Suit, generateDeck, shuffleDeck, Action } from './deck'
+import { Card, Suit, generateDeck, shuffleDeck } from './deck'
+
+export type PlayerId = string
 
 export class CrazyEightsGame {
-  public players: Map<string, Card[]> = new Map()
-  public playerOrder: string[] = []
+  public players: Map<PlayerId, Card[]> = new Map()
+  public playerOrder: PlayerId[] = []
   public drawPile: Card[] = []
   public discardPile: Card[] = []
   public currentTurnIndex: number = 0
   public activeSuit: Suit | null = null
   public isStarted: boolean = false
+  public roundNumber: number = 1
   public gameOver: boolean = false
 
-  // New state machine rules
-  public turnDirection: number = 1 // 1 for clockwise, -1 for counter-clockwise
+  public turnDirection: number = 1
   public pendingDraws: number = 0
-  public eliminatedPlayers: Set<string> = new Set()
-  public scores: Map<string, number> = new Map()
+  public eliminatedPlayers: Set<PlayerId> = new Set()
+  public scores: Map<PlayerId, number> = new Map()
+  public onRoundEnd?: (eliminated: PlayerId, winner?: PlayerId, scoreBreakdown?: string, roundWinner?: PlayerId) => void
 
-  public addPlayer(playerId: string) {
+  public safeDeclared: Set<PlayerId> = new Set()
+  public onNotification?: (message: string) => void
+  public onBotTurnStart?: () => void
+
+  public addPlayer(playerId: PlayerId) {
     if (!this.isStarted && !this.players.has(playerId)) {
       this.players.set(playerId, [])
       this.playerOrder.push(playerId)
@@ -25,10 +32,7 @@ export class CrazyEightsGame {
   }
 
   public startGame() {
-    if (this.playerOrder.length < 2) {
-      console.log("Need at least 2 players to start!")
-      return
-    }
+    if (this.playerOrder.length < 2) return
 
     this.drawPile = shuffleDeck(generateDeck())
     this.discardPile = []
@@ -36,102 +40,153 @@ export class CrazyEightsGame {
     this.turnDirection = 1
     this.gameOver = false
     this.eliminatedPlayers.clear()
+    this.safeDeclared.clear()
     
-    // Deal 8 cards to each player (Oasis Rules)
+    this.dealInitialCards()
+    this.setupInitialDiscard()
+    
+    this.isStarted = true
+    this.currentTurnIndex = 0
+  }
+
+  private dealInitialCards() {
     for (let i = 0; i < 8; i++) {
-      for (const playerId of this.playerOrder) {
+      const activePlayers = this.playerOrder.filter(p => !this.eliminatedPlayers.has(p))
+      for (const playerId of activePlayers) {
         const hand = this.players.get(playerId)!
         hand.push(this.drawPile.pop()!)
       }
     }
+  }
 
-    // Flip first card to discard pile
+  private setupInitialDiscard() {
     let startingCard = this.drawPile.pop()!
-    
-    // If the starting card is an action card or Joker, keep burying it
     while (startingCard.action !== 'Normal') {
       this.drawPile.unshift(startingCard)
       startingCard = this.drawPile.pop()!
     }
-    
     this.discardPile.push(startingCard)
     this.activeSuit = startingCard.suit
-    this.isStarted = true
-    this.currentTurnIndex = 0
   }
 
   public getTopDiscard(): Card {
     return this.discardPile[this.discardPile.length - 1]
   }
 
+  public declareLowCards(playerId: PlayerId): boolean {
+    const hand = this.players.get(playerId)
+    if (this.isHandVulnerable(hand)) {
+      this.safeDeclared.add(playerId)
+      if (this.onNotification) this.onNotification(`${playerId.toUpperCase()} declares: "I have ${hand!.length} card(s) left!"`)
+      return true
+    }
+    return false
+  }
+
+  private isHandVulnerable(hand: Card[] | undefined): boolean {
+    return !!(hand && hand.length > 0 && hand.length <= 3)
+  }
+
+  public challengePlayer(challengerId: PlayerId, targetId: PlayerId): boolean {
+    if (this.gameOver) return false
+    const targetHand = this.players.get(targetId)
+    if (!targetHand) return false
+
+    if (this.isHandVulnerable(targetHand) && !this.safeDeclared.has(targetId)) {
+      this.drawOne(targetId)
+      this.drawOne(targetId)
+      if (this.onNotification) this.onNotification(`🚨 CAUGHT! ${challengerId} caught ${targetId} failing to declare! 2 Penalty Cards!`)
+      return true
+    } else {
+      if (this.onNotification) this.onNotification(`❌ False alarm! ${targetId} is safe.`)
+      return false
+    }
+  }
+
   public isValidPlay(card: Card): boolean {
     const topCard = this.getTopDiscard()
-    
-    // If there are pending draws, you MUST play a matching draw card, or draw
     if (this.pendingDraws > 0) {
-      // You can stack Draw2 on Draw2, or Draw4 on Draw4.
-      if (topCard.action === 'Draw4' && card.action === 'Draw4') return true
-      if (topCard.action === 'Draw2' && card.action === 'Draw2') return true
-      return false // Cannot play anything else
+      return this.isValidPlayDuringDrawPenalty(card, topCard)
     }
+    return this.isValidPlayNormal(card, topCard)
+  }
 
-    // A Joker (Draw4) can be played on anything
-    if (card.action === 'Draw4') return true
+  private isValidPlayDuringDrawPenalty(card: Card, topCard: Card): boolean {
+    if (topCard.action === 'Draw4' && card.action === 'Draw4') return true
+    if (topCard.action === 'Draw2' && card.action === 'Draw2') return true
+    return false
+  }
 
-    // An 8 (Wild) can be played on anything (except if there are pending draws, handled above)
-    if (card.action === 'Wild') return true
-    
-    // Otherwise, must match the current active suit or the rank of the top card
+  private isValidPlayNormal(card: Card, topCard: Card): boolean {
+    if (card.action === 'Draw4' || card.action === 'Wild') return true
     return card.suit === this.activeSuit || card.rank === topCard.rank
   }
 
-  public playCard(playerId: string, cardIndex: number, newSuitForWild?: Suit): boolean {
+  private canPlayCard(playerId: PlayerId, cardToPlay?: Card): boolean {
     if (this.playerOrder[this.currentTurnIndex] !== playerId) return false
     if (this.gameOver) return false
+    if (!cardToPlay) return false
+    if (!this.isValidPlay(cardToPlay)) return false
+    return true
+  }
 
+  public playCard(playerId: PlayerId, cardIndex: number, newSuitForWild?: Suit): boolean {
     const hand = this.players.get(playerId)!
     const cardToPlay = hand[cardIndex]
 
-    if (!cardToPlay || !this.isValidPlay(cardToPlay)) return false
+    if (!this.canPlayCard(playerId, cardToPlay)) return false
 
-    // Remove from hand and add to discard
     hand.splice(cardIndex, 1)
     this.discardPile.push(cardToPlay)
+    this.safeDeclared.delete(playerId)
 
-    // Handle Active Suit changes
-    if (cardToPlay.action === 'Wild') {
-      this.activeSuit = newSuitForWild || cardToPlay.suit 
-    } else if (cardToPlay.action !== 'Draw4') {
-      this.activeSuit = cardToPlay.suit
+    this.handleSuitChange(cardToPlay, newSuitForWild, playerId)
+    const skipNext = this.handleActionCardEffects(cardToPlay)
+
+    if (hand.length === 0) {
+      this.endRound(playerId)
+    } else {
+      this.nextTurn(skipNext ? 2 : 1)
     }
 
-    // Handle Action Cards
+    return true
+  }
+
+  private handleSuitChange(cardToPlay: Card, newSuitForWild: Suit | undefined, playerId: PlayerId) {
+    if (cardToPlay.action === 'Wild' || cardToPlay.action === 'Draw4') {
+      this.activeSuit = newSuitForWild || 'Spades'
+      if (this.onNotification) {
+        this.onNotification(`${playerId.toUpperCase()} changed the suit to ${this.activeSuit.toUpperCase()}!`)
+      }
+    } else {
+      this.activeSuit = cardToPlay.suit
+    }
+  }
+
+  private handleActionCardEffects(cardToPlay: Card): boolean {
     let skipNext = false
     if (cardToPlay.action === 'Draw2') {
       this.pendingDraws += 2
     } else if (cardToPlay.action === 'Draw4') {
       this.pendingDraws += 4
     } else if (cardToPlay.action === 'Reverse') {
-      this.turnDirection *= -1
+      const activePlayersCount = this.playerOrder.filter(p => !this.eliminatedPlayers.has(p)).length
+      if (activePlayersCount === 2) {
+        skipNext = true
+      } else {
+        this.turnDirection *= -1
+      }
     } else if (cardToPlay.action === 'Skip') {
       skipNext = true
     }
-
-    // Check for Win
-    if (hand.length === 0) {
-      this.endRound()
-      return true
-    }
-
-    this.nextTurn(skipNext ? 2 : 1)
-    return true
+    return skipNext
   }
 
-  public drawCard(playerId: string): boolean {
-    if (this.playerOrder[this.currentTurnIndex] !== playerId) return false
-    if (this.gameOver) return false
+  public drawCard(playerId: PlayerId): boolean {
+    if (this.playerOrder[this.currentTurnIndex] !== playerId || this.gameOver) return false
 
-    // If there are pending draws, take them ALL and end turn
+    this.safeDeclared.delete(playerId)
+
     if (this.pendingDraws > 0) {
       for (let i = 0; i < this.pendingDraws; i++) {
         this.drawOne(playerId)
@@ -141,16 +196,14 @@ export class CrazyEightsGame {
       return true
     }
 
-    // Normal draw
     this.drawOne(playerId)
     this.nextTurn(1)
     return true
   }
 
-  private drawOne(playerId: string) {
-    // Reshuffle discard if draw pile is empty
+  private drawOne(playerId: PlayerId) {
     if (this.drawPile.length === 0) {
-      if (this.discardPile.length <= 1) return // No cards left
+      if (this.discardPile.length <= 1) return
       const topCard = this.discardPile.pop()!
       this.drawPile = shuffleDeck(this.discardPile)
       this.discardPile = [topCard]
@@ -163,65 +216,78 @@ export class CrazyEightsGame {
   }
 
   private nextTurn(steps: number) {
-    const numPlayers = this.playerOrder.length
-    // Advance index by (steps * direction), wrapping around safely with modulo
+    const activePlayers = this.playerOrder.filter(p => !this.eliminatedPlayers.has(p))
+    const numPlayers = activePlayers.length
+    
     this.currentTurnIndex = (this.currentTurnIndex + (steps * this.turnDirection)) % numPlayers
     if (this.currentTurnIndex < 0) {
       this.currentTurnIndex += numPlayers
     }
 
-    // Simple Bot AI!
-    const currentPlayer = this.playerOrder[this.currentTurnIndex]
+    const currentPlayer = activePlayers[this.currentTurnIndex]
     if (currentPlayer === 'bot' && !this.gameOver) {
-      this.runBotTurn()
+      if (this.onBotTurnStart) {
+        this.onBotTurnStart()
+      } else {
+        this.runBotTurn()
+      }
     }
   }
 
-  private runBotTurn() {
-    const hand = this.players.get('bot')!
-    
-    // Find a playable card
-    let playableIndex = -1
-    for (let i = 0; i < hand.length; i++) {
-      if (this.isValidPlay(hand[i])) {
-        playableIndex = i
-        break
+  private botTryChallenge() {
+    const humanHand = this.players.get('player1')
+    if (this.isHandVulnerable(humanHand) && !this.safeDeclared.has('player1')) {
+      if (Math.random() <= 0.6) {
+        this.challengePlayer('bot', 'player1')
       }
     }
+  }
+
+  private botPlayOrDraw(hand: Card[]) {
+    const playableIndex = hand.findIndex(c => this.isValidPlay(c))
 
     if (playableIndex !== -1) {
-      // Play it!
       const playedCard = hand[playableIndex]
-      // Bot picks a random suit for Wilds and Jokers based on its hand
       let chosenSuit: Suit = 'Spades'
       if (playedCard.action === 'Wild' || playedCard.action === 'Draw4') {
         const suitsInHand = hand.filter(c => c.suit !== 'None').map(c => c.suit)
         if (suitsInHand.length > 0) {
-          chosenSuit = suitsInHand[0] // pick the first available suit it has
+          chosenSuit = suitsInHand[0]
         }
       }
-      
       this.playCard('bot', playableIndex, chosenSuit)
     } else {
-      // Draw 
       this.drawCard('bot')
     }
   }
 
-  private endRound() {
-    this.gameOver = true
-    
-    // Calculate scores
-    let highestScore = -1
-    let eliminatedPlayer = ''
-
-    for (const playerId of this.playerOrder) {
-      const hand = this.players.get(playerId)!
-      let score = 0
-      for (const card of hand) {
-        score += card.points
+  private botTryDeclare() {
+    const newHand = this.players.get('bot')!
+    if (this.isHandVulnerable(newHand) && !this.safeDeclared.has('bot')) {
+      if (Math.random() <= 0.7) {
+        this.declareLowCards('bot')
       }
+    }
+  }
+
+  public runBotTurn() {
+    const hand = this.players.get('bot')!
+    this.botTryChallenge()
+    this.botPlayOrDraw(hand)
+    this.botTryDeclare()
+  }
+
+  private calculateScores(): { highestScore: number, eliminatedPlayer: PlayerId, scoreBreakdown: string } {
+    let highestScore = -1
+    let eliminatedPlayer: PlayerId = ''
+    let breakdownLines: string[] = []
+
+    const activePlayers = this.playerOrder.filter(p => !this.eliminatedPlayers.has(p))
+    for (const playerId of activePlayers) {
+      const hand = this.players.get(playerId)!
+      const score = hand.reduce((sum, card) => sum + card.points, 0)
       this.scores.set(playerId, score)
+      breakdownLines.push(`${playerId.toUpperCase()}: ${score} pts`)
 
       if (score > highestScore) {
         highestScore = score
@@ -229,7 +295,30 @@ export class CrazyEightsGame {
       }
     }
 
+    return { highestScore, eliminatedPlayer, scoreBreakdown: breakdownLines.join('\n') }
+  }
+
+  private endRound(roundWinnerId: PlayerId) {
+    this.gameOver = true
+    
+    const { highestScore, eliminatedPlayer, scoreBreakdown } = this.calculateScores()
+
     console.log(`Game Over! Highest score: ${eliminatedPlayer} with ${highestScore} points. They are eliminated!`)
     this.eliminatedPlayers.add(eliminatedPlayer)
+    
+    const remaining = this.playerOrder.filter(p => !this.eliminatedPlayers.has(p))
+    let winner = remaining.length === 1 ? remaining[0] : undefined
+    
+    if (this.onNotification) {
+      if (winner) {
+        this.onNotification(`🏆 GAME OVER! ${winner.toUpperCase()} WINS THE WHOLE GAME! 🏆`)
+      } else {
+        this.onNotification(`🎉 ${roundWinnerId.toUpperCase()} WENT OUT! 🚨 ${eliminatedPlayer.toUpperCase()} ELIMINATED!`)
+      }
+    }
+
+    if (this.onRoundEnd) {
+      this.onRoundEnd(eliminatedPlayer, winner, scoreBreakdown, roundWinnerId)
+    }
   }
 }
