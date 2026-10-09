@@ -1,4 +1,4 @@
-import { engine, Transform, MeshRenderer, MeshCollider, Material, Entity } from '@dcl/sdk/ecs'
+import { engine, Transform, MeshRenderer, MeshCollider, Material, Entity, MaterialTransparencyMode } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion, Color4 } from '@dcl/sdk/math'
 
 export function buildHouse() {
@@ -23,10 +23,11 @@ export function buildHouse() {
     Transform.create(ent, { parent: houseEntity, position: pos, scale: scale })
     MeshRenderer.setBox(ent)
     MeshCollider.setBox(ent)
+    const transparency = color.a < 1.0 ? MaterialTransparencyMode.MTM_ALPHA_BLEND : MaterialTransparencyMode.MTM_AUTO
     if (emissive) {
-      Material.setPbrMaterial(ent, { albedoColor: color, emissiveColor: emissive, emissiveIntensity: 2.0 })
+      Material.setPbrMaterial(ent, { albedoColor: color, emissiveColor: emissive, emissiveIntensity: 2.0, transparencyMode: transparency })
     } else {
-      Material.setPbrMaterial(ent, { albedoColor: color })
+      Material.setPbrMaterial(ent, { albedoColor: color, transparencyMode: transparency })
     }
     return ent
   }
@@ -87,11 +88,6 @@ export function buildHouse() {
   const mainWater = addBlock(Vector3.create(poolX, waterH, poolZ), Vector3.create(poolW, 0.02, poolD), colorWater)
   MeshCollider.deleteFrom(mainWater)
 
-  // 7. FIREPLACE
-  addBlock(Vector3.create(7.5, 0.9, 16.5), Vector3.create(3.2, 1.8, 1.4), colorStone)
-  addBlock(Vector3.create(7.5, 2.6, 16.5), Vector3.create(1.8, 1.8, 1.1), colorStone)
-  addBlock(Vector3.create(7.5, 0.55, 16.05), Vector3.create(1.4, 0.8, 0.6), colorNavy) 
-  addBlock(Vector3.create(7.5, 0.60, 15.85), Vector3.create(1.1, 0.4, 0.2), colorFire, colorFire) 
 
   // 8. NEON SQUARE JACUZZI
   const jacX = -4.8, jacZ = 16.5
@@ -113,6 +109,51 @@ export function buildHouse() {
 
   const jacWater = addBlock(Vector3.create(jacX, jacWaterH, jacZ), Vector3.create(jacW, 0.02, jacD), colorWater)
   MeshCollider.deleteFrom(jacWater)
+
+  // 9. JACUZZI BOILING EFFECT & BUBBLES
+  const bubbleCount = 12
+  const bubbles: { ent: Entity, speed: number, offset: number, x: number, z: number }[] = []
+  
+  for (let i = 0; i < bubbleCount; i++) {
+      const b = engine.addEntity()
+      const bx = jacX + (Math.random() * jacW * 0.8) - (jacW * 0.4)
+      const bz = jacZ + (Math.random() * jacD * 0.8) - (jacD * 0.4)
+      Transform.create(b, {
+          parent: houseEntity,
+          position: Vector3.create(bx, jacWaterH, bz),
+          scale: Vector3.create(0.05, 0.05, 0.05)
+      })
+      MeshRenderer.setSphere(b)
+      Material.setPbrMaterial(b, { albedoColor: Color4.create(0.8, 0.9, 1.0, 0.6), transparencyMode: MaterialTransparencyMode.MTM_ALPHA_BLEND })
+      bubbles.push({ ent: b, speed: 0.5 + Math.random(), offset: Math.random() * 10, x: bx, z: bz })
+  }
+
+  let boilTime = 0
+  engine.addSystem((dt) => {
+      boilTime += dt
+      
+      // 1. Chaotic surface boil
+      const boilOffset = (Math.sin(boilTime * 12) * 0.015) + (Math.cos(boilTime * 18) * 0.01)
+      const waterTransform = Transform.getMutable(jacWater)
+      waterTransform.position.y = jacWaterH + boilOffset
+      
+      // 2. Bubbles rising, wobbling, and popping
+      for (const b of bubbles) {
+          const t = Transform.getMutable(b.ent)
+          // Cycle from bottom of jacuzzi up to the surface
+          const cycle = (boilTime * b.speed + b.offset) % 0.4
+          t.position.y = (jacWaterH - 0.3) + cycle
+          
+          // Shrink as they approach the surface
+          const life = cycle / 0.4
+          const scale = 0.06 * Math.sin(life * Math.PI) // bulge in middle, shrink at ends
+          t.scale = Vector3.create(scale, scale, scale)
+          
+          // Wobble side to side
+          t.position.x = b.x + Math.sin(boilTime * 8 + b.offset) * 0.03
+          t.position.z = b.z + Math.cos(boilTime * 7 + b.offset) * 0.03
+      }
+  })
 
   return houseEntity
 }
