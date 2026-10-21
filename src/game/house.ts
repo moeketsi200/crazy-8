@@ -1,5 +1,5 @@
-import { engine, Transform, MeshRenderer, MeshCollider, Material, Entity, MaterialTransparencyMode } from '@dcl/sdk/ecs'
-import { Vector3, Quaternion, Color4 } from '@dcl/sdk/math'
+import { engine, Transform, MeshRenderer, MeshCollider, Material, Entity, MaterialTransparencyMode, TextureWrapMode, TextureFilterMode } from '@dcl/sdk/ecs'
+import { Vector3, Quaternion, Color4, Color3, Vector2 } from '@dcl/sdk/math'
 
 export function buildHouse() {
   const houseEntity = engine.addEntity()
@@ -9,9 +9,9 @@ export function buildHouse() {
     scale: Vector3.create(0.9, 0.9, 0.9)
   })
 
-  const colorWood = Color4.fromHexString('#2E1A11')
+  const colorObsidianBase = Color4.fromHexString('#0a0c10')
   const colorNavy = Color4.fromHexString('#1A222E')
-  const colorFlagstone = Color4.fromHexString('#8C8070')
+  const colorSlateBase = Color4.fromHexString('#12141a')
   const colorStone = Color4.fromHexString('#333333') // Darker for modern look
   const colorWater = Color4.create(0.0, 0.6, 0.9, 0.8) 
   const colorFire = Color4.fromHexString('#FF5905')
@@ -41,11 +41,101 @@ export function buildHouse() {
     return ent
   }
 
-  // 1. FLOOR & PIT
-  addBlock(Vector3.create(0, -0.2, 0), Vector3.create(14.0, 0.4, 12.0), colorWood)
-  addCylinder(Vector3.create(0, 0.01, -0.15), Vector3.create(6.4, 0.02, 6.4), colorNavy)
+  function addWallpaperPlane(pos: Vector3, scale: Vector3, rot: Quaternion, tiling: Vector2): Entity {
+    const ent = engine.addEntity()
+    Transform.create(ent, { parent: houseEntity, position: pos, scale: scale, rotation: rot })
+    MeshRenderer.setPlane(ent)
+    Material.setPbrMaterial(ent, {
+      texture: Material.Texture.Common({
+        src: 'assets/images/dark_hex_grid.png',
+        wrapMode: TextureWrapMode.TWM_REPEAT,
+        filterMode: TextureFilterMode.TFM_TRILINEAR,
+        tiling: tiling
+      }),
+      emissiveTexture: Material.Texture.Common({
+        src: 'assets/images/dark_hex_emissive.png',
+        wrapMode: TextureWrapMode.TWM_REPEAT,
+        filterMode: TextureFilterMode.TFM_TRILINEAR
+      }),
+      emissiveColor: Color3.create(0.0, 0.95, 1.0),
+      emissiveIntensity: 1.2,
+      metallic: 0.5,
+      roughness: 0.35,
+      specularIntensity: 0.8
+    })
+    return ent
+  }
 
-  // 2. MAIN WALLS
+  function addBrickWallPlane(pos: Vector3, scale: Vector3, rot: Quaternion, tiling: Vector2): Entity {
+    const ent = engine.addEntity()
+    Transform.create(ent, { parent: houseEntity, position: pos, scale: scale, rotation: rot })
+    MeshRenderer.setPlane(ent)
+    Material.setPbrMaterial(ent, {
+      texture: Material.Texture.Common({
+        src: 'assets/images/dark_brick_wallpaper.jpg',
+        wrapMode: TextureWrapMode.TWM_REPEAT,
+        filterMode: TextureFilterMode.TFM_TRILINEAR,
+        tiling: tiling
+      }),
+      metallic: 0.0,
+      roughness: 0.85,
+      specularIntensity: 0.2
+    })
+    return ent
+  }
+
+  function addObsidianFloor(pos: Vector3, scale: Vector3, tiling: Vector2): Entity {
+    const ent = engine.addEntity()
+    Transform.create(ent, {
+      parent: houseEntity,
+      position: pos,
+      scale: scale,
+      rotation: Quaternion.fromEulerDegrees(90, 0, 0)
+    })
+    MeshRenderer.setPlane(ent)
+    Material.setPbrMaterial(ent, {
+      texture: Material.Texture.Common({
+        src: 'assets/images/polished_black_obsidian.png',
+        wrapMode: TextureWrapMode.TWM_REPEAT,
+        filterMode: TextureFilterMode.TFM_TRILINEAR,
+        tiling: tiling
+      }),
+      metallic: 0.15,
+      roughness: 0.08,
+      specularIntensity: 1.0
+    })
+    return ent
+  }
+
+  function addSlatePatioFloor(pos: Vector3, scale: Vector3, tiling: Vector2): Entity {
+    const ent = engine.addEntity()
+    Transform.create(ent, {
+      parent: houseEntity,
+      position: pos,
+      scale: scale,
+      rotation: Quaternion.fromEulerDegrees(90, 0, 0)
+    })
+    MeshRenderer.setPlane(ent)
+    Material.setPbrMaterial(ent, {
+      texture: Material.Texture.Common({
+        src: 'assets/images/charcoal_slate_patio.png',
+        wrapMode: TextureWrapMode.TWM_REPEAT,
+        filterMode: TextureFilterMode.TFM_TRILINEAR,
+        tiling: tiling
+      }),
+      metallic: 0.05,
+      roughness: 0.72,
+      specularIntensity: 0.4
+    })
+    return ent
+  }
+
+  // 1. FLOOR & PIT (Polished Black Obsidian / Gloss Epoxy)
+  addBlock(Vector3.create(0, -0.2, 0), Vector3.create(14.0, 0.4, 12.0), Color4.fromHexString('#0a0c10'))
+  addObsidianFloor(Vector3.create(0, 0.003, 0), Vector3.create(13.8, 11.8, 1.0), Vector2.create(3.5, 3.0))
+  addCylinder(Vector3.create(0, 0.01, -0.15), Vector3.create(6.4, 0.02, 6.4), Color4.fromHexString('#0c0e14'))
+
+  // 2. MAIN WALLS (Exterior Architectural Shell)
   addBlock(Vector3.create(-6.9, 4.0, 0), Vector3.create(0.2, 8.0, 12.0), colorNavy) 
   addBlock(Vector3.create(6.9, 4.0, 0), Vector3.create(0.2, 8.0, 12.0), colorNavy)  
 
@@ -57,11 +147,134 @@ export function buildHouse() {
   addBlock(Vector3.create(5.8, 4.0, -5.9), Vector3.create(2.4, 8.0, 0.2), colorNavy)
   addBlock(Vector3.create(0, 6.75, -5.9), Vector3.create(9.2, 2.50, 0.22), colorNavy) 
 
+  // 3.5. DARK HEXAGONAL SCI-FI CYBER GRID (INTERIOR VIP LOUNGE)
+  // Left Interior Wall (facing +X into the room)
+  addWallpaperPlane(
+    Vector3.create(-6.78, 4.0, 0),
+    Vector3.create(11.8, 8.0, 1.0),
+    Quaternion.fromEulerDegrees(0, -90, 0),
+    Vector2.create(3.0, 2.0)
+  )
+
+  // Right Interior Wall (facing -X into the room)
+  addWallpaperPlane(
+    Vector3.create(6.78, 4.0, 0),
+    Vector3.create(11.8, 8.0, 1.0),
+    Quaternion.fromEulerDegrees(0, 90, 0),
+    Vector2.create(3.0, 2.0)
+  )
+
+  // Back Interior Stub Walls & Header (facing +Z into the room)
+  addWallpaperPlane(
+    Vector3.create(-5.8, 4.0, -5.76),
+    Vector3.create(2.38, 8.0, 1.0),
+    Quaternion.fromEulerDegrees(0, 180, 0),
+    Vector2.create(0.6, 2.0)
+  )
+  addWallpaperPlane(
+    Vector3.create(5.8, 4.0, -5.76),
+    Vector3.create(2.38, 8.0, 1.0),
+    Quaternion.fromEulerDegrees(0, 180, 0),
+    Vector2.create(0.6, 2.0)
+  )
+  addWallpaperPlane(
+    Vector3.create(0, 6.75, -5.76),
+    Vector3.create(9.2, 2.50, 1.0),
+    Quaternion.fromEulerDegrees(0, 180, 0),
+    Vector2.create(2.3, 0.625)
+  )
+
+  // Front Interior Stub Walls & Header (facing -Z into the room)
+  addWallpaperPlane(
+    Vector3.create(-5.8, 4.0, 5.76),
+    Vector3.create(2.38, 8.0, 1.0),
+    Quaternion.fromEulerDegrees(0, 0, 0),
+    Vector2.create(0.6, 2.0)
+  )
+  addWallpaperPlane(
+    Vector3.create(5.8, 4.0, 5.76),
+    Vector3.create(2.38, 8.0, 1.0),
+    Quaternion.fromEulerDegrees(0, 0, 0),
+    Vector2.create(0.6, 2.0)
+  )
+  addWallpaperPlane(
+    Vector3.create(0, 6.75, 5.76),
+    Vector3.create(9.2, 2.50, 1.0),
+    Quaternion.fromEulerDegrees(0, 0, 0),
+    Vector2.create(2.3, 0.625)
+  ) 
+
+  // Interior Ceiling / Underside of Roof (facing -Y downwards into the room)
+  addWallpaperPlane(
+    Vector3.create(0, 7.98, 0),
+    Vector3.create(13.6, 11.6, 1.0),
+    Quaternion.fromEulerDegrees(-90, 0, 0),
+    Vector2.create(3.4, 2.9)
+  )
+
+  // 3.8. EXTERIOR DARK BRICK WALLPAPER
+  // Left Exterior Wall (facing -X)
+  addBrickWallPlane(
+    Vector3.create(-7.02, 4.0, 0),
+    Vector3.create(12.04, 8.0, 1.0),
+    Quaternion.fromEulerDegrees(0, 90, 0),
+    Vector2.create(6.0, 8.0)
+  )
+
+  // Right Exterior Wall (facing +X)
+  addBrickWallPlane(
+    Vector3.create(7.02, 4.0, 0),
+    Vector3.create(12.04, 8.0, 1.0),
+    Quaternion.fromEulerDegrees(0, -90, 0),
+    Vector2.create(6.0, 8.0)
+  )
+
+  // Back Exterior Stub Walls & Header (Entrance side, facing -Z)
+  addBrickWallPlane(
+    Vector3.create(-5.8, 4.0, -6.02),
+    Vector3.create(2.44, 8.0, 1.0),
+    Quaternion.fromEulerDegrees(0, 0, 0),
+    Vector2.create(1.22, 8.0)
+  )
+  addBrickWallPlane(
+    Vector3.create(5.8, 4.0, -6.02),
+    Vector3.create(2.44, 8.0, 1.0),
+    Quaternion.fromEulerDegrees(0, 0, 0),
+    Vector2.create(1.22, 8.0)
+  )
+  addBrickWallPlane(
+    Vector3.create(0, 6.75, -6.02),
+    Vector3.create(9.2, 2.50, 1.0),
+    Quaternion.fromEulerDegrees(0, 0, 0),
+    Vector2.create(4.6, 2.5)
+  )
+
+  // Front Exterior Stub Walls & Header (Patio side, facing +Z)
+  addBrickWallPlane(
+    Vector3.create(-5.8, 4.0, 6.02),
+    Vector3.create(2.44, 8.0, 1.0),
+    Quaternion.fromEulerDegrees(0, 180, 0),
+    Vector2.create(1.22, 8.0)
+  )
+  addBrickWallPlane(
+    Vector3.create(5.8, 4.0, 6.02),
+    Vector3.create(2.44, 8.0, 1.0),
+    Quaternion.fromEulerDegrees(0, 180, 0),
+    Vector2.create(1.22, 8.0)
+  )
+  addBrickWallPlane(
+    Vector3.create(0, 6.75, 6.02),
+    Vector3.create(9.2, 2.50, 1.0),
+    Quaternion.fromEulerDegrees(0, 180, 0),
+    Vector2.create(4.6, 2.5)
+  )
+
   // 4. ROOF
   addBlock(Vector3.create(0, 8.1, 0), Vector3.create(14.5, 0.2, 12.5), colorNavy)
 
-  // 5. CHILLERS OASIS PATIO
-  addBlock(Vector3.create(0, -0.22, 16.5), Vector3.create(22.0, 0.38, 21.0), colorFlagstone)
+  // 5. CHILLERS OASIS PATIO (Charcoal Basalt Pavers / Dark Slate Slabs)
+  addBlock(Vector3.create(0, -0.22, 16.5), Vector3.create(22.0, 0.38, 21.0), colorSlateBase)
+  addSlatePatioFloor(Vector3.create(0, -0.027, 16.5), Vector3.create(21.96, 20.96, 1.0), Vector2.create(11.0, 10.5))
 
   // 6. NEON LUXURY POOL (Hollow Rectangular)
   const poolX = 1.0, poolZ = 14.5

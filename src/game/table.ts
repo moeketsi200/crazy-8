@@ -57,7 +57,17 @@ export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
   })
   MeshRenderer.setBox(drawPile)
   MeshCollider.setBox(drawPile)
-  Material.setPbrMaterial(drawPile, { albedoColor: Color4.Red() })
+  Material.setPbrMaterial(drawPile, {
+    texture: Material.Texture.Common({
+      src: 'assets/images/card_back_logo.png'
+    }),
+    emissiveTexture: Material.Texture.Common({
+      src: 'assets/images/card_back_emissive.png'
+    }),
+    emissiveIntensity: 1.8,
+    roughness: 0.3,
+    metallic: 0.1
+  })
   
   pointerEventsSystem.onPointerDown(
     { entity: drawPile, opts: { button: InputAction.IA_PRIMARY, hoverText: 'Draw Card' } },
@@ -80,7 +90,13 @@ export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
     rotation: Quaternion.fromEulerDegrees(0, 15, 0)
   })
   MeshRenderer.setBox(discardPile)
-  Material.setPbrMaterial(discardPile, { albedoColor: Color4.White() })
+  Material.setPbrMaterial(discardPile, {
+    texture: Material.Texture.Common({
+      src: 'assets/images/card_front_cyber.png'
+    }),
+    roughness: 0.3,
+    metallic: 0.1
+  })
 
   Transform.create(discardText, {
     parent: discardPile,
@@ -225,11 +241,11 @@ engine.addSystem(autoUpdateTableSystem)
 
 function getSuitVisuals(suit: string): { symbol: string, color: Color4 } {
   switch (suit) {
-    case 'Hearts': return { symbol: '♥', color: Color4.Red() }
-    case 'Diamonds': return { symbol: '♦', color: Color4.Red() }
-    case 'Clubs': return { symbol: '♣', color: Color4.Black() }
-    case 'Spades': return { symbol: '♠', color: Color4.Black() }
-    default: return { symbol: '', color: Color4.Black() }
+    case 'Hearts': return { symbol: '♥', color: Color4.fromHexString('#ff007b') }
+    case 'Diamonds': return { symbol: '♦', color: Color4.fromHexString('#ff007b') }
+    case 'Clubs': return { symbol: '♣', color: Color4.fromHexString('#00f3ff') }
+    case 'Spades': return { symbol: '♠', color: Color4.fromHexString('#00f3ff') }
+    default: return { symbol: '', color: Color4.White() }
   }
 }
 
@@ -280,7 +296,17 @@ function spawnSingleOpponentHand(playerId: string, numCards: number) {
       rotation: Quaternion.fromEulerDegrees(0, -(angleDeg + 15 + (offset * 100)), 0)
     })
     MeshRenderer.setBox(cardEnt)
-    Material.setPbrMaterial(cardEnt, { albedoColor: Color4.fromHexString('#BF0D0D') }) 
+    Material.setPbrMaterial(cardEnt, {
+      texture: Material.Texture.Common({
+        src: 'assets/images/card_back_logo.png'
+      }),
+      emissiveTexture: Material.Texture.Common({
+        src: 'assets/images/card_back_emissive.png'
+      }),
+      emissiveIntensity: 1.8,
+      roughness: 0.3,
+      metallic: 0.1
+    }) 
     
     MeshCollider.setBox(cardEnt, ColliderLayer.CL_POINTER)
     pointerEventsSystem.onPointerDown(

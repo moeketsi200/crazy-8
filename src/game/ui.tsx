@@ -46,24 +46,29 @@ function getCardSymbol(card: Card): string {
 }
 
 function getCardColor(card: Card): Color4 {
-  return (card.suit === 'Hearts' || card.suit === 'Diamonds') ? Color4.Red() : Color4.Black()
+  return (card.suit === 'Hearts' || card.suit === 'Diamonds') 
+    ? Color4.fromHexString('#ff007b') 
+    : Color4.fromHexString('#00f3ff')
 }
 
 function PlayingCard(props: { key?: string|number, card: Card, isPlayable: boolean, onClick?: () => void }) {
   const { card, isPlayable, onClick } = props
   const color = getCardColor(card)
   const symbol = getCardSymbol(card)
-  const bgColor = isPlayable ? Color4.White() : Color4.fromHexString('#aaaaaaff')
+  const isRed = card.suit === 'Hearts' || card.suit === 'Diamonds'
+  const neonAccent = isRed ? Color4.fromHexString('#ff007b') : Color4.fromHexString('#00f3ff')
+  const borderColor = isPlayable ? neonAccent : Color4.fromHexString('#232838')
+  const cardBg = isPlayable ? Color4.fromHexString('#0b0e14') : Color4.fromHexString('#141720')
 
   return (
     <UiEntity
       uiTransform={{
-        width: 80,
-        height: 120,
+        width: 82,
+        height: 122,
         margin: { left: 5, right: 5 },
-        padding: 2, // Creates a crisp black border!
+        padding: 2,
       }}
-      uiBackground={{ color: Color4.Black() }}
+      uiBackground={{ color: borderColor }}
       onMouseDown={onClick}
     >
       <UiEntity
@@ -72,26 +77,26 @@ function PlayingCard(props: { key?: string|number, card: Card, isPlayable: boole
           height: '100%',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          padding: 4
+          padding: 6
         }}
-        uiBackground={{ color: bgColor }}
+        uiBackground={{ color: cardBg }}
       >
         {/* Top Left Rank/Suit */}
         <UiEntity
-          uiTransform={{ width: '100%', height: 35 }}
-          uiText={{ value: `${card.rank}\n${symbol}`, fontSize: 14, color: color, textAlign: 'top-left' }}
+          uiTransform={{ width: '100%', height: 32 }}
+          uiText={{ value: `${card.rank}\n${symbol}`, fontSize: 13, color: color, textAlign: 'top-left' }}
         />
         
         {/* Center Huge Suit */}
         <UiEntity
-          uiTransform={{ width: '100%', height: 40 }}
-          uiText={{ value: symbol, fontSize: 45, color: color, textAlign: 'middle-center' }}
+          uiTransform={{ width: '100%', height: 42, alignItems: 'center', justifyContent: 'center' }}
+          uiText={{ value: symbol, fontSize: 44, color: color, textAlign: 'middle-center' }}
         />
 
         {/* Bottom Right Rank/Suit */}
         <UiEntity
-          uiTransform={{ width: '100%', height: 35 }}
-          uiText={{ value: `${card.rank}\n${symbol}`, fontSize: 14, color: color, textAlign: 'bottom-right' }}
+          uiTransform={{ width: '100%', height: 32 }}
+          uiText={{ value: `${card.rank}\n${symbol}`, fontSize: 13, color: color, textAlign: 'bottom-right' }}
         />
       </UiEntity>
     </UiEntity>
@@ -101,28 +106,17 @@ function PlayingCard(props: { key?: string|number, card: Card, isPlayable: boole
 function DrawDeckCard(props: { onClick?: () => void }) {
   return (
     <UiEntity
-      uiTransform={{ width: 80, height: 120, margin: { left: 15, right: 15 }, padding: 3 }}
-      uiBackground={{ color: Color4.White() }} // Outer white border
+      uiTransform={{ width: 82, height: 122, margin: { left: 15, right: 15 }, padding: 2 }}
+      uiBackground={{ color: Color4.fromHexString('#00f3ff') }}
       onMouseDown={props.onClick}
     >
       <UiEntity
-        uiTransform={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}
-        uiBackground={{ color: Color4.fromHexString('#b30000ff') }} // Deep Casino Red
-      >
-        <UiEntity
-          uiTransform={{ width: '85%', height: '85%', padding: 2 }}
-          uiBackground={{ color: Color4.White() }} // Inner white ring
-        >
-          <UiEntity
-            uiTransform={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}
-            uiBackground={{ color: Color4.fromHexString('#b30000ff') }}
-          >
-            <UiEntity
-              uiText={{ value: 'DRAW\nDECK', fontSize: 16, color: Color4.White(), textAlign: 'middle-center' }}
-            />
-          </UiEntity>
-        </UiEntity>
-      </UiEntity>
+        uiTransform={{ width: '100%', height: '100%' }}
+        uiBackground={{
+          textureMode: 'stretch',
+          texture: { src: 'assets/images/card_back_logo.png' }
+        }}
+      />
     </UiEntity>
   )
 }

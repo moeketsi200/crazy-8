@@ -7,6 +7,7 @@ import { buildHouse } from './game/house'
 import { buildFurniture } from './game/furniture'
 import { buildBeachSeats } from './game/beach_seats'
 import { buildLights } from './game/lights'
+import { buildRooftop } from './game/rooftop'
 import { setupUI } from './game/ui'
 import { buildInfoBoard, showGameButton } from './game/info_board'
 import { buildScoreBoard, updateScoreBoardText, updateHighWinningsText } from './game/score_board'
@@ -23,6 +24,9 @@ export function main() {
 
     // 3. Build the glowing accent lights
     buildLights(houseEntity)
+
+    // 3.2. Build Rooftop VIP Deck / Terrace
+    buildRooftop(houseEntity)
     
     // 3.5. Build the Rules Info Board
     

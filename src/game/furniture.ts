@@ -1,5 +1,5 @@
 import { engine, Transform, MeshRenderer, MeshCollider, Material, Entity, TextShape, TextAlignMode, GltfContainer } from '@dcl/sdk/ecs'
-import { Vector3, Quaternion, Color4 } from '@dcl/sdk/math'
+import { Vector3, Quaternion, Color4, Color3 } from '@dcl/sdk/math'
 
 function createBox(parent: Entity, pos: Vector3, scale: Vector3, color: Color4, rot: Quaternion = Quaternion.Identity()) {
     const ent = engine.addEntity()
@@ -81,9 +81,33 @@ export function buildDJBooth(houseEntity: Entity) {
 
     // 1. DJ PLATFORM (Raised floor)
     createBox(djGroup, Vector3.create(0, 0.1, 0), Vector3.create(3.0, 0.2, 2.5), colorBlack)
-    // Platform LED Strip (Pink)
-    const platLed = createBox(djGroup, Vector3.create(-1.48, 0.2, 0), Vector3.create(0.05, 0.02, 2.5), colorBlack)
-    Material.setPbrMaterial(platLed, { albedoColor: colorNeonPink, emissiveColor: colorNeonPink, emissiveIntensity: 2.0 })
+    // Platform Front Step LED Strip (Hot Magenta #ff007b underglow)
+    const platLed = createBox(djGroup, Vector3.create(-1.48, 0.2, 0), Vector3.create(0.06, 0.04, 2.5), colorBlack)
+    Material.setPbrMaterial(platLed, {
+        albedoColor: colorNeonPink,
+        emissiveColor: Color3.fromHexString('#ff007b'),
+        emissiveIntensity: 3.8,
+        roughness: 0.1,
+        metallic: 0.1
+    })
+
+    // Platform Side Neon Glow Strips (Electric Cyan #00f3ff)
+    const platLedSideL = createBox(djGroup, Vector3.create(0, 0.2, 1.23), Vector3.create(3.0, 0.04, 0.04), colorBlack)
+    Material.setPbrMaterial(platLedSideL, {
+        albedoColor: colorNeonBlue,
+        emissiveColor: Color3.fromHexString('#00f3ff'),
+        emissiveIntensity: 3.5,
+        roughness: 0.1,
+        metallic: 0.1
+    })
+    const platLedSideR = createBox(djGroup, Vector3.create(0, 0.2, -1.23), Vector3.create(3.0, 0.04, 0.04), colorBlack)
+    Material.setPbrMaterial(platLedSideR, {
+        albedoColor: colorNeonBlue,
+        emissiveColor: Color3.fromHexString('#00f3ff'),
+        emissiveIntensity: 3.5,
+        roughness: 0.1,
+        metallic: 0.1
+    })
 
     // 2. MAIN BOOTH STRUCTURE (Angled Front)
     // Base block
@@ -93,11 +117,23 @@ export function buildDJBooth(houseEntity: Entity) {
     // Thick Countertop
     createBox(djGroup, Vector3.create(-0.65, 1.12, 0), Vector3.create(1.0, 0.08, 2.1), colorBlack)
     
-    // Front LED Strips (Top and Bottom of panel)
-    const ledTop = createBox(djGroup, Vector3.create(-1.12, 1.05, 0), Vector3.create(0.02, 0.02, 1.9), colorBlack, Quaternion.fromEulerDegrees(0, 0, 15))
-    Material.setPbrMaterial(ledTop, { albedoColor: colorNeonBlue, emissiveColor: colorNeonBlue, emissiveIntensity: 2.5 })
-    const ledBot = createBox(djGroup, Vector3.create(-0.90, 0.25, 0), Vector3.create(0.02, 0.02, 1.9), colorBlack, Quaternion.fromEulerDegrees(0, 0, 15))
-    Material.setPbrMaterial(ledBot, { albedoColor: colorNeonBlue, emissiveColor: colorNeonBlue, emissiveIntensity: 2.5 })
+    // Front LED Strips (Top and Bottom of panel in Electric Cyan)
+    const ledTop = createBox(djGroup, Vector3.create(-1.12, 1.05, 0), Vector3.create(0.03, 0.03, 1.95), colorBlack, Quaternion.fromEulerDegrees(0, 0, 15))
+    Material.setPbrMaterial(ledTop, {
+        albedoColor: colorNeonBlue,
+        emissiveColor: Color3.fromHexString('#00f3ff'),
+        emissiveIntensity: 3.6,
+        roughness: 0.1,
+        metallic: 0.1
+    })
+    const ledBot = createBox(djGroup, Vector3.create(-0.90, 0.25, 0), Vector3.create(0.03, 0.03, 1.95), colorBlack, Quaternion.fromEulerDegrees(0, 0, 15))
+    Material.setPbrMaterial(ledBot, {
+        albedoColor: colorNeonBlue,
+        emissiveColor: Color3.fromHexString('#00f3ff'),
+        emissiveIntensity: 3.6,
+        roughness: 0.1,
+        metallic: 0.1
+    })
 
     // FRONT LOGO TEXT
     const logoText = engine.addEntity()
