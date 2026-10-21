@@ -55,9 +55,8 @@ export function buildPrimitiveChair(parentHouse: Entity, cx: number, cz: number,
         scale: Vector3.create(1, 1.2, 1) // Scaled up 20% in Y so cushion meets avatar hips
     })
 
-    // Left-side chairs (cx >= -0.05, facing DJ booth) get Electric Cyan (#00f3ff)
-    // Right-side chairs (cx < -0.05, facing patio / brick wall) get Hot Magenta (#ff007b)
-    const isCyan = cx >= -0.05
+    // All chairs styled in matching Electric Cyan (#00f3ff)
+    const isCyan = true
     const colAccent = isCyan ? Color4.fromHexString('#00f3ff') : Color4.fromHexString('#ff007b')
     const colGlow = isCyan ? Color3.fromHexString('#00f3ff') : Color3.fromHexString('#ff007b')
     const glowIntensity = 2.8

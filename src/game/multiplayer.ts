@@ -39,16 +39,25 @@ export function setupMultiplayer(gameEngine: CrazyEightsGame) {
     if (!isStateSyncronized()) return
 
     const currentState = SyncGameState.getOrNull(syncEntityInstance)
-    if (currentState) {
-      // If we receive a newer state from another player, apply it
-      if (currentState.updateId > localUpdateId) {
-        localUpdateId = currentState.updateId
-        gameEngine.deserialize(currentState.stateJson)
-      } else if (!hasAppliedInitialSync && currentState.stateJson) {
-        // Initial sync on join
-        localUpdateId = currentState.updateId
-        gameEngine.deserialize(currentState.stateJson)
-        hasAppliedInitialSync = true
+    if (currentState && currentState.stateJson) {
+      // Validate that stateJson is non-empty before deserializing
+      let isValidPayload = false
+      try {
+        const parsed = JSON.parse(currentState.stateJson)
+        if (parsed && Array.isArray(parsed.playerOrder) && parsed.playerOrder.length > 0) {
+          isValidPayload = true
+        }
+      } catch {}
+
+      if (isValidPayload) {
+        if (currentState.updateId > localUpdateId) {
+          localUpdateId = currentState.updateId
+          gameEngine.deserialize(currentState.stateJson)
+        } else if (!hasAppliedInitialSync) {
+          localUpdateId = currentState.updateId
+          gameEngine.deserialize(currentState.stateJson)
+          hasAppliedInitialSync = true
+        }
       }
     }
   })

@@ -35,7 +35,10 @@ export function main() {
     // 4. Start the Crazy 8 Game Backend
     const gameEngine = new CrazyEightsGame()
 
-    // 4.5 Set up Multiplayer Sync
+    // 5. Setup the Draw Pile, Discard Pile, and clickable Chairs (registers players & bot)!
+    setup3DTable(gameEngine, houseEntity)
+
+    // 4.5 Set up Multiplayer Sync (now serializes with players already present)
     setupMultiplayer(gameEngine)
     gameEngine.onStateChanged = () => {
       pushGameState(gameEngine)
@@ -52,9 +55,6 @@ export function main() {
         showGameButton('CONTINUE\n(Next Round)', 'CONTINUE')
       }
     }
-
-    // 5. Setup the Draw Pile, Discard Pile, and clickable Chairs!
-    setup3DTable(gameEngine, houseEntity)
 
     // Set up the Rules Board and 3D Start Button
     buildInfoBoard(houseEntity, gameEngine)

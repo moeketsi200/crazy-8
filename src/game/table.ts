@@ -40,6 +40,45 @@ const discardText = engine.addEntity()
 
 let globalHouseEntity: Entity
 let spawnedOpponentCards: Entity[] = []
+export let globalGame: CrazyEightsGame | null = null
+
+export function resolvePlayerId(game?: CrazyEightsGame): string {
+  const actualId = getPlayer()?.userId
+  const targetGame = game || globalGame
+
+  if (!targetGame) return actualId || 'player1'
+
+  // If actualId is known and game has 'player1', migrate 'player1' to actualId
+  if (actualId && actualId !== 'player1') {
+    if (targetGame.players.has('player1') && !targetGame.players.has(actualId)) {
+      const hand = targetGame.players.get('player1') || []
+      const score = targetGame.scores.get('player1') || 0
+      targetGame.players.delete('player1')
+      targetGame.players.set(actualId, hand)
+      targetGame.scores.delete('player1')
+      targetGame.scores.set(actualId, score)
+      const orderIdx = targetGame.playerOrder.indexOf('player1')
+      if (orderIdx !== -1) {
+        targetGame.playerOrder[orderIdx] = actualId
+      }
+      if (targetGame.safeDeclared.has('player1')) {
+        targetGame.safeDeclared.delete('player1')
+        targetGame.safeDeclared.add(actualId)
+      }
+      targetGame.onStateChanged?.()
+    }
+    if (!targetGame.players.has(actualId)) {
+      targetGame.addPlayer(actualId)
+    }
+    return actualId
+  }
+
+  // Fallback: if actualId not available, ensure 'player1' exists in game
+  if (!targetGame.players.has('player1') && targetGame.playerOrder.length === 0) {
+    targetGame.addPlayer('player1')
+  }
+  return 'player1'
+}
 
 export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
   globalHouseEntity = furnitureRoot
@@ -72,9 +111,10 @@ export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
   pointerEventsSystem.onPointerDown(
     { entity: drawPile, opts: { button: InputAction.IA_PRIMARY, hoverText: 'Draw Card' } },
     () => {
-      const success = game.drawCard(getPlayer()?.userId || 'player1')
+      const myId = resolvePlayerId(game)
+      const success = game.drawCard(myId)
       if (success) {
-        console.log(`You drew a card! Your hand now has ${game.players.get(getPlayer()?.userId || 'player1')?.length} cards.`)
+        console.log(`You drew a card! Your hand now has ${game.players.get(myId)?.length} cards.`)
         update3DTable(game)
       } else {
         console.log("It's not your turn, or the deck is empty!")
@@ -118,7 +158,8 @@ export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
   }
 
   // 4. ADD PLAYERS
-  game.addPlayer(getPlayer()?.userId || 'player1')
+  const initialId = resolvePlayerId(game)
+  game.addPlayer(initialId)
   game.addPlayer('bot')
   
   // 5. BOT THINKING DELAY
@@ -167,7 +208,7 @@ class CasinoChair {
     
     this.sitPosition = Vector3.create(
       16 - (sitCx * 0.9),  // World X
-      0.0,                 // World Y (Ensure we are fully grounded to prevent falling cancellation)
+      0.15,                // World Y (Cleanly on top of floor surface)
       25 - (sitCz * 0.9)   // World Z
     )
 
@@ -183,6 +224,13 @@ class CasinoChair {
 
   private occupy() {
     setPlayerSeated(true)
+    if (globalGame) {
+      resolvePlayerId(globalGame)
+      if (!globalGame.isStarted) {
+        globalGame.startGame()
+      }
+      update3DTable(globalGame)
+    }
     movePlayerTo({
       newRelativePosition: this.sitPosition,
       cameraTarget: this.lookAtPosition,
@@ -222,7 +270,6 @@ export function setPlayerSeated(value: boolean) {
 // System to automatically update the 3D table when the bot (or anyone) plays a card
 let lastTopCardStr = ''
 let lastBotHandSize = -1
-let globalGame: CrazyEightsGame | null = null
 
 export function autoUpdateTableSystem(dt: number) {
   if (!globalGame || !globalGame.isStarted || globalGame.discardPile.length === 0) return
@@ -313,7 +360,8 @@ function spawnSingleOpponentHand(playerId: string, numCards: number) {
       { entity: cardEnt, opts: { button: InputAction.IA_PRIMARY, hoverText: `Challenge ${playerId}!` } },
       () => {
         if (globalGame) {
-          globalGame.challengePlayer(getPlayer()?.userId || 'player1', playerId)
+          const myId = resolvePlayerId(globalGame)
+          globalGame.challengePlayer(myId, playerId)
           update3DTable(globalGame)
         }
       }
@@ -325,9 +373,10 @@ function spawnSingleOpponentHand(playerId: string, numCards: number) {
 
 function spawnOpponentCardsVisuals(game: CrazyEightsGame) {
   clearOpponentCards()
+  const myId = resolvePlayerId(game)
 
   for (const [playerId, hand] of game.players.entries()) {
-    if (playerId !== (getPlayer()?.userId || 'player1')) {
+    if (playerId !== myId) {
       spawnSingleOpponentHand(playerId, hand.length)
     }
   }

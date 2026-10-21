@@ -47,6 +47,10 @@ export class CrazyEightsGame {
   public deserialize(json: string) {
     try {
       const state = JSON.parse(json)
+      // Guard: do not overwrite active or valid local state with empty uninitialized data
+      if (!state || !Array.isArray(state.playerOrder) || state.playerOrder.length === 0) {
+        return
+      }
       this.players = new Map(state.players)
       this.playerOrder = state.playerOrder
       this.drawPile = state.drawPile
@@ -69,7 +73,7 @@ export class CrazyEightsGame {
   }
 
   public addPlayer(playerId: PlayerId) {
-    if (!this.isStarted && !this.players.has(playerId)) {
+    if (!this.players.has(playerId)) {
       this.players.set(playerId, [])
       this.playerOrder.push(playerId)
       this.scores.set(playerId, 0)
@@ -78,7 +82,16 @@ export class CrazyEightsGame {
   }
 
   public startGame() {
-    if (this.playerOrder.length < 2) return
+    // Ensure we always have the player and the bot ready before dealing
+    if (this.playerOrder.length === 0) {
+      this.addPlayer('player1')
+    }
+    if (!this.playerOrder.includes('bot')) {
+      this.addPlayer('bot')
+    }
+    if (this.playerOrder.length < 2) {
+      this.addPlayer('bot')
+    }
 
     this.drawPile = shuffleDeck(generateDeck())
     this.discardPile = []

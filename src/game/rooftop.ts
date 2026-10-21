@@ -1,5 +1,6 @@
 import { engine, Transform, MeshRenderer, MeshCollider, Material, Entity, MaterialTransparencyMode } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion, Color4, Color3 } from '@dcl/sdk/math'
+import { buildElevator } from './elevator'
 
 function createBox(
   parent: Entity,
@@ -74,7 +75,7 @@ function createCylinder(
 export function buildRooftop(houseEntity: Entity) {
   buildRooftopDeck(houseEntity)
   buildPerimeterRailing(houseEntity)
-  buildSpiralStaircase(houseEntity)
+  buildElevator(houseEntity)
   buildRooftopBar(houseEntity)
   buildRooftopLoungers(houseEntity)
   buildRooftopLoungeSofa(houseEntity)
@@ -109,7 +110,7 @@ function buildRooftopDeck(houseEntity: Entity) {
 
 /**
  * 2. PERIMETER GLASS BALUSTRADE & NEON BASEBOARDS
- * With an opening on the East side (x = 7.15, z ~ 3.5) for the spiral staircase
+ * With an opening on the East side (x = 7.15, z ~ 3.5) for the VIP elevator
  */
 function buildPerimeterRailing(houseEntity: Entity) {
   const glassColor = Color4.create(0.12, 0.18, 0.25, 0.40)
@@ -139,7 +140,7 @@ function buildPerimeterRailing(houseEntity: Entity) {
   createBox(houseEntity, Vector3.create(-7.15, 8.2 + railH, 0), Vector3.create(0.10, 0.06, 12.35), railMetal)
   createBox(houseEntity, Vector3.create(-7.12, 8.24, 0), Vector3.create(0.06, 0.04, 12.3), colNeonCyan, Quaternion.Identity(), neonCyan, 3.0, false)
 
-  // D. Right Balustrade (x = 7.15) - Broken into two sections to leave 1.4m opening for stairs at z ~ 3.5
+  // D. Right Balustrade (x = 7.15) - Broken into two sections to leave 1.4m opening for the VIP elevator at z ~ 3.5
   // Back section: z from -6.15 to +2.6 (length 8.75m, center z = -1.775)
   createBox(houseEntity, Vector3.create(7.15, railY, -1.775), Vector3.create(0.04, railH, 8.75), glassColor)
   createBox(houseEntity, Vector3.create(7.15, 8.2 + railH, -1.775), Vector3.create(0.10, 0.06, 8.75), railMetal)
@@ -150,7 +151,7 @@ function buildPerimeterRailing(houseEntity: Entity) {
   createBox(houseEntity, Vector3.create(7.15, 8.2 + railH, 5.175), Vector3.create(0.10, 0.06, 1.95), railMetal)
   createBox(houseEntity, Vector3.create(7.12, 8.24, 5.175), Vector3.create(0.06, 0.04, 1.95), colNeonCyan, Quaternion.Identity(), neonCyan, 3.0, false)
 
-  // VIP Entrance Gateway Posts (flanking the staircase opening at z = 2.6 and z = 4.2)
+  // VIP Entrance Gateway Posts (flanking the elevator opening at z = 2.6 and z = 4.2)
   for (const pz of [2.6, 4.2]) {
     createBox(houseEntity, Vector3.create(7.15, 8.2 + railH / 2, pz), Vector3.create(0.12, railH + 0.1, 0.12), railMetal)
     // Small glowing cyan top cap
@@ -159,224 +160,7 @@ function buildPerimeterRailing(houseEntity: Entity) {
 }
 
 /**
- * 3. OUTDOOR SPIRAL STAIRCASE
- * Positioned on the side at x = 8.1, z = 3.4.
- * Ascends from y = 0.0 up to y = 8.20.
- * 28 steps (rise ~ 0.29m per step), winding up seamlessly to the rooftop entrance.
- */
-function buildSpiralStaircase(houseEntity: Entity) {
-  const centerX = 8.1
-  const centerZ = 3.4
-  const totalH = 8.20
-  const stepsCount = 28
-  const risePerStep = totalH / stepsCount
-
-  const colPillar = Color4.fromHexString('#1A1C22')
-  const colTread = Color4.fromHexString('#101216')
-  const colCyan = Color3.fromHexString('#00f3ff')
-  const colorCyan = Color4.fromHexString('#00f3ff')
-  const colRail = Color4.fromHexString('#2A2E38')
-
-  // Center structural pillar
-  createCylinder(
-    houseEntity,
-    Vector3.create(centerX, (totalH + 1.2) / 2, centerZ),
-    Vector3.create(0.35, totalH + 1.2, 0.35),
-    colPillar
-  )
-
-  // Top decorative finial on pillar
-  createCylinder(
-    houseEntity,
-    Vector3.create(centerX, totalH + 1.2 + 0.1, centerZ),
-    Vector3.create(0.42, 0.15, 0.42),
-    colorCyan,
-    Quaternion.Identity(),
-    colCyan,
-    2.5,
-    false
-  )
-
-  // 1.25 turns = 450 degrees.
-  // Top step (#27) lands at angle 180 degrees (facing West towards the house opening at x = 7.15).
-  // Step 0 starts at 180 - 450 = -270 = +90 degrees (facing North towards the patio).
-  const startAngle = 90.0
-  const totalRotation = 450.0
-  const anglePerStep = totalRotation / (stepsCount - 1)
-  const treadLength = 1.35
-  const treadDist = treadLength / 2 + 0.15
-
-  const glassColor = Color4.create(0.12, 0.20, 0.28, 0.40)
-  const railMetal = Color4.fromHexString('#141720')
-
-  for (let i = 0; i < stepsCount; i++) {
-    const angleDeg = startAngle + i * anglePerStep
-    const angleRad = (angleDeg * Math.PI) / 180
-    const stepY = (i + 1) * risePerStep
-
-    // Position of tread center
-    const tx = centerX + Math.cos(angleRad) * treadDist
-    const tz = centerZ + Math.sin(angleRad) * treadDist
-
-    // Rotation so step radiates from the center pillar
-    const stepRot = Quaternion.fromEulerDegrees(0, -angleDeg + 90, 0)
-
-    // Solid Tread (Walkable!)
-    createBox(
-      houseEntity,
-      Vector3.create(tx, stepY - 0.04, tz),
-      Vector3.create(0.48, 0.08, treadLength),
-      colTread,
-      stepRot,
-      undefined,
-      0,
-      true
-    )
-
-    // Glowing Cyan LED Strip under the front edge of each tread
-    createBox(
-      houseEntity,
-      Vector3.create(tx, stepY - 0.07, tz),
-      Vector3.create(0.04, 0.02, treadLength * 0.9),
-      colorCyan,
-      stepRot,
-      colCyan,
-      2.0,
-      false
-    )
-
-    // 1. OUTER PROTECTIVE GLASS BALUSTRADE (1.15m height with solid collider)
-    const glassDist = treadDist + treadLength / 2 + 0.02 // r ~ 1.52m
-    const gx = centerX + Math.cos(angleRad) * glassDist
-    const gz = centerZ + Math.sin(angleRad) * glassDist
-    const glassH = 1.15
-
-    createBox(
-      houseEntity,
-      Vector3.create(gx, stepY + glassH / 2, gz),
-      Vector3.create(0.48, glassH, 0.03),
-      glassColor,
-      stepRot,
-      undefined,
-      0,
-      true
-    )
-
-    // Dark Metal Handrail Cap along the outer glass top
-    createBox(
-      houseEntity,
-      Vector3.create(gx, stepY + glassH + 0.02, gz),
-      Vector3.create(0.50, 0.04, 0.08),
-      railMetal,
-      stepRot,
-      undefined,
-      0,
-      false
-    )
-
-    // Glowing Cyan LED accent ribbon at base of protective glass
-    createBox(
-      houseEntity,
-      Vector3.create(gx, stepY + 0.02, gz),
-      Vector3.create(0.48, 0.02, 0.04),
-      colorCyan,
-      stepRot,
-      colCyan,
-      2.5,
-      false
-    )
-
-    // 2. OVERHEAD PROTECTIVE GLASS CANOPY (2.4m headroom over stairs)
-    const canopyDist = centerX + Math.cos(angleRad) * (treadDist * 0.95)
-    const canopyZ = centerZ + Math.sin(angleRad) * (treadDist * 0.95)
-    const canopyH = 2.40
-
-    // Overhead protective glass roof segment
-    createBox(
-      houseEntity,
-      Vector3.create(canopyDist, stepY + canopyH, canopyZ),
-      Vector3.create(0.52, 0.03, treadLength + 0.35),
-      glassColor,
-      stepRot,
-      undefined,
-      0,
-      false
-    )
-
-    // Structural titanium overhead support rib
-    createBox(
-      houseEntity,
-      Vector3.create(canopyDist, stepY + canopyH + 0.03, canopyZ),
-      Vector3.create(0.05, 0.04, treadLength + 0.40),
-      railMetal,
-      stepRot,
-      undefined,
-      0,
-      false
-    )
-
-    // Glowing Neon Cyan spine along the outer rim of the glass canopy
-    const spineDist = centerX + Math.cos(angleRad) * (treadLength + 0.25)
-    const spineZ = centerZ + Math.sin(angleRad) * (treadLength + 0.25)
-    createBox(
-      houseEntity,
-      Vector3.create(spineDist, stepY + canopyH + 0.03, spineZ),
-      Vector3.create(0.52, 0.03, 0.03),
-      colorCyan,
-      stepRot,
-      colCyan,
-      3.0,
-      false
-    )
-  }
-
-  // Connecting bridge from top step into the rooftop deck opening
-  createBox(
-    houseEntity,
-    Vector3.create(7.45, 8.19, centerZ),
-    Vector3.create(1.0, 0.06, 1.4),
-    colTread,
-    Quaternion.Identity(),
-    undefined,
-    0,
-    true
-  )
-
-  // Protective glass sides and overhead cover on the connecting bridge
-  createBox(
-    houseEntity,
-    Vector3.create(7.45, 8.2 + 0.58, centerZ - 0.70),
-    Vector3.create(1.0, 1.15, 0.03),
-    glassColor,
-    Quaternion.Identity(),
-    undefined,
-    0,
-    true
-  )
-  createBox(
-    houseEntity,
-    Vector3.create(7.45, 8.2 + 0.58, centerZ + 0.70),
-    Vector3.create(1.0, 1.15, 0.03),
-    glassColor,
-    Quaternion.Identity(),
-    undefined,
-    0,
-    true
-  )
-  createBox(
-    houseEntity,
-    Vector3.create(7.45, 8.2 + 2.40, centerZ),
-    Vector3.create(1.0, 0.03, 1.45),
-    glassColor,
-    Quaternion.Identity(),
-    undefined,
-    0,
-    false
-  )
-}
-
-/**
- * 4. SHADED VIP ROOFTOP COCKTAIL BAR
+ * 3. SHADED VIP ROOFTOP COCKTAIL BAR
  * Features a minimalist black steel pergola, polished stone bar counter,
  * cyan undercounter glow, and bar stools overlooking the horizon.
  */

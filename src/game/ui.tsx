@@ -2,7 +2,7 @@ import ReactEcs, { ReactEcsRenderer, UiEntity } from '@dcl/sdk/react-ecs'
 import { Color4, Vector3 } from '@dcl/sdk/math'
 import { engine, Transform } from '@dcl/sdk/ecs'
 import { CrazyEightsGame } from './logic'
-import { update3DTable, getPlayerSeated, setPlayerSeated, getTimeSeated } from './table'
+import { update3DTable, resolvePlayerId, getPlayerSeated, setPlayerSeated } from './table'
 import { getPlayer } from '@dcl/sdk/src/players'
 import { Card } from './deck'
 
@@ -130,11 +130,22 @@ let pendingWildCardIndex: number | null = null
 // MAIN LAYOUT
 // ----------------------------------------------------
 
+// Helper to reliably check if it is the local player's turn
+function isLocalPlayerTurn(game: CrazyEightsGame): boolean {
+  if (!game || !game.isStarted || game.gameOver) return false
+  const currentTurnPlayer = game.playerOrder[game.currentTurnIndex]
+  if (currentTurnPlayer === 'bot') return false
+  const myId = resolvePlayerId(game)
+  if (currentTurnPlayer === myId || currentTurnPlayer === 'player1') return true
+  // In single player vs bot, if current turn is not bot, it is always the local human player
+  if (game.playerOrder.length <= 2 && currentTurnPlayer !== 'bot') return true
+  return false
+}
+
 function TableArea() {
   if (!activeGame) return null
-  const player = getPlayer()
-  const myId = player ? player.userId : 'player1'
-  const isMyTurn = activeGame.playerOrder[activeGame.currentTurnIndex] === myId
+  const myId = resolvePlayerId(activeGame)
+  const isMyTurn = isLocalPlayerTurn(activeGame)
   const topCard = activeGame.getTopDiscard()
 
   return (
@@ -185,8 +196,7 @@ function GameInfoBar() {
     )
   }
 
-  const myId = getPlayer()?.userId || 'player1';
-  const isMyTurn = activeGame.playerOrder[activeGame.currentTurnIndex] === myId
+  const isMyTurn = isLocalPlayerTurn(activeGame)
   const activeSuit = activeGame.activeSuit
 
   return (
@@ -196,7 +206,7 @@ function GameInfoBar() {
     >
       <UiEntity
         uiText={{
-          value: isMyTurn ? `YOUR TURN! (Active Suit: ${activeSuit})` : `OPPONENT'S TURN (Active Suit: ${activeSuit})`,
+          value: isMyTurn ? `YOUR TURN! (Active Suit: ${activeSuit})` : `BOT'S TURN (Active Suit: ${activeSuit})`,
           fontSize: 18, color: Color4.White(), textAlign: 'middle-center'
         }}
       />
@@ -206,8 +216,9 @@ function GameInfoBar() {
 
 function DeclareButton({ myHand }: { myHand: Card[] }) {
   if (!activeGame || activeGame.gameOver) return null
+  const myId = resolvePlayerId(activeGame)
   const isVulnerable = myHand.length > 0 && myHand.length <= 3
-  const hasDeclared = activeGame.safeDeclared.has(getPlayer()?.userId || 'player1')
+  const hasDeclared = activeGame.safeDeclared.has(myId)
   
   if (!isVulnerable || hasDeclared) return null
 
@@ -215,7 +226,7 @@ function DeclareButton({ myHand }: { myHand: Card[] }) {
     <UiEntity
       uiTransform={{ width: 300, height: 50, margin: { bottom: 10 }, justifyContent: 'center', alignItems: 'center' }}
       uiBackground={{ color: Color4.fromHexString('#ff2222ff') }}
-      onMouseDown={() => { if (activeGame) activeGame.declareLowCards(getPlayer()?.userId || 'player1') }}
+      onMouseDown={() => { if (activeGame) activeGame.declareLowCards(myId) }}
     >
       <UiEntity uiText={{ value: `DECLARE ${myHand.length} CARD(S)!`, fontSize: 22, color: Color4.White() }} />
     </UiEntity>
@@ -224,8 +235,8 @@ function DeclareButton({ myHand }: { myHand: Card[] }) {
 
 function PlayerHandArea({ myHand }: { myHand: Card[] }) {
   if (!activeGame) return null
-  const myId = getPlayer()?.userId || 'player1';
-  const isMyTurn = activeGame.playerOrder[activeGame.currentTurnIndex] === myId && !activeGame.gameOver
+  const myId = resolvePlayerId(activeGame)
+  const isMyTurn = isLocalPlayerTurn(activeGame)
   const isChoosingSuit = pendingWildCardIndex !== null
 
   return (
@@ -245,7 +256,7 @@ function PlayerHandArea({ myHand }: { myHand: Card[] }) {
                 if (card.action === 'Wild') {
                   pendingWildCardIndex = index
                 } else {
-                  const success = activeGame.playCard(getPlayer()?.userId || 'player1', index)
+                  const success = activeGame.playCard(myId, index)
                   if (success) update3DTable(activeGame)
                 }
               }
@@ -282,7 +293,8 @@ function SuitPickerModal() {
               uiBackground={{ color: Color4.White() }}
               onMouseDown={() => {
                 if (activeGame && pendingWildCardIndex !== null) {
-                  activeGame.playCard(getPlayer()?.userId || 'player1', pendingWildCardIndex, suit as any)
+                  const myId = resolvePlayerId(activeGame)
+                  activeGame.playCard(myId, pendingWildCardIndex, suit as any)
                   pendingWildCardIndex = null
                   update3DTable(activeGame)
                 }
@@ -298,27 +310,49 @@ function SuitPickerModal() {
 }
 
 function uiComponent() {
+  // 1. Whenever game is not started, do not show in-game cards
   if (!activeGame || !activeGame.isStarted) return null
 
-  // Check if player is seated
+  // 2. Proximity & Seated Check:
+  // Show cards only when seated in a chair OR standing right next to the table (< 2.8m).
+  // When the player walks away, hide the cards immediately.
+  let isNearTable = false
   const playerTransform = Transform.getOrNull(engine.PlayerEntity)
-  if (!playerTransform) return null
-  
-  const pos = playerTransform.position
-  const tableCenter = Vector3.create(16, pos.y, 25)
-  const dist = Vector3.distance(pos, tableCenter)
-  
-  // Chairs are at ~2m radius. Give 3.5m leeway so we don't accidentally hide it due to camera/avatar offsets!
-  // We add a 1 second grace period to prevent teleport race conditions!
-  if (dist > 3.5 && Date.now() - getTimeSeated() > 1000) {
-    setPlayerSeated(false)
+  if (playerTransform) {
+    const px = playerTransform.position.x
+    const pz = playerTransform.position.z
+    // Table center is at world coordinates (16, 25)
+    const dx = px - 16
+    const dz = pz - 25
+    const horizontalDist = Math.sqrt(dx * dx + dz * dz)
+
+    if (horizontalDist <= 2.8) {
+      isNearTable = true
+    } else {
+      // Avatar moved away from the table
+      setPlayerSeated(false)
+    }
   }
 
-  // Hide the UI until they click the chair to sit!
-  if (!getPlayerSeated()) return null
+  const isAtTable = isNearTable || getPlayerSeated()
+  if (!isAtTable) {
+    return null
+  }
 
-  const myId = getPlayer()?.userId || 'player1';
-  const myHand = activeGame.players.get(myId) || []
+  // 3. Resolve local player's hand
+  const myId = resolvePlayerId(activeGame)
+  let myHand = activeGame.players.get(myId) || []
+  if (myHand.length === 0 && activeGame.players.has('player1')) {
+    myHand = activeGame.players.get('player1') || []
+  }
+  if (myHand.length === 0) {
+    for (const [pId, hand] of activeGame.players.entries()) {
+      if (pId !== 'bot' && hand.length > 0) {
+        myHand = hand
+        break
+      }
+    }
+  }
 
   return (
     <UiEntity
