@@ -46,6 +46,7 @@ export function buildHouse() {
     Transform.create(ent, { parent: houseEntity, position: pos, scale: scale, rotation: rot })
     MeshRenderer.setPlane(ent)
     Material.setPbrMaterial(ent, {
+      albedoColor: Color4.create(0.08, 0.10, 0.14, 1.0),
       texture: Material.Texture.Common({
         src: 'assets/images/dark_hex_grid.png',
         wrapMode: TextureWrapMode.TWM_REPEAT,
@@ -55,13 +56,14 @@ export function buildHouse() {
       emissiveTexture: Material.Texture.Common({
         src: 'assets/images/dark_hex_emissive.png',
         wrapMode: TextureWrapMode.TWM_REPEAT,
-        filterMode: TextureFilterMode.TFM_TRILINEAR
+        filterMode: TextureFilterMode.TFM_TRILINEAR,
+        tiling: tiling
       }),
       emissiveColor: Color3.create(0.0, 0.95, 1.0),
-      emissiveIntensity: 1.2,
-      metallic: 0.5,
-      roughness: 0.35,
-      specularIntensity: 0.8
+      emissiveIntensity: 0.5,
+      metallic: 0.1,
+      roughness: 0.75,
+      specularIntensity: 0.2
     })
     return ent
   }
@@ -94,15 +96,16 @@ export function buildHouse() {
     })
     MeshRenderer.setPlane(ent)
     Material.setPbrMaterial(ent, {
+      albedoColor: Color4.create(0.06, 0.07, 0.09, 1.0),
       texture: Material.Texture.Common({
         src: 'assets/images/polished_black_obsidian.png',
         wrapMode: TextureWrapMode.TWM_REPEAT,
         filterMode: TextureFilterMode.TFM_TRILINEAR,
         tiling: tiling
       }),
-      metallic: 0.15,
-      roughness: 0.08,
-      specularIntensity: 1.0
+      metallic: 0.1,
+      roughness: 0.6,
+      specularIntensity: 0.3
     })
     return ent
   }

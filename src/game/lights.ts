@@ -222,8 +222,8 @@ function buildHaloChandelier(houseEntity: Entity) {
     houseEntity,
     Vector3.create(0, ringY - 0.05, 0),
     Color3.create(0.7, 0.95, 1.0),
-    6.0,
-    0.25
+    1.8,
+    0.20
   )
 }
 
