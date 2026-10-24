@@ -288,11 +288,11 @@ engine.addSystem(autoUpdateTableSystem)
 
 function getSuitVisuals(suit: string): { symbol: string, color: Color4 } {
   switch (suit) {
-    case 'Hearts': return { symbol: '♥', color: Color4.fromHexString('#ff007b') }
-    case 'Diamonds': return { symbol: '♦', color: Color4.fromHexString('#ff007b') }
+    case 'Hearts': return { symbol: '♥', color: Color4.fromHexString('#FF2A6D') }
+    case 'Diamonds': return { symbol: '♦', color: Color4.fromHexString('#FF2A6D') }
     case 'Clubs': return { symbol: '♣', color: Color4.fromHexString('#00f3ff') }
     case 'Spades': return { symbol: '♠', color: Color4.fromHexString('#00f3ff') }
-    default: return { symbol: '', color: Color4.White() }
+    default: return { symbol: '★', color: Color4.fromHexString('#FFD700') }
   }
 }
 

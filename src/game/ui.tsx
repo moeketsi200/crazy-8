@@ -4,7 +4,7 @@ import { engine, Transform } from '@dcl/sdk/ecs'
 import { CrazyEightsGame } from './logic'
 import { update3DTable, resolvePlayerId, getPlayerSeated, setPlayerSeated } from './table'
 import { getPlayer } from '@dcl/sdk/src/players'
-import { Card } from './deck'
+import { Card, Suit } from './deck'
 
 let activeGame: CrazyEightsGame | null = null
 let isPlayerInHouse = false
@@ -32,40 +32,58 @@ export function setupUI(game: CrazyEightsGame) {
 }
 
 // ----------------------------------------------------
-// UI COMPONENTS
+// UI COMPONENTS & ASSETS
 // ----------------------------------------------------
 
-function getCardSymbol(card: Card): string {
-  switch (card.suit) {
-    case 'Hearts': return '♥'
-    case 'Diamonds': return '♦'
-    case 'Clubs': return '♣'
-    case 'Spades': return '♠'
-    default: return card.rank === 'Joker' ? '★' : ''
+function getSuitTexture(suit: Suit, rank?: string): string {
+  if (rank === 'Joker' || suit === 'None') return 'assets/images/suits/joker.png'
+  switch (suit) {
+    case 'Hearts': return 'assets/images/suits/heart.png'
+    case 'Diamonds': return 'assets/images/suits/diamond.png'
+    case 'Clubs': return 'assets/images/suits/club.png'
+    case 'Spades': return 'assets/images/suits/spade.png'
+    default: return 'assets/images/suits/joker.png'
   }
 }
 
-function getCardColor(card: Card): Color4 {
-  return (card.suit === 'Hearts' || card.suit === 'Diamonds') 
-    ? Color4.fromHexString('#ff007b') 
-    : Color4.fromHexString('#00f3ff')
+function getCardRankColor(card: Card): Color4 {
+  if (card.suit === 'Hearts' || card.suit === 'Diamonds') {
+    // High-luminance neon coral rose for maximum readability against dark backgrounds
+    return Color4.fromHexString('#FFAEC0')
+  }
+  if (card.rank === 'Joker' || card.action === 'Wild') {
+    return Color4.fromHexString('#FFD700')
+  }
+  return Color4.fromHexString('#E0FFFF')
+}
+
+function getCardBorderColor(card: Card, isPlayable: boolean): Color4 {
+  if (!isPlayable) return Color4.fromHexString('#252B3A')
+  if (card.suit === 'Hearts' || card.suit === 'Diamonds') {
+    // High-luminance electric neon coral red
+    return Color4.fromHexString('#FF2A6D')
+  }
+  if (card.rank === 'Joker' || card.action === 'Wild') {
+    return Color4.fromHexString('#FFD700')
+  }
+  return Color4.fromHexString('#00F3FF')
 }
 
 function PlayingCard(props: { key?: string|number, card: Card, isPlayable: boolean, onClick?: () => void }) {
   const { card, isPlayable, onClick } = props
-  const color = getCardColor(card)
-  const symbol = getCardSymbol(card)
-  const isRed = card.suit === 'Hearts' || card.suit === 'Diamonds'
-  const neonAccent = isRed ? Color4.fromHexString('#ff007b') : Color4.fromHexString('#00f3ff')
-  const borderColor = isPlayable ? neonAccent : Color4.fromHexString('#232838')
-  const cardBg = isPlayable ? Color4.fromHexString('#0b0e14') : Color4.fromHexString('#141720')
+  const isJoker = card.rank === 'Joker' || card.action === 'Draw4'
+  const displayRank = isJoker ? '★' : card.rank
+  const rankColor = getCardRankColor(card)
+  const borderColor = getCardBorderColor(card, isPlayable)
+  const cardBg = isPlayable ? Color4.fromHexString('#0c0f16') : Color4.fromHexString('#141720')
+  const suitIcon = getSuitTexture(card.suit, card.rank)
 
   return (
     <UiEntity
       uiTransform={{
-        width: 82,
-        height: 122,
-        margin: { left: 5, right: 5 },
+        width: 84,
+        height: 124,
+        margin: { left: 4, right: 4 },
         padding: 2,
       }}
       uiBackground={{ color: borderColor }}
@@ -77,27 +95,66 @@ function PlayingCard(props: { key?: string|number, card: Card, isPlayable: boole
           height: '100%',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          padding: 6
+          padding: { top: 4, bottom: 4, left: 6, right: 6 }
         }}
         uiBackground={{ color: cardBg }}
       >
-        {/* Top Left Rank/Suit */}
+        {/* Top Left: Bold Rank & Mini Suit Icon */}
         <UiEntity
-          uiTransform={{ width: '100%', height: 32 }}
-          uiText={{ value: `${card.rank}\n${symbol}`, fontSize: 13, color: color, textAlign: 'top-left' }}
-        />
+          uiTransform={{ width: '100%', height: 26, flexDirection: 'row', alignItems: 'center' }}
+        >
+          <UiEntity
+            uiTransform={{ width: isJoker ? 18 : 22, height: '100%' }}
+            uiText={{ value: displayRank, fontSize: isJoker ? 18 : 16, color: rankColor, textAlign: 'middle-left' }}
+          />
+          <UiEntity
+            uiTransform={{ width: 14, height: 14, margin: { left: 2 } }}
+            uiBackground={{
+              textureMode: 'stretch',
+              texture: { src: suitIcon }
+            }}
+          />
+        </UiEntity>
         
-        {/* Center Huge Suit */}
+        {/* Center: Large High-Resolution Glowing Neon Suit Graphic */}
         <UiEntity
-          uiTransform={{ width: '100%', height: 42, alignItems: 'center', justifyContent: 'center' }}
-          uiText={{ value: symbol, fontSize: 44, color: color, textAlign: 'middle-center' }}
+          uiTransform={{
+            width: 46,
+            height: 46,
+            alignSelf: 'center',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}
+          uiBackground={{
+            textureMode: 'stretch',
+            texture: { src: suitIcon }
+          }}
         />
 
-        {/* Bottom Right Rank/Suit */}
+        {/* Subtitle banner for Joker */}
+        {isJoker && (
+          <UiEntity
+            uiTransform={{ width: '100%', height: 14, alignItems: 'center', justifyContent: 'center', positionType: 'absolute', position: { top: 78 } }}
+            uiText={{ value: '+4 WILD', fontSize: 10, color: Color4.fromHexString('#FFD700'), textAlign: 'middle-center' }}
+          />
+        )}
+
+        {/* Bottom Right: Inverted Mini Suit Icon & Rank */}
         <UiEntity
-          uiTransform={{ width: '100%', height: 32 }}
-          uiText={{ value: `${card.rank}\n${symbol}`, fontSize: 13, color: color, textAlign: 'bottom-right' }}
-        />
+          uiTransform={{ width: '100%', height: 26, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}
+        >
+          <UiEntity
+            uiTransform={{ width: 14, height: 14, margin: { right: 2 } }}
+            uiBackground={{
+              textureMode: 'stretch',
+              texture: { src: suitIcon }
+            }}
+          />
+          <UiEntity
+            uiTransform={{ width: isJoker ? 18 : 22, height: '100%' }}
+            uiText={{ value: displayRank, fontSize: isJoker ? 18 : 16, color: rankColor, textAlign: 'middle-right' }}
+          />
+        </UiEntity>
       </UiEntity>
     </UiEntity>
   )
@@ -271,36 +328,66 @@ function PlayerHandArea({ myHand }: { myHand: Card[] }) {
 function SuitPickerModal() {
   if (pendingWildCardIndex === null) return null
 
+  const suits: Array<{ suit: Suit, label: string, color: Color4, border: Color4, icon: string }> = [
+    { suit: 'Hearts', label: 'HEARTS', color: Color4.fromHexString('#FFAEC0'), border: Color4.fromHexString('#FF2A6D'), icon: 'assets/images/suits/heart.png' },
+    { suit: 'Diamonds', label: 'DIAMONDS', color: Color4.fromHexString('#FFAEC0'), border: Color4.fromHexString('#FF2A6D'), icon: 'assets/images/suits/diamond.png' },
+    { suit: 'Clubs', label: 'CLUBS', color: Color4.fromHexString('#E0FFFF'), border: Color4.fromHexString('#00F3FF'), icon: 'assets/images/suits/club.png' },
+    { suit: 'Spades', label: 'SPADES', color: Color4.fromHexString('#E0FFFF'), border: Color4.fromHexString('#00F3FF'), icon: 'assets/images/suits/spade.png' }
+  ]
+
   return (
     <UiEntity
       uiTransform={{ positionType: 'absolute', width: '100%', height: '100%', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
       uiBackground={{ color: Color4.fromHexString('#000000dd') }}
     >
-      <UiEntity uiText={{ value: 'CALL YOUR SUIT!', fontSize: 30, color: Color4.White() }} uiTransform={{ margin: { bottom: 30 } }} />
+      <UiEntity uiText={{ value: 'CHOOSE YOUR SUIT!', fontSize: 28, color: Color4.White() }} uiTransform={{ margin: { bottom: 25 } }} />
       <UiEntity uiTransform={{ flexDirection: 'row' }}>
-        {['Hearts', 'Diamonds', 'Clubs', 'Spades'].map((suit) => {
-          let symbol = ''
-          let color = Color4.Black()
-          if (suit === 'Hearts') { symbol = '♥'; color = Color4.Red() }
-          if (suit === 'Diamonds') { symbol = '♦'; color = Color4.Red() }
-          if (suit === 'Clubs') { symbol = '♣'; color = Color4.Black() }
-          if (suit === 'Spades') { symbol = '♠'; color = Color4.Black() }
-
+        {suits.map((item) => {
           return (
             <UiEntity
-              key={suit}
-              uiTransform={{ width: 80, height: 80, margin: 10 }}
-              uiBackground={{ color: Color4.White() }}
+              key={item.suit}
+              uiTransform={{
+                width: 96,
+                height: 110,
+                margin: 10,
+                padding: 2,
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              uiBackground={{ color: item.border }}
               onMouseDown={() => {
                 if (activeGame && pendingWildCardIndex !== null) {
                   const myId = resolvePlayerId(activeGame)
-                  activeGame.playCard(myId, pendingWildCardIndex, suit as any)
+                  activeGame.playCard(myId, pendingWildCardIndex, item.suit)
                   pendingWildCardIndex = null
                   update3DTable(activeGame)
                 }
               }}
             >
-              <UiEntity uiTransform={{ width: '100%', height: '100%' }} uiText={{ value: symbol, fontSize: 50, color: color, textAlign: 'middle-center' }} />
+              <UiEntity
+                uiTransform={{
+                  width: '100%',
+                  height: '100%',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 6
+                }}
+                uiBackground={{ color: Color4.fromHexString('#0c0f16') }}
+              >
+                <UiEntity
+                  uiTransform={{ width: 50, height: 50, margin: { bottom: 8 } }}
+                  uiBackground={{
+                    textureMode: 'stretch',
+                    texture: { src: item.icon }
+                  }}
+                />
+                <UiEntity
+                  uiTransform={{ width: '100%', height: 20 }}
+                  uiText={{ value: item.label, fontSize: 13, color: item.color, textAlign: 'middle-center' }}
+                />
+              </UiEntity>
             </UiEntity>
           )
         })}
