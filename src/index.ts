@@ -1,7 +1,7 @@
 import { engine, Transform, Entity } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion } from '@dcl/sdk/math'
 import { CrazyEightsGame } from './game/logic'
-import { setup3DTable } from './game/table'
+import { setup3DTable, getPlayerDisplayName } from './game/table'
 import { setupDoors } from './game/doors'
 import { buildHouse } from './game/house'
 import { buildFurniture } from './game/furniture'
@@ -49,13 +49,17 @@ export function main() {
     }
 
     gameEngine.onRoundEnd = (eliminated, winner, scoreBreakdown, roundWinner) => {
+      const winnerName = winner ? getPlayerDisplayName(winner).toUpperCase() : ''
+      const eliminatedName = eliminated ? getPlayerDisplayName(eliminated).toUpperCase() : ''
+      const roundWinnerName = roundWinner ? getPlayerDisplayName(roundWinner).toUpperCase() : ''
+
       if (winner) {
-        updateScoreBoardText(`SCOREBOARD\n\n🏆 WINNER: ${winner.toUpperCase()} 🏆\n\nRound ${gameEngine.roundNumber} Over!\n\nLast Eliminated: ${eliminated.toUpperCase()}\n\nScores:\n${scoreBreakdown || ''}`)
-        updateHighWinningsText(`HIGH WINNINGS\n\n🏆 ${winner.toUpperCase()} 🏆\n\nSecured the bag in Round ${gameEngine.roundNumber}!`)
+        updateScoreBoardText(`SCOREBOARD\n\n🏆 WINNER: ${winnerName} 🏆\n\nRound ${gameEngine.roundNumber} Over!\n\nLast Eliminated: ${eliminatedName}\n\nScores:\n${scoreBreakdown || ''}`)
+        updateHighWinningsText(`HIGH WINNINGS\n\n🏆 ${winnerName} 🏆\n\nSecured the bag in Round ${gameEngine.roundNumber}!`)
         showGameButton('START NEW GAME', 'START')
       } else {
-        updateScoreBoardText(`SCOREBOARD\n\n🎉 ${roundWinner?.toUpperCase()} WENT OUT! 🎉\n\nRound ${gameEngine.roundNumber} Over!\n\nEliminated: ${eliminated.toUpperCase()}\n\nScores:\n${scoreBreakdown || ''}\n\nWaiting for next round...`)
-        updateHighWinningsText(`HIGH WINNINGS\n\nRound ${gameEngine.roundNumber} Winner:\n${roundWinner?.toUpperCase()}\n\nGame still in progress!`)
+        updateScoreBoardText(`SCOREBOARD\n\n🎉 ${roundWinnerName} WENT OUT! 🎉\n\nRound ${gameEngine.roundNumber} Over!\n\nEliminated: ${eliminatedName}\n\nScores:\n${scoreBreakdown || ''}\n\nWaiting for next round...`)
+        updateHighWinningsText(`HIGH WINNINGS\n\nRound ${gameEngine.roundNumber} Winner:\n${roundWinnerName}\n\nGame still in progress!`)
         showGameButton('CONTINUE\n(Next Round)', 'CONTINUE')
       }
     }

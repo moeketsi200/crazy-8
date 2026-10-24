@@ -80,9 +80,34 @@ export function resolvePlayerId(game?: CrazyEightsGame): string {
   return 'player1'
 }
 
+export function getPlayerDisplayName(userId: string): string {
+  if (!userId) return 'Player'
+  if (userId.toLowerCase() === 'bot') return 'Cyber Bot'
+  if (userId === 'player1') {
+    const local = getPlayer()
+    return local?.name || 'Player 1'
+  }
+  const localPlayer = getPlayer()
+  if (localPlayer && (localPlayer.userId === userId || localPlayer.userId?.toLowerCase() === userId.toLowerCase())) {
+    if (localPlayer.name && localPlayer.name.trim().length > 0) {
+      return localPlayer.name
+    }
+  }
+  const otherPlayer = getPlayer({ userId })
+  if (otherPlayer?.name && otherPlayer.name.trim().length > 0) {
+    return otherPlayer.name
+  }
+  // If it's an Ethereum address e.g. 0xad439...cd35b, shorten for clean UI
+  if (userId.startsWith('0x') && userId.length >= 10) {
+    return `${userId.slice(0, 6)}...${userId.slice(-4)}`
+  }
+  return userId
+}
+
 export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
   globalHouseEntity = furnitureRoot
   globalGame = game
+  game.playerNameResolver = getPlayerDisplayName
   
   // 0. GENERATE THE 3D VISUAL TABLE AND CARDS
   buildPrimitiveTable(furnitureRoot)
@@ -357,7 +382,7 @@ function spawnSingleOpponentHand(playerId: string, numCards: number) {
     
     MeshCollider.setBox(cardEnt, ColliderLayer.CL_POINTER)
     pointerEventsSystem.onPointerDown(
-      { entity: cardEnt, opts: { button: InputAction.IA_PRIMARY, hoverText: `Challenge ${playerId}!` } },
+      { entity: cardEnt, opts: { button: InputAction.IA_PRIMARY, hoverText: `Challenge ${getPlayerDisplayName(playerId)}!` } },
       () => {
         if (globalGame) {
           const myId = resolvePlayerId(globalGame)

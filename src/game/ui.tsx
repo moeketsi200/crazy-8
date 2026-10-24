@@ -2,7 +2,7 @@ import ReactEcs, { ReactEcsRenderer, UiEntity } from '@dcl/sdk/react-ecs'
 import { Color4, Vector3 } from '@dcl/sdk/math'
 import { engine, Transform } from '@dcl/sdk/ecs'
 import { CrazyEightsGame } from './logic'
-import { update3DTable, resolvePlayerId, getPlayerSeated, setPlayerSeated } from './table'
+import { update3DTable, resolvePlayerId, getPlayerSeated, setPlayerSeated, getPlayerDisplayName } from './table'
 import { getPlayer } from '@dcl/sdk/src/players'
 import { Card, Suit } from './deck'
 
@@ -255,6 +255,8 @@ function GameInfoBar() {
 
   const isMyTurn = isLocalPlayerTurn(activeGame)
   const activeSuit = activeGame.activeSuit
+  const activePlayerId = activeGame.playerOrder[activeGame.currentTurnIndex]
+  const turnLabel = isMyTurn ? 'YOUR TURN!' : `${getPlayerDisplayName(activePlayerId).toUpperCase()}'S TURN`
 
   return (
     <UiEntity
@@ -263,7 +265,7 @@ function GameInfoBar() {
     >
       <UiEntity
         uiText={{
-          value: isMyTurn ? `YOUR TURN! (Active Suit: ${activeSuit})` : `BOT'S TURN (Active Suit: ${activeSuit})`,
+          value: `${turnLabel} (Active Suit: ${activeSuit})`,
           fontSize: 18, color: Color4.White(), textAlign: 'middle-center'
         }}
       />
