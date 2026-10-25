@@ -1,4 +1,4 @@
-import { engine, Transform, TextShape, Entity, TextAlignMode, MeshRenderer, MeshCollider, Material } from '@dcl/sdk/ecs'
+import { engine, Transform, TextShape, Entity, TextAlignMode, MeshRenderer, MeshCollider, Material, MaterialTransparencyMode } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion, Color4 } from '@dcl/sdk/math'
 
 export let scoreTextEntity: Entity
@@ -53,15 +53,41 @@ export function buildScoreBoard(parentHouse: Entity) {
   createBox(billboardGroup, Vector3.create(-1.8, 2.5, 0), Vector3.create(0.2, 5.0, 0.2), metalColor)
   createBox(billboardGroup, Vector3.create(1.8, 2.5, 0), Vector3.create(0.2, 5.0, 0.2), metalColor)
 
-  // Neon glowing frame (slightly larger, placed behind the main screen)
+  // 1. Sleek dark rear casing covering the back of the billboard (prevents bright rear blowout)
+  const casingColor = Color4.fromHexString('#151820')
+  createBox(billboardGroup, Vector3.create(0, 3.5, 0.06), Vector3.create(4.30, 2.80, 0.12), casingColor)
+
+  // 2. Crazy 8 Logo on the rear chassis (branded esports look from outside)
+  const backLogo = engine.addEntity()
+  Transform.create(backLogo, {
+    parent: billboardGroup,
+    position: Vector3.create(0, 3.5, 0.125),
+    scale: Vector3.create(2.2, 2.2, 1.0),
+    rotation: Quaternion.fromEulerDegrees(0, 180, 0)
+  })
+  MeshRenderer.setPlane(backLogo)
+  Material.setPbrMaterial(backLogo, {
+    texture: Material.Texture.Common({ src: 'assets/images/crazy8_logo.png' }),
+    transparencyMode: MaterialTransparencyMode.MTM_ALPHA_BLEND,
+    roughness: 0.3,
+    metallic: 0.1
+  })
+
+  // 3. Neon glowing cyan trim border around the front of the screen
   const frameColor = Color4.fromHexString('#00f3ff')
   const frame = engine.addEntity()
-  Transform.create(frame, { parent: billboardGroup, position: Vector3.create(0, 3.5, 0.05), scale: Vector3.create(4.2, 2.7, 0.2) })
+  Transform.create(frame, { parent: billboardGroup, position: Vector3.create(0, 3.5, 0.00), scale: Vector3.create(4.16, 2.66, 0.04) })
   MeshRenderer.setBox(frame)
-  Material.setPbrMaterial(frame, { albedoColor: frameColor, emissiveColor: frameColor, emissiveIntensity: 2.0 })
+  Material.setPbrMaterial(frame, {
+    albedoColor: frameColor,
+    emissiveColor: frameColor,
+    emissiveIntensity: 0.8,
+    metallic: 0.2,
+    roughness: 0.2
+  })
 
-  // Main Screen Board (black screen in front of the glowing frame)
-  const screenBoard = createBox(billboardGroup, Vector3.create(0, 3.5, -0.05), Vector3.create(4.0, 2.5, 0.2), screenColor)
+  // 4. Main Screen Board (sleek dark glass in front of the glowing trim)
+  const screenBoard = createBox(billboardGroup, Vector3.create(0, 3.5, -0.04), Vector3.create(4.0, 2.5, 0.06), screenColor)
 
   // The text on the billboard
   exteriorScoreTextEntity = engine.addEntity()

@@ -10,3 +10,6 @@ yarn-error.log*
 .editor
 agent/
 skills-lock.json
+thumbnails/
+.optimize/
+SCENE_README.md

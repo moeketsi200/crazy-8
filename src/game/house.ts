@@ -46,23 +46,21 @@ export function buildHouse() {
     Transform.create(ent, { parent: houseEntity, position: pos, scale: scale, rotation: rot })
     MeshRenderer.setPlane(ent)
     Material.setPbrMaterial(ent, {
-      albedoColor: Color4.create(0.08, 0.10, 0.14, 1.0),
       texture: Material.Texture.Common({
         src: 'assets/images/dark_hex_grid.png',
         wrapMode: TextureWrapMode.TWM_REPEAT,
-        filterMode: TextureFilterMode.TFM_TRILINEAR,
-        tiling: tiling
+        filterMode: TextureFilterMode.TFM_TRILINEAR
       }),
       emissiveTexture: Material.Texture.Common({
         src: 'assets/images/dark_hex_emissive.png',
         wrapMode: TextureWrapMode.TWM_REPEAT,
-        filterMode: TextureFilterMode.TFM_TRILINEAR,
-        tiling: tiling
+        filterMode: TextureFilterMode.TFM_TRILINEAR
       }),
       emissiveColor: Color3.create(0.0, 0.95, 1.0),
-      emissiveIntensity: 0.5,
+      emissiveIntensity: 0.6,
+      transparencyMode: MaterialTransparencyMode.MTM_OPAQUE,
       metallic: 0.1,
-      roughness: 0.75,
+      roughness: 0.70,
       specularIntensity: 0.2
     })
     return ent
@@ -76,9 +74,9 @@ export function buildHouse() {
       texture: Material.Texture.Common({
         src: 'assets/images/dark_brick_wallpaper.jpg',
         wrapMode: TextureWrapMode.TWM_REPEAT,
-        filterMode: TextureFilterMode.TFM_TRILINEAR,
-        tiling: tiling
+        filterMode: TextureFilterMode.TFM_TRILINEAR
       }),
+      transparencyMode: MaterialTransparencyMode.MTM_OPAQUE,
       metallic: 0.0,
       roughness: 0.85,
       specularIntensity: 0.2
@@ -96,15 +94,14 @@ export function buildHouse() {
     })
     MeshRenderer.setPlane(ent)
     Material.setPbrMaterial(ent, {
-      albedoColor: Color4.create(0.06, 0.07, 0.09, 1.0),
       texture: Material.Texture.Common({
         src: 'assets/images/polished_black_obsidian.png',
         wrapMode: TextureWrapMode.TWM_REPEAT,
-        filterMode: TextureFilterMode.TFM_TRILINEAR,
-        tiling: tiling
+        filterMode: TextureFilterMode.TFM_TRILINEAR
       }),
+      transparencyMode: MaterialTransparencyMode.MTM_OPAQUE,
       metallic: 0.1,
-      roughness: 0.6,
+      roughness: 0.5,
       specularIntensity: 0.3
     })
     return ent
@@ -123,12 +120,12 @@ export function buildHouse() {
       texture: Material.Texture.Common({
         src: 'assets/images/charcoal_slate_patio.png',
         wrapMode: TextureWrapMode.TWM_REPEAT,
-        filterMode: TextureFilterMode.TFM_TRILINEAR,
-        tiling: tiling
+        filterMode: TextureFilterMode.TFM_TRILINEAR
       }),
+      transparencyMode: MaterialTransparencyMode.MTM_OPAQUE,
       metallic: 0.05,
-      roughness: 0.72,
-      specularIntensity: 0.4
+      roughness: 0.8,
+      specularIntensity: 0.2
     })
     return ent
   }

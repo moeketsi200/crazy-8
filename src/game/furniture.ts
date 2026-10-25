@@ -36,7 +36,7 @@ export function buildFurniture(houseEntity: Entity) {
 }
 
 function buildMediaUnit(houseEntity: Entity) {
-    const colorGlossWhite = Color4.White()
+    const colorCabinet = Color4.fromHexString('#141720') // Dark obsidian credenza
     const colorTVFrame = Color4.fromHexString('#080808')
     const colorTVScreen = Color4.Black()
 
@@ -50,16 +50,16 @@ function buildMediaUnit(houseEntity: Entity) {
     const stand_x = 0 
     const stand_y = 0 
 
-    createBox(mediaUnit, Vector3.create(stand_x, 0.06, stand_y + 1.25), Vector3.create(0.50, 0.12, 1.30), colorGlossWhite)
-    createBox(mediaUnit, Vector3.create(stand_x, 0.22, stand_y - 0.50), Vector3.create(0.52, 0.44, 2.20), colorGlossWhite)
+    createBox(mediaUnit, Vector3.create(stand_x, 0.06, stand_y + 1.25), Vector3.create(0.50, 0.12, 1.30), colorCabinet)
+    createBox(mediaUnit, Vector3.create(stand_x, 0.22, stand_y - 0.50), Vector3.create(0.52, 0.44, 2.20), colorCabinet)
 
     for (const dy_offset of [-0.52, 0.52]) {
-        createBox(mediaUnit, Vector3.create(stand_x + 0.265, 0.22, stand_y - 0.50 + dy_offset), Vector3.create(0.02, 0.38, 0.98), colorGlossWhite)
+        createBox(mediaUnit, Vector3.create(stand_x + 0.265, 0.22, stand_y - 0.50 + dy_offset), Vector3.create(0.02, 0.38, 0.98), colorCabinet)
     }
     for (const ry of [-1.45, -0.50, 0.45]) {
-        createBox(mediaUnit, Vector3.create(stand_x, 0.52, stand_y + ry), Vector3.create(0.42, 0.16, 0.05), colorGlossWhite)
+        createBox(mediaUnit, Vector3.create(stand_x, 0.52, stand_y + ry), Vector3.create(0.42, 0.16, 0.05), colorCabinet)
     }
-    createBox(mediaUnit, Vector3.create(stand_x, 0.63, stand_y - 0.45), Vector3.create(0.54, 0.06, 2.35), colorGlossWhite)
+    createBox(mediaUnit, Vector3.create(stand_x, 0.63, stand_y - 0.45), Vector3.create(0.54, 0.06, 2.35), colorCabinet)
 
     createBox(mediaUnit, Vector3.create(stand_x - 0.5, 1.85, stand_y - 0.35), Vector3.create(0.04, 1.38, 2.45), colorTVFrame)
     createBox(mediaUnit, Vector3.create(stand_x - 0.47, 1.85, stand_y - 0.35), Vector3.create(0.01, 1.33, 2.40), colorTVScreen)
@@ -319,7 +319,7 @@ export function buildBraaiStand(houseEntity: Entity) {
         rotation: Quaternion.fromEulerDegrees(0, 0, 0)
     })
 
-    const matStucco = Color4.fromHexString('#dcd4c4')
+    const matStucco = Color4.fromHexString('#1a1d24') // Luxury dark charcoal basalt finish
     const matStainless = Color4.fromHexString('#d1d6db')
     const matBraaiDark = Color4.fromHexString('#0f0f10')
     const matCabinet = Color4.fromHexString('#1c1e21')
