@@ -1,4 +1,4 @@
-import { engine, Transform, MeshRenderer, MeshCollider, Material, Entity } from '@dcl/sdk/ecs'
+import { engine, Transform, MeshRenderer, MeshCollider, Material, Entity, MaterialTransparencyMode } from '@dcl/sdk/ecs'
 import { Vector3, Color4 } from '@dcl/sdk/math'
 
 let isDoorOpen = false
@@ -32,12 +32,17 @@ function createPane(houseEntity: Entity, pos: Vector3, glassColor: Color4): Enti
   })
   MeshRenderer.setBox(pane)
   MeshCollider.setBox(pane)
-  Material.setPbrMaterial(pane, { albedoColor: glassColor })
+  Material.setPbrMaterial(pane, {
+    albedoColor: glassColor,
+    transparencyMode: MaterialTransparencyMode.MTM_ALPHA_BLEND,
+    roughness: 0.1,
+    metallic: 0.1
+  })
   return pane
 }
 
 export function setupDoors(houseEntity: Entity) {
-  const glassColor = Color4.create(0.9, 0.95, 0.98, 0.4) 
+  const glassColor = Color4.create(0.1, 0.25, 0.4, 0.2) 
   
   paneOL = createPane(houseEntity, closedPosOL, glassColor)
   paneIL = createPane(houseEntity, closedPosIL, glassColor)

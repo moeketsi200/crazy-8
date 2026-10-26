@@ -23,6 +23,14 @@ export class CrazyEightsGame {
 
   public safeDeclared: Set<PlayerId> = new Set()
   public onNotification?: (message: string) => void
+  public playerNameResolver?: (playerId: PlayerId) => string
+
+  public getDisplayName(playerId: PlayerId): string {
+    if (this.playerNameResolver) {
+      return this.playerNameResolver(playerId)
+    }
+    return playerId
+  }
   public onBotTurnStart?: () => void
   public onStateSync?: () => void
   public onStateChanged?: () => void
@@ -49,6 +57,10 @@ export class CrazyEightsGame {
   public deserialize(json: string) {
     try {
       const state = JSON.parse(json)
+      // Guard: do not overwrite active or valid local state with empty uninitialized data
+      if (!state || !Array.isArray(state.playerOrder) || state.playerOrder.length === 0) {
+        return
+      }
       this.players = new Map(state.players)
       this.playerOrder = state.playerOrder
       this.drawPile = state.drawPile
@@ -71,7 +83,7 @@ export class CrazyEightsGame {
   }
 
   public addPlayer(playerId: PlayerId) {
-    if (!this.isStarted && !this.players.has(playerId)) {
+    if (!this.players.has(playerId)) {
       this.players.set(playerId, [])
       this.playerOrder.push(playerId)
       this.scores.set(playerId, 0)
@@ -80,7 +92,16 @@ export class CrazyEightsGame {
   }
 
   public startGame() {
-    if (this.playerOrder.length < 2) return
+    // Ensure we always have the player and the bot ready before dealing
+    if (this.playerOrder.length === 0) {
+      this.addPlayer('player1')
+    }
+    if (!this.playerOrder.includes('bot')) {
+      this.addPlayer('bot')
+    }
+    if (this.playerOrder.length < 2) {
+      this.addPlayer('bot')
+    }
 
     this.drawPile = shuffleDeck(generateDeck())
     this.discardPile = []
@@ -177,14 +198,17 @@ export class CrazyEightsGame {
     const targetHand = this.players.get(targetId)
     if (!targetHand) return false
 
+    const challengerName = this.getDisplayName(challengerId).toUpperCase()
+    const targetName = this.getDisplayName(targetId).toUpperCase()
+
     if (this.isHandVulnerable(targetHand) && !this.safeDeclared.has(targetId)) {
       this.drawOne(targetId)
       this.drawOne(targetId)
-      if (this.onNotification) this.onNotification(`🚨 CAUGHT! ${challengerId} caught ${targetId} failing to declare! 2 Penalty Cards!`)
+      if (this.onNotification) this.onNotification(`🚨 CAUGHT! ${challengerName} caught ${targetName} failing to declare! 2 Penalty Cards!`)
       this.onStateChanged?.()
       return true
     } else {
-      if (this.onNotification) this.onNotification(`❌ False alarm! ${targetId} is safe.`)
+      if (this.onNotification) this.onNotification(`❌ False alarm! ${targetName} is safe.`)
       return false
     }
   }
@@ -247,7 +271,8 @@ export class CrazyEightsGame {
     if (cardToPlay.action === 'Wild' || cardToPlay.action === 'Draw4') {
       this.activeSuit = newSuitForWild || 'Spades'
       if (this.onNotification) {
-        this.onNotification(`${playerId.toUpperCase()} changed the suit to ${this.activeSuit.toUpperCase()}!`)
+        const name = this.getDisplayName(playerId).toUpperCase()
+        this.onNotification(`${name} changed the suit to ${this.activeSuit.toUpperCase()}!`)
       }
     } else {
       this.activeSuit = cardToPlay.suit
@@ -380,7 +405,8 @@ export class CrazyEightsGame {
       const hand = this.players.get(playerId)!
       const score = hand.reduce((sum, card) => sum + card.points, 0)
       this.scores.set(playerId, score)
-      breakdownLines.push(`${playerId.toUpperCase()}: ${score} pts`)
+      const name = this.getDisplayName(playerId).toUpperCase()
+      breakdownLines.push(`${name}: ${score} pts`)
 
       if (score > highestScore) {
         highestScore = score
@@ -403,10 +429,13 @@ export class CrazyEightsGame {
     let winner = remaining.length === 1 ? remaining[0] : undefined
     
     if (this.onNotification) {
+      const roundWinnerName = this.getDisplayName(roundWinnerId).toUpperCase()
+      const eliminatedName = this.getDisplayName(eliminatedPlayer).toUpperCase()
       if (winner) {
-        this.onNotification(`🏆 GAME OVER! ${winner.toUpperCase()} WINS THE WHOLE GAME! 🏆`)
+        const winnerName = this.getDisplayName(winner).toUpperCase()
+        this.onNotification(`🏆 GAME OVER! ${winnerName} WINS THE WHOLE GAME! 🏆`)
       } else {
-        this.onNotification(`🎉 ${roundWinnerId.toUpperCase()} WENT OUT! 🚨 ${eliminatedPlayer.toUpperCase()} ELIMINATED!`)
+        this.onNotification(`🎉 ${roundWinnerName} WENT OUT! 🚨 ${eliminatedName} ELIMINATED!`)
       }
     }
 

@@ -1,7 +1,7 @@
 import { engine, Transform, MeshRenderer, MeshCollider, TextShape, Material, Entity, pointerEventsSystem, inputSystem, InputAction, TextAlignMode } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion, Color4 } from '@dcl/sdk/math'
 import { CrazyEightsGame } from './logic'
-import { update3DTable } from './table'
+import { update3DTable, resolvePlayerId } from './table'
 import { updateScoreBoardText } from './score_board'
 
 export let buttonEntity: Entity
@@ -80,6 +80,14 @@ function handleButtonClick(actionType: 'START' | 'CONTINUE') {
   const gameEngine = cachedGameEngine
   if (!gameEngine) return
 
+  const myId = resolvePlayerId(gameEngine)
+  if (!gameEngine.players.has(myId)) {
+    gameEngine.addPlayer(myId)
+  }
+  if (!gameEngine.players.has('bot')) {
+    gameEngine.addPlayer('bot')
+  }
+
   if (actionType === 'START') {
     gameEngine.startGame()
   } else if (actionType === 'CONTINUE') {
@@ -123,13 +131,21 @@ function createStartButton(parentHouse: Entity) {
   })
   MeshCollider.setBox(buttonTextEntity)
 
-  // Attach default start logic initially
+  // Attach default start logic initially (both E key and Click)
   pointerEventsSystem.onPointerDown(
     { entity: buttonEntity, opts: { button: InputAction.IA_POINTER, hoverText: 'Start The Game' } },
     () => handleButtonClick('START')
   )
   pointerEventsSystem.onPointerDown(
+    { entity: buttonEntity, opts: { button: InputAction.IA_PRIMARY, hoverText: 'Start The Game' } },
+    () => handleButtonClick('START')
+  )
+  pointerEventsSystem.onPointerDown(
     { entity: buttonTextEntity, opts: { button: InputAction.IA_POINTER, hoverText: 'Start The Game' } },
+    () => handleButtonClick('START')
+  )
+  pointerEventsSystem.onPointerDown(
+    { entity: buttonTextEntity, opts: { button: InputAction.IA_PRIMARY, hoverText: 'Start The Game' } },
     () => handleButtonClick('START')
   )
 }
