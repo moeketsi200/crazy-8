@@ -18,6 +18,8 @@ export class CrazyEightsGame {
   public eliminatedPlayers: Set<PlayerId> = new Set()
   public scores: Map<PlayerId, number> = new Map()
   public onRoundEnd?: (eliminated: PlayerId, winner?: PlayerId, scoreBreakdown?: string, roundWinner?: PlayerId) => void
+  public onCardPlayed?: (playerId: PlayerId, card: Card) => void
+  public onDeclareSafe?: (playerId: PlayerId) => void
 
   public safeDeclared: Set<PlayerId> = new Set()
   public onNotification?: (message: string) => void
@@ -156,7 +158,10 @@ export class CrazyEightsGame {
     const hand = this.players.get(playerId)
     if (this.isHandVulnerable(hand)) {
       this.safeDeclared.add(playerId)
-      if (this.onNotification) this.onNotification(`${playerId.toUpperCase()} declares: "I have ${hand!.length} card(s) left!"`)
+      if (this.onDeclareSafe) this.onDeclareSafe(playerId)
+      const count = hand!.length
+      const cardStr = count === 1 ? '1 card' : `${count} cards`
+      if (this.onNotification) this.onNotification(`${playerId.toUpperCase()} declares: "I have ${cardStr} left!"`)
       this.onStateChanged?.()
       return true
     }
@@ -220,6 +225,10 @@ export class CrazyEightsGame {
     hand.splice(cardIndex, 1)
     this.discardPile.push(cardToPlay)
     this.safeDeclared.delete(playerId)
+
+    if (this.onCardPlayed) {
+      this.onCardPlayed(playerId, cardToPlay)
+    }
 
     this.handleSuitChange(cardToPlay, newSuitForWild, playerId)
     const skipNext = this.handleActionCardEffects(cardToPlay)

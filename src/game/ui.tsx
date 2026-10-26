@@ -5,6 +5,7 @@ import { CrazyEightsGame } from './logic'
 import { update3DTable, getPlayerSeated, setPlayerSeated, getTimeSeated } from './table'
 import { getPlayer } from '@dcl/sdk/src/players'
 import { Card } from './deck'
+import { TopHudWidget, DailyRewardsModal, RewardToastBanner, updateRewardToast } from './rewards_ui'
 
 let activeGame: CrazyEightsGame | null = null
 let isPlayerInHouse = false
@@ -22,12 +23,13 @@ export function setupUI(game: CrazyEightsGame) {
     uiNotificationTimer = 4.0 // Show for 4 seconds
   }
 
-  // System to countdown notifications
+  // System to countdown notifications and rewards toast
   engine.addSystem((dt) => {
     if (uiNotificationTimer > 0) {
       uiNotificationTimer -= dt
       if (uiNotificationTimer <= 0) uiNotificationMessage = ''
     }
+    updateRewardToast(dt)
   })
 }
 
@@ -155,14 +157,165 @@ function TableArea() {
   )
 }
 
+function parseNotification(msg: string) {
+  // Check for declaration: ROOI declares: "I have 3 cards left!"
+  const declMatch = msg.match(/(.+?) declares: "I have (\d+)\s*cards?\s*left!"/i) || msg.match(/(.+?) declares: "I have (\d+)\s*card\(s\)\s*left!"/i)
+  if (declMatch) {
+    const speaker = declMatch[1]
+    const count = parseInt(declMatch[2])
+    const countStr = count === 1 ? '1 card' : `${count} cards`
+    return {
+      speaker,
+      action: 'declares: "I have ',
+      highlight: countStr,
+      suffix: ' left!"',
+      icon: '🎴'
+    }
+  }
+
+  // Check for suit change: PLAYER changed the suit to HEARTS!
+  const suitMatch = msg.match(/(.+?) changed the suit to (.+?)!/i)
+  if (suitMatch) {
+    return {
+      speaker: suitMatch[1],
+      action: 'switched suit to ',
+      highlight: suitMatch[2],
+      suffix: '!',
+      icon: '✨'
+    }
+  }
+
+  // Check for caught challenge
+  if (msg.includes('CAUGHT')) {
+    return {
+      speaker: '🚨 CAUGHT',
+      action: msg.replace(/🚨\s*CAUGHT!\s*/i, ''),
+      highlight: '',
+      suffix: '',
+      icon: '🚨'
+    }
+  }
+
+  // Generic fallback
+  return {
+    speaker: '',
+    action: msg,
+    highlight: '',
+    suffix: '',
+    icon: '⚡'
+  }
+}
+
 function TopBannerNotification() {
   if (uiNotificationMessage === '') return null
+  const parsed = parseNotification(uiNotificationMessage)
+
   return (
     <UiEntity
-      uiTransform={{ positionType: 'absolute', position: { top: 50 }, width: '80%', height: 60, justifyContent: 'center', alignItems: 'center' }}
-      uiBackground={{ color: Color4.fromHexString('#ffaa00dd') }}
+      uiTransform={{
+        positionType: 'absolute',
+        position: { top: 28 },
+        height: 56,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 2
+      }}
+      uiBackground={{ color: Color4.fromHexString('#00f3ff') }}
     >
-      <UiEntity uiText={{ value: uiNotificationMessage, fontSize: 24, color: Color4.Black(), textAlign: 'middle-center' }} />
+      <UiEntity
+        uiTransform={{
+          height: '100%',
+          flexDirection: 'row',
+          alignItems: 'center',
+          padding: { left: 16, right: 20, top: 4, bottom: 4 }
+        }}
+        uiBackground={{ color: Color4.fromHexString('#090d16fa') }}
+      >
+        {/* Left Tech Bracket */}
+        <UiEntity
+          uiTransform={{ margin: { right: 8 } }}
+          uiText={{ value: '⟨', fontSize: 24, color: Color4.fromHexString('#00f3ff'), textAlign: 'middle-center' }}
+        />
+
+        {/* Circular Avatar / Badge Icon */}
+        <UiEntity
+          uiTransform={{
+            width: 40,
+            height: 40,
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: { right: 12 }
+          }}
+          uiBackground={{ color: Color4.fromHexString('#162238') }}
+        >
+          <UiEntity
+            uiText={{
+              value: parsed.icon,
+              fontSize: 20,
+              textAlign: 'middle-center'
+            }}
+          />
+        </UiEntity>
+
+        {/* Text Segments: Speaker (Cyan) + Action (White) + Highlight (Gold) + Suffix */}
+        <UiEntity
+          uiTransform={{
+            flexDirection: 'row',
+            alignItems: 'center'
+          }}
+        >
+          {parsed.speaker !== '' && (
+            <UiEntity
+              uiTransform={{ margin: { right: 6 } }}
+              uiText={{
+                value: parsed.speaker,
+                fontSize: 17,
+                color: Color4.fromHexString('#00f3ff'),
+                textAlign: 'middle-left'
+              }}
+            />
+          )}
+
+          <UiEntity
+            uiText={{
+              value: parsed.action,
+              fontSize: 16,
+              color: Color4.fromHexString('#e2e8f0'),
+              textAlign: 'middle-left'
+            }}
+          />
+
+          {parsed.highlight !== '' && (
+            <UiEntity
+              uiTransform={{ margin: { left: 4, right: 4 } }}
+              uiText={{
+                value: parsed.highlight,
+                fontSize: 17,
+                color: Color4.fromHexString('#ffd700'),
+                textAlign: 'middle-left'
+              }}
+            />
+          )}
+
+          {parsed.suffix !== '' && (
+            <UiEntity
+              uiText={{
+                value: parsed.suffix,
+                fontSize: 16,
+                color: Color4.fromHexString('#e2e8f0'),
+                textAlign: 'middle-left'
+              }}
+            />
+          )}
+        </UiEntity>
+
+        {/* Right Tech Bracket */}
+        <UiEntity
+          uiTransform={{ margin: { left: 12 } }}
+          uiText={{ value: '⟩', fontSize: 24, color: Color4.fromHexString('#00f3ff'), textAlign: 'middle-center' }}
+        />
+      </UiEntity>
     </UiEntity>
   )
 }
@@ -298,38 +451,64 @@ function SuitPickerModal() {
 }
 
 function uiComponent() {
-  if (!activeGame || !activeGame.isStarted) return null
-
   // Check if player is seated
   const playerTransform = Transform.getOrNull(engine.PlayerEntity)
-  if (!playerTransform) return null
-  
-  const pos = playerTransform.position
-  const tableCenter = Vector3.create(16, pos.y, 25)
-  const dist = Vector3.distance(pos, tableCenter)
-  
-  // Chairs are at ~2m radius. Give 3.5m leeway so we don't accidentally hide it due to camera/avatar offsets!
-  // We add a 1 second grace period to prevent teleport race conditions!
-  if (dist > 3.5 && Date.now() - getTimeSeated() > 1000) {
-    setPlayerSeated(false)
+  if (playerTransform) {
+    const pos = playerTransform.position
+    const tableCenter = Vector3.create(16, pos.y, 25)
+    const dist = Vector3.distance(pos, tableCenter)
+
+    // Chairs are at ~2m radius. Give 3.5m leeway so we don't accidentally hide it due to camera/avatar offsets!
+    // We add a 1 second grace period to prevent teleport race conditions!
+    if (dist > 3.5 && Date.now() - getTimeSeated() > 1000) {
+      setPlayerSeated(false)
+    }
   }
 
-  // Hide the UI until they click the chair to sit!
-  if (!getPlayerSeated()) return null
-
-  const myId = getPlayer()?.userId || 'player1';
-  const myHand = activeGame.players.get(myId) || []
+  const isTableActive = !!(activeGame && activeGame.isStarted && getPlayerSeated())
+  const myId = getPlayer()?.userId || 'player1'
+  const myHand = isTableActive ? (activeGame!.players.get(myId) || []) : []
 
   return (
     <UiEntity
-      uiTransform={{ width: '100%', height: '100%', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end' }}
+      uiTransform={{
+        width: '100%',
+        height: '100%',
+        positionType: 'relative',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-end'
+      }}
     >
-      <TableArea />
+      {/* Permanent Economy HUD in Top Right */}
+      <TopHudWidget />
+
+      {/* Rewards Toast notification */}
+      <RewardToastBanner />
+
+      {/* Daily Rewards & Bounties Modal (when opened) */}
+      <DailyRewardsModal />
+
+      {/* Game Notifications */}
       <TopBannerNotification />
-      <GameInfoBar />
-      <DeclareButton myHand={myHand} />
-      <PlayerHandArea myHand={myHand} />
-      <SuitPickerModal />
+
+      {/* In-Game Table Controls (Only when seated and game started) */}
+      {isTableActive && (
+        <UiEntity
+          uiTransform={{
+            width: '100%',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'flex-end'
+          }}
+        >
+          <TableArea />
+          <GameInfoBar />
+          <DeclareButton myHand={myHand} />
+          <PlayerHandArea myHand={myHand} />
+          <SuitPickerModal />
+        </UiEntity>
+      )}
     </UiEntity>
   )
 }

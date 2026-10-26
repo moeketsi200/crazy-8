@@ -12,6 +12,8 @@ import { setupUI } from './game/ui'
 import { buildInfoBoard, showGameButton } from './game/info_board'
 import { buildScoreBoard, updateScoreBoardText, updateHighWinningsText } from './game/score_board'
 import { setupMultiplayer, pushGameState } from './game/multiplayer'
+import { reportGameplayAction, addChips, addTrophies } from './game/economy'
+import { showRewardToast } from './game/rewards_ui'
 
 export function main() {
     // 1. Build the architectural shell (Now at 90% scale!)
@@ -41,7 +43,41 @@ export function main() {
       pushGameState(gameEngine)
     }
 
+    // Connect gameplay events to the retention & economy quest system
+    gameEngine.onCardPlayed = (playerId, card) => {
+      const myId = 'player1'
+      if (playerId === myId) {
+        reportGameplayAction('card_played')
+        if (card.rank === '8' || card.action === 'Wild' || card.action === 'Draw4') {
+          reportGameplayAction('wild_eight')
+        }
+        if (card.action === 'Draw2' || card.action === 'Draw4') {
+          reportGameplayAction('inflict_draw')
+        }
+      }
+    }
+
+    gameEngine.onDeclareSafe = (playerId) => {
+      if (playerId === 'player1') {
+        reportGameplayAction('declare_safe')
+      }
+    }
+
     gameEngine.onRoundEnd = (eliminated, winner, scoreBreakdown, roundWinner) => {
+      const myId = 'player1'
+      reportGameplayAction('match_finished')
+
+      if (roundWinner === myId || winner === myId) {
+        reportGameplayAction('match_won')
+        addChips(150)
+        addTrophies(20)
+        showRewardToast('🏆 VICTORY! +150 Chips & +20 Trophies!')
+      } else {
+        addChips(30)
+        addTrophies(5)
+        showRewardToast('Good game! +30 Chips & +5 Trophies!')
+      }
+
       if (winner) {
         updateScoreBoardText(`SCOREBOARD\n\n🏆 WINNER: ${winner.toUpperCase()} 🏆\n\nRound ${gameEngine.roundNumber} Over!\n\nLast Eliminated: ${eliminated.toUpperCase()}\n\nScores:\n${scoreBreakdown || ''}`)
         updateHighWinningsText(`HIGH WINNINGS\n\n🏆 ${winner.toUpperCase()} 🏆\n\nSecured the bag in Round ${gameEngine.roundNumber}!`)
