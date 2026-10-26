@@ -30,7 +30,7 @@ export function updateRewardToast(dt: number) {
 }
 
 // ----------------------------------------------------
-// TOP HUD WIDGET
+// TOP HUD WIDGET (4 Sci-Fi Buttons in Top Right)
 // ----------------------------------------------------
 export function TopHudWidget() {
   const profile = getProfile()
@@ -46,75 +46,94 @@ export function TopHudWidget() {
         padding: 4
       }}
     >
-      {/* Chips Pill */}
+      {/* 1. Chips Pill */}
       <UiEntity
         uiTransform={{
           flexDirection: 'row',
           alignItems: 'center',
-          padding: { left: 12, right: 12, top: 6, bottom: 6 },
-          margin: { right: 8 }
+          height: 34,
+          padding: { left: 12, right: 12 },
+          margin: { right: 8 },
+          borderRadius: 6,
+          borderWidth: 1.5,
+          borderColor: Color4.fromHexString('#ffd700aa')
         }}
-        uiBackground={{ color: Color4.fromHexString('#0f172aee') }}
+        uiBackground={{ color: Color4.fromHexString('#0b1422ea') }}
       >
         <UiEntity
           uiText={{
-            value: `🪙 ${profile.chips.toLocaleString()} CHIPS`,
-            fontSize: 14,
+            value: `🟡 ${profile.chips.toLocaleString()} CHIPS`,
+            fontSize: 13,
             color: Color4.fromHexString('#ffd700'),
-            textAlign: 'middle-center'
+            textAlign: 'middle-center',
+            font: 'sans-serif'
           }}
         />
       </UiEntity>
 
-      {/* Trophies Pill */}
+      {/* 2. Trophies Pill */}
       <UiEntity
         uiTransform={{
           flexDirection: 'row',
           alignItems: 'center',
-          padding: { left: 12, right: 12, top: 6, bottom: 6 },
-          margin: { right: 8 }
+          height: 34,
+          padding: { left: 12, right: 12 },
+          margin: { right: 8 },
+          borderRadius: 6,
+          borderWidth: 1.5,
+          borderColor: Color4.fromHexString('#00f3ffaa')
         }}
-        uiBackground={{ color: Color4.fromHexString('#0f172aee') }}
+        uiBackground={{ color: Color4.fromHexString('#0b1422ea') }}
       >
         <UiEntity
           uiText={{
             value: `🏆 ${profile.trophies} TROPHIES`,
-            fontSize: 14,
+            fontSize: 13,
             color: Color4.fromHexString('#00f3ff'),
-            textAlign: 'middle-center'
+            textAlign: 'middle-center',
+            font: 'sans-serif'
           }}
         />
       </UiEntity>
 
-      {/* Streak Pill */}
+      {/* 3. Streak Pill */}
       <UiEntity
         uiTransform={{
           flexDirection: 'row',
           alignItems: 'center',
-          padding: { left: 12, right: 12, top: 6, bottom: 6 },
-          margin: { right: 10 }
+          height: 34,
+          padding: { left: 12, right: 12 },
+          margin: { right: 10 },
+          borderRadius: 6,
+          borderWidth: 1.5,
+          borderColor: Color4.fromHexString('#ff7700aa')
         }}
-        uiBackground={{ color: Color4.fromHexString('#0f172aee') }}
+        uiBackground={{ color: Color4.fromHexString('#0b1422ea') }}
       >
         <UiEntity
           uiText={{
             value: `🔥 DAY ${profile.loginStreak}`,
-            fontSize: 14,
+            fontSize: 13,
             color: Color4.fromHexString('#ff7700'),
-            textAlign: 'middle-center'
+            textAlign: 'middle-center',
+            font: 'sans-serif'
           }}
         />
       </UiEntity>
 
-      {/* Rewards Button */}
+      {/* 4. Rewards Button */}
       <UiEntity
         uiTransform={{
           flexDirection: 'row',
           alignItems: 'center',
-          padding: { left: 14, right: 14, top: 8, bottom: 8 }
+          height: 34,
+          padding: { left: 14, right: 14 },
+          borderRadius: 6,
+          borderWidth: 1.5,
+          borderColor: hasPending ? Color4.fromHexString('#ffd700') : Color4.fromHexString('#00f3ff')
         }}
         uiBackground={{
-          color: hasPending ? Color4.fromHexString('#ffaa00') : Color4.fromHexString('#00f3ff33')
+          color: hasPending ? Color4.fromHexString('#f59e0bdd') : Color4.fromHexString('#063d4add')
         }}
         onMouseDown={() => {
           setRewardsModalOpen(!getIsRewardsModalOpen())
@@ -123,9 +142,10 @@ export function TopHudWidget() {
         <UiEntity
           uiText={{
             value: hasPending ? `🎁 REWARDS (!)` : `🎁 REWARDS`,
-            fontSize: 14,
+            fontSize: 13,
             color: hasPending ? Color4.Black() : Color4.White(),
-            textAlign: 'middle-center'
+            textAlign: 'middle-center',
+            font: 'sans-serif'
           }}
         />
       </UiEntity>
@@ -134,7 +154,7 @@ export function TopHudWidget() {
 }
 
 // ----------------------------------------------------
-// DAILY REWARDS & BOUNTIES MODAL
+// DAILY REWARDS & BOUNTIES MODAL (Sci-Fi Cyber Theme)
 // ----------------------------------------------------
 export function DailyRewardsModal() {
   if (!getIsRewardsModalOpen()) return null
@@ -153,18 +173,21 @@ export function DailyRewardsModal() {
         alignItems: 'center',
         justifyContent: 'center'
       }}
-      uiBackground={{ color: Color4.fromHexString('#000000bb') }}
+      uiBackground={{ color: Color4.fromHexString('#000000cc') }}
     >
       {/* Modal Dialog Box */}
       <UiEntity
         uiTransform={{
           width: 760,
-          height: 490,
+          height: 500,
           flexDirection: 'column',
           alignItems: 'center',
-          padding: 16
+          padding: 18,
+          borderRadius: 10,
+          borderWidth: 1.5,
+          borderColor: Color4.fromHexString('#00f3ff55')
         }}
-        uiBackground={{ color: Color4.fromHexString('#0b0f19fc') }}
+        uiBackground={{ color: Color4.fromHexString('#080f1efa') }}
       >
         {/* Header Bar */}
         <UiEntity
@@ -182,30 +205,25 @@ export function DailyRewardsModal() {
               value: `⭐ CRAZY 8 VIP REWARDS ⭐`,
               fontSize: 22,
               color: Color4.fromHexString('#ffd700'),
-              textAlign: 'middle-left'
+              textAlign: 'middle-left',
+              font: 'sans-serif'
             }}
           />
 
-          {/* Close Button */}
+          {/* Close Hazard Button */}
           <UiEntity
             uiTransform={{
-              width: 38,
-              height: 38,
+              width: 32,
+              height: 32,
               alignItems: 'center',
               justifyContent: 'center'
             }}
-            uiBackground={{ color: Color4.fromHexString('#ff2255') }}
+            uiBackground={{
+              textureMode: 'stretch',
+              texture: { src: 'assets/images/btn_close_hazard.png' }
+            }}
             onMouseDown={() => setRewardsModalOpen(false)}
-          >
-            <UiEntity
-              uiText={{
-                value: `✕`,
-                fontSize: 20,
-                color: Color4.White(),
-                textAlign: 'middle-center'
-              }}
-            />
-          </UiEntity>
+          />
         </UiEntity>
 
         {/* Tab Selection */}
@@ -223,21 +241,26 @@ export function DailyRewardsModal() {
               width: '50%',
               height: '100%',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              borderRadius: 4,
+              borderWidth: activeTab === 'streak' ? 0 : 1,
+              borderColor: Color4.fromHexString('#ffd70055'),
+              margin: { right: 4 }
             }}
             uiBackground={{
               color: activeTab === 'streak'
                 ? Color4.fromHexString('#ffd700')
-                : Color4.fromHexString('#1e293b')
+                : Color4.fromHexString('#101726')
             }}
             onMouseDown={() => setActiveRewardsTab('streak')}
           >
             <UiEntity
               uiText={{
                 value: `🔥 7-DAY LOGIN STREAK`,
-                fontSize: 16,
-                color: activeTab === 'streak' ? Color4.Black() : Color4.White(),
-                textAlign: 'middle-center'
+                fontSize: 15,
+                color: activeTab === 'streak' ? Color4.Black() : Color4.fromHexString('#ffd700'),
+                textAlign: 'middle-center',
+                font: 'sans-serif'
               }}
             />
           </UiEntity>
@@ -248,21 +271,26 @@ export function DailyRewardsModal() {
               width: '50%',
               height: '100%',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              borderRadius: 4,
+              borderWidth: activeTab === 'bounties' ? 0 : 1,
+              borderColor: Color4.fromHexString('#00f3ff55'),
+              margin: { left: 4 }
             }}
             uiBackground={{
               color: activeTab === 'bounties'
                 ? Color4.fromHexString('#00f3ff')
-                : Color4.fromHexString('#1e293b')
+                : Color4.fromHexString('#101726')
             }}
             onMouseDown={() => setActiveRewardsTab('bounties')}
           >
             <UiEntity
               uiText={{
                 value: `🎯 DAILY BOUNTIES`,
-                fontSize: 16,
-                color: activeTab === 'bounties' ? Color4.Black() : Color4.White(),
-                textAlign: 'middle-center'
+                fontSize: 15,
+                color: activeTab === 'bounties' ? Color4.Black() : Color4.fromHexString('#00f3ff'),
+                textAlign: 'middle-center',
+                font: 'sans-serif'
               }}
             />
           </UiEntity>
@@ -281,28 +309,37 @@ export function DailyRewardsModal() {
             <UiEntity
               uiTransform={{
                 width: '100%',
-                height: 250,
+                height: 255,
                 flexDirection: 'row',
                 justifyContent: 'space-between',
-                margin: { bottom: 20 }
+                margin: { bottom: 18 }
               }}
             >
               {STREAK_SCHEDULE.map((s) => {
                 const isCurrent = profile.loginStreak === s.day
                 const isPast = profile.loginStreak > s.day
                 const isClaimedToday = isCurrent && !canClaim
+                const isDay7 = s.day === 7
 
-                let cardBg = Color4.fromHexString('#151c2e')
-                let borderColor = Color4.fromHexString('#2d3748')
-                let titleColor = Color4.White()
+                let cardBg = Color4.fromHexString('#0f172a')
+                let borderColor = Color4.fromHexString('#1e293b')
+                let borderWidth = 1
+                let titleColor = Color4.fromHexString('#94a3b8')
 
                 if (isPast || isClaimedToday) {
                   cardBg = Color4.fromHexString('#062414')
                   borderColor = Color4.fromHexString('#10b981')
+                  borderWidth = 2
                   titleColor = Color4.fromHexString('#10b981')
+                } else if (isDay7) {
+                  cardBg = Color4.fromHexString('#22092c')
+                  borderColor = Color4.fromHexString('#d946ef')
+                  borderWidth = 2
+                  titleColor = Color4.White()
                 } else if (isCurrent) {
                   cardBg = Color4.fromHexString('#2a2305')
                   borderColor = Color4.fromHexString('#ffd700')
+                  borderWidth = 2
                   titleColor = Color4.fromHexString('#ffd700')
                 }
 
@@ -311,11 +348,14 @@ export function DailyRewardsModal() {
                     key={s.day}
                     uiTransform={{
                       width: 96,
-                      height: 240,
+                      height: 250,
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: 8
+                      padding: 8,
+                      borderRadius: 6,
+                      borderWidth,
+                      borderColor
                     }}
                     uiBackground={{ color: cardBg }}
                   >
@@ -323,13 +363,14 @@ export function DailyRewardsModal() {
                     <UiEntity
                       uiText={{
                         value: `DAY ${s.day}`,
-                        fontSize: 15,
+                        fontSize: 14,
                         color: titleColor,
-                        textAlign: 'top-center'
+                        textAlign: 'top-center',
+                        font: 'sans-serif'
                       }}
                     />
 
-                    {/* Reward details */}
+                    {/* Reward Center details */}
                     <UiEntity
                       uiTransform={{
                         flexDirection: 'column',
@@ -338,30 +379,71 @@ export function DailyRewardsModal() {
                         width: '100%'
                       }}
                     >
+                      {/* Day 7 Crown vs Locked Padlock vs Claimed Coin */}
+                      {isDay7 ? (
+                        <UiEntity
+                          uiTransform={{
+                            width: 44,
+                            height: 30,
+                            margin: { top: 4, bottom: 6 }
+                          }}
+                          uiBackground={{
+                            textureMode: 'stretch',
+                            texture: { src: 'assets/images/icon_crown.png' }
+                          }}
+                        />
+                      ) : (isPast || isClaimedToday || (isCurrent && canClaim)) ? (
+                        <UiEntity
+                          uiTransform={{
+                            margin: { top: 8, bottom: 4 }
+                          }}
+                          uiText={{
+                            value: `🪙`,
+                            fontSize: 24,
+                            textAlign: 'middle-center'
+                          }}
+                        />
+                      ) : (
+                        <UiEntity
+                          uiTransform={{
+                            width: 32,
+                            height: 34,
+                            margin: { top: 6, bottom: 6 }
+                          }}
+                          uiBackground={{
+                            textureMode: 'stretch',
+                            texture: { src: 'assets/images/icon_lock.png' }
+                          }}
+                        />
+                      )}
+
                       <UiEntity
                         uiText={{
-                          value: `🪙\n+${s.chips}`,
-                          fontSize: 13,
+                          value: `+${s.chips}`,
+                          fontSize: 15,
                           color: Color4.fromHexString('#ffd700'),
-                          textAlign: 'middle-center'
+                          textAlign: 'middle-center',
+                          font: 'sans-serif'
                         }}
                       />
                       <UiEntity
                         uiText={{
-                          value: `🏆 +${s.trophies}`,
-                          fontSize: 12,
+                          value: `+${s.trophies}`,
+                          fontSize: 13,
                           color: Color4.fromHexString('#00f3ff'),
-                          textAlign: 'middle-center'
+                          textAlign: 'middle-center',
+                          font: 'sans-serif'
                         }}
                       />
                       {s.specialTitle && (
                         <UiEntity
-                          uiTransform={{ margin: { top: 6 } }}
+                          uiTransform={{ margin: { top: 4 } }}
                           uiText={{
-                            value: `👑\n${s.specialTitle}`,
+                            value: s.specialTitle,
                             fontSize: 10,
-                            color: Color4.fromHexString('#ff00aa'),
-                            textAlign: 'middle-center'
+                            color: isDay7 ? Color4.fromHexString('#ec4899') : Color4.fromHexString('#ff9900'),
+                            textAlign: 'middle-center',
+                            font: 'sans-serif'
                           }}
                         />
                       )}
@@ -370,10 +452,11 @@ export function DailyRewardsModal() {
                     {/* Status Label */}
                     <UiEntity
                       uiText={{
-                        value: (isPast || isClaimedToday) ? '✓ CLAIMED' : isCurrent ? 'READY' : 'LOCKED',
+                        value: (isPast || isClaimedToday) ? '✔ CLAIMED' : isCurrent ? (canClaim ? 'READY' : 'LOCKED') : 'LOCKED',
                         fontSize: 11,
-                        color: (isPast || isClaimedToday) ? Color4.fromHexString('#10b981') : isCurrent ? Color4.fromHexString('#ffd700') : Color4.Gray(),
-                        textAlign: 'bottom-center'
+                        color: (isPast || isClaimedToday) ? Color4.fromHexString('#10b981') : (isCurrent && canClaim) ? Color4.fromHexString('#ffd700') : Color4.fromHexString('#64748b'),
+                        textAlign: 'bottom-center',
+                        font: 'sans-serif'
                       }}
                     />
                   </UiEntity>
@@ -381,18 +464,17 @@ export function DailyRewardsModal() {
               })}
             </UiEntity>
 
-            {/* Streak Claim Button */}
+            {/* Sci-Fi Streak Claim Button */}
             <UiEntity
               uiTransform={{
-                width: 360,
-                height: 50,
+                width: 340,
+                height: 48,
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
               uiBackground={{
-                color: canClaim
-                  ? Color4.fromHexString('#ffd700')
-                  : Color4.fromHexString('#222f3e')
+                textureMode: 'stretch',
+                texture: { src: 'assets/images/btn_claim_frame.png' }
               }}
               onMouseDown={() => {
                 if (canClaim) {
@@ -408,9 +490,10 @@ export function DailyRewardsModal() {
                   value: canClaim
                     ? `CLAIM DAY ${profile.loginStreak} REWARD!`
                     : `CLAIMED TODAY! (Next reward in 24h)`,
-                  fontSize: 16,
-                  color: canClaim ? Color4.Black() : Color4.fromHexString('#94a3b8'),
-                  textAlign: 'middle-center'
+                  fontSize: 15,
+                  color: canClaim ? Color4.fromHexString('#ffd700') : Color4.fromHexString('#e2e8f0'),
+                  textAlign: 'middle-center',
+                  font: 'sans-serif'
                 }}
               />
             </UiEntity>
@@ -435,21 +518,24 @@ export function DailyRewardsModal() {
                   key={q.id}
                   uiTransform={{
                     width: '100%',
-                    height: 84,
+                    height: 86,
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: 12,
-                    margin: { bottom: 10 }
+                    padding: { left: 16, right: 16, top: 10, bottom: 10 },
+                    margin: { bottom: 12 },
+                    borderRadius: 8,
+                    borderWidth: 1.5,
+                    borderColor: isReady ? Color4.fromHexString('#10b981') : Color4.fromHexString('#00f3ff77')
                   }}
-                  uiBackground={{ color: Color4.fromHexString('#131a2c') }}
+                  uiBackground={{ color: Color4.fromHexString('#0a1320ee') }}
                 >
-                  {/* Quest info */}
+                  {/* Quest info (Left) */}
                   <UiEntity
                     uiTransform={{
                       flexDirection: 'column',
                       justifyContent: 'center',
-                      width: 440
+                      width: 420
                     }}
                   >
                     <UiEntity
@@ -457,7 +543,8 @@ export function DailyRewardsModal() {
                         value: `${q.title} (${q.progress}/${q.target})`,
                         fontSize: 16,
                         color: Color4.White(),
-                        textAlign: 'middle-left'
+                        textAlign: 'middle-left',
+                        font: 'sans-serif'
                       }}
                     />
                     <UiEntity
@@ -465,7 +552,8 @@ export function DailyRewardsModal() {
                         value: q.description,
                         fontSize: 12,
                         color: Color4.fromHexString('#94a3b8'),
-                        textAlign: 'middle-left'
+                        textAlign: 'middle-left',
+                        font: 'sans-serif'
                       }}
                     />
 
@@ -473,15 +561,17 @@ export function DailyRewardsModal() {
                     <UiEntity
                       uiTransform={{
                         width: '100%',
-                        height: 8,
-                        margin: { top: 6 }
+                        height: 6,
+                        margin: { top: 8 },
+                        borderRadius: 3
                       }}
-                      uiBackground={{ color: Color4.fromHexString('#222d45') }}
+                      uiBackground={{ color: Color4.fromHexString('#172338') }}
                     >
                       <UiEntity
                         uiTransform={{
                           width: `${pct}%`,
-                          height: '100%'
+                          height: '100%',
+                          borderRadius: 3
                         }}
                         uiBackground={{
                           color: isReady
@@ -492,66 +582,111 @@ export function DailyRewardsModal() {
                     </UiEntity>
                   </UiEntity>
 
-                  {/* Reward badges */}
+                  {/* Reward badges (Middle) */}
                   <UiEntity
                     uiTransform={{
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      width: 120
+                      width: 110
                     }}
                   >
                     <UiEntity
                       uiText={{
                         value: `+${q.rewardChips} 🪙`,
-                        fontSize: 14,
+                        fontSize: 15,
                         color: Color4.fromHexString('#ffd700'),
-                        textAlign: 'middle-center'
+                        textAlign: 'middle-center',
+                        font: 'sans-serif'
                       }}
                     />
                     <UiEntity
                       uiText={{
                         value: `+${q.rewardTrophies} 🏆`,
-                        fontSize: 12,
+                        fontSize: 13,
                         color: Color4.fromHexString('#00f3ff'),
-                        textAlign: 'middle-center'
+                        textAlign: 'middle-center',
+                        font: 'sans-serif'
                       }}
                     />
                   </UiEntity>
 
-                  {/* Action Button */}
-                  <UiEntity
-                    uiTransform={{
-                      width: 120,
-                      height: 42,
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                    uiBackground={{
-                      color: q.claimed
-                        ? Color4.fromHexString('#1e293b')
-                        : isReady
-                        ? Color4.fromHexString('#10b981')
-                        : Color4.fromHexString('#334155')
-                    }}
-                    onMouseDown={() => {
-                      if (isReady) {
+                  {/* Action Button or Circular Gauge (Right) */}
+                  {q.claimed ? (
+                    <UiEntity
+                      uiTransform={{
+                        width: 96,
+                        height: 38,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: 6
+                      }}
+                      uiBackground={{ color: Color4.fromHexString('#1e293b') }}
+                    >
+                      <UiEntity
+                        uiText={{
+                          value: `CLAIMED`,
+                          fontSize: 13,
+                          color: Color4.fromHexString('#64748b'),
+                          textAlign: 'middle-center',
+                          font: 'sans-serif'
+                        }}
+                      />
+                    </UiEntity>
+                  ) : isReady ? (
+                    <UiEntity
+                      uiTransform={{
+                        width: 96,
+                        height: 38,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: 6,
+                        borderWidth: 1.5,
+                        borderColor: Color4.fromHexString('#10b981')
+                      }}
+                      uiBackground={{ color: Color4.fromHexString('#059669') }}
+                      onMouseDown={() => {
                         const success = claimQuest(q.id)
                         if (success) {
                           showRewardToast(`🎉 Bounty Complete: +${q.rewardChips} Chips, +${q.rewardTrophies} Trophies!`)
                         }
-                      }
-                    }}
-                  >
-                    <UiEntity
-                      uiText={{
-                        value: q.claimed ? `CLAIMED` : isReady ? `CLAIM!` : `${pct}%`,
-                        fontSize: 14,
-                        color: isReady ? Color4.White() : Color4.fromHexString('#94a3b8'),
-                        textAlign: 'middle-center'
                       }}
-                    />
-                  </UiEntity>
+                    >
+                      <UiEntity
+                        uiText={{
+                          value: `CLAIM!`,
+                          fontSize: 14,
+                          color: Color4.White(),
+                          textAlign: 'middle-center',
+                          font: 'sans-serif'
+                        }}
+                      />
+                    </UiEntity>
+                  ) : (
+                    /* Circular Sci-Fi Gauge */
+                    <UiEntity
+                      uiTransform={{
+                        width: 52,
+                        height: 52,
+                        borderRadius: 26,
+                        borderWidth: 2,
+                        borderColor: Color4.fromHexString('#00f3ff'),
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      uiBackground={{ color: Color4.fromHexString('#061d2d') }}
+                    >
+                      <UiEntity
+                        uiText={{
+                          value: `${pct}%`,
+                          fontSize: 13,
+                          color: Color4.fromHexString('#00f3ff'),
+                          textAlign: 'middle-center',
+                          font: 'sans-serif'
+                        }}
+                      />
+                    </UiEntity>
+                  )}
                 </UiEntity>
               )
             })}
@@ -573,16 +708,20 @@ export function RewardToastBanner() {
         width: 500,
         height: 50,
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        borderRadius: 8,
+        borderWidth: 1.5,
+        borderColor: Color4.fromHexString('#10b981')
       }}
-      uiBackground={{ color: Color4.fromHexString('#10b981ee') }}
+      uiBackground={{ color: Color4.fromHexString('#062414fa') }}
     >
       <UiEntity
         uiText={{
           value: rewardToastMsg,
-          fontSize: 18,
+          fontSize: 17,
           color: Color4.White(),
-          textAlign: 'middle-center'
+          textAlign: 'middle-center',
+          font: 'sans-serif'
         }}
       />
     </UiEntity>
