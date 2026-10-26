@@ -6,6 +6,8 @@ import { CrazyEightsGame } from './logic'
 import { buildPrimitiveChair } from './chairs'
 import { buildPrimitiveTable } from './table_visuals'
 import { setupTableChips, setupChairAuras, updateChairAuraVisibility } from './models_integration'
+import { getStreakReminderMessage } from './economy'
+import { showRewardToast } from './rewards_ui'
 
 // ==========================================
 // CUSTOM TIMER SYSTEM
@@ -350,6 +352,9 @@ export function standUpPlayer() {
     globalGame.removePlayer(myId)
     update3DTable(globalGame)
   }
+
+  // Phase 6: Log-Off & Streak Protection Hook
+  showRewardToast(getStreakReminderMessage())
 }
 
 export function sitPlayerAtOpenChair(userId?: string): boolean {

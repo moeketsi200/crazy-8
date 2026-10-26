@@ -82,6 +82,7 @@ const ALL_QUEST_TEMPLATES = [
 export interface PlayerProfile {
   chips: number
   trophies: number
+  totalWins: number
   loginStreak: number
   lastClaimDateStr: string // 'YYYY-MM-DD'
   equippedTitle: string
@@ -120,6 +121,7 @@ function generateDailyQuests(): PlayerQuest[] {
 const profile: PlayerProfile = {
   chips: 250, // Welcome bonus chips
   trophies: 25,
+  totalWins: 5, // Lifetime match wins
   loginStreak: 1,
   lastClaimDateStr: '', // Not claimed yet today
   equippedTitle: 'Card Rookie',
@@ -193,6 +195,9 @@ export type GameplayAction = 'card_played' | 'wild_eight' | 'inflict_draw' | 'de
 
 export function reportGameplayAction(action: GameplayAction, count: number = 1) {
   let updated = false
+  if (action === 'match_won') {
+    profile.totalWins += count
+  }
   for (const quest of profile.quests) {
     if (quest.claimed) continue
 
@@ -244,6 +249,7 @@ export interface ShopItem {
   category: 'deck' | 'aura' | 'title' | 'wearable'
   priceChips: number
   reqTrophies: number
+  reqWins?: number
   description: string
   badgeColor: string
   auraHex?: string
@@ -251,7 +257,7 @@ export interface ShopItem {
 }
 
 export const SHOP_CATALOG: ShopItem[] = [
-  // 1. Card Decks
+  // 1. Hardcore Custom Card Decks
   {
     id: 'deck_classic',
     name: 'Classic Standard',
@@ -264,36 +270,36 @@ export const SHOP_CATALOG: ShopItem[] = [
   },
   {
     id: 'deck_cyberpunk',
-    name: 'Cyberpunk Neon',
+    name: 'Cyberpunk Neon Deck',
     category: 'deck',
-    priceChips: 750,
-    reqTrophies: 20,
-    description: 'Glowing laser cyan & magenta circuit lines',
+    priceChips: 1200,
+    reqTrophies: 40,
+    description: 'Requires daily dedication. Glowing laser cyan & magenta circuit lines',
     badgeColor: '#00f3ff',
     iconLabel: '⚡'
   },
   {
     id: 'deck_gold_vip',
-    name: 'Gold Foil VIP',
+    name: 'Gold Foil VIP Deck',
     category: 'deck',
-    priceChips: 2200,
-    reqTrophies: 100,
-    description: 'Black obsidian card with metallic 24K gold filigree',
+    priceChips: 4000,
+    reqTrophies: 150,
+    description: 'Requires serious match-winning dedication. Black obsidian with 24K gold filigree',
     badgeColor: '#ffd700',
     iconLabel: '👑'
   },
   {
     id: 'deck_dcl_holo',
-    name: 'DCL Holographic',
+    name: 'DCL Holographic Deck',
     category: 'deck',
-    priceChips: 3800,
-    reqTrophies: 250,
-    description: 'Decentraland Mana prismatic holographic sheen',
+    priceChips: 7500,
+    reqTrophies: 350,
+    description: 'An elite endgame deck for true card sharks with shifting Mana crystals',
     badgeColor: '#b026ff',
     iconLabel: '✨'
   },
 
-  // 2. Chair Underglow Auras
+  // 2. Hardcore Chair Underglow Auras (chair_aura_ring.glb)
   {
     id: 'aura_none',
     name: 'No Underglow',
@@ -307,33 +313,33 @@ export const SHOP_CATALOG: ShopItem[] = [
   },
   {
     id: 'aura_cyan',
-    name: 'Cyan Cyber Glow',
+    name: 'Cyan Pulse Ring',
     category: 'aura',
-    priceChips: 1200,
-    reqTrophies: 50,
-    description: 'Floor ring glows laser cyan when seated',
+    priceChips: 3000,
+    reqTrophies: 75,
+    description: 'Electric blue floor glow underneath your chair',
     badgeColor: '#00f3ff',
     auraHex: '#00f3ff',
     iconLabel: '💠'
   },
   {
     id: 'aura_purple',
-    name: 'Neon Violet Glow',
+    name: 'Royal Purple Glow',
     category: 'aura',
-    priceChips: 2500,
-    reqTrophies: 120,
-    description: 'Floor ring pulses royal violet when seated',
+    priceChips: 7000,
+    reqTrophies: 200,
+    description: 'Deep, ambient purple aura signaling veteran status',
     badgeColor: '#b026ff',
     auraHex: '#b026ff',
     iconLabel: '🔮'
   },
   {
     id: 'aura_gold',
-    name: 'High-Roller Gold',
+    name: 'Golden High-Roller Ring',
     category: 'aura',
-    priceChips: 5000,
-    reqTrophies: 350,
-    description: 'Floor ring shines 24K radiant gold when seated',
+    priceChips: 15000,
+    reqTrophies: 600,
+    description: 'Only the top veterans on the server will ever sit on this 24K halo',
     badgeColor: '#ffd700',
     auraHex: '#ffd700',
     iconLabel: '🌟'
@@ -381,26 +387,49 @@ export const SHOP_CATALOG: ShopItem[] = [
     iconLabel: '👑'
   },
 
-  // 4. Wearables (Showcase Preview Items)
+  // 4. Win Count Milestone Apparel (Caps, Bomber Jackets, Custom T-Shirts)
   {
-    id: 'wearable_cyber_hoodie',
-    name: 'Crazy 8 Cyber Hoodie',
+    id: 'wearable_electric_cap',
+    name: 'Electric Streak Cap',
     category: 'wearable',
-    priceChips: 10000,
-    reqTrophies: 600,
-    description: 'Lounge-exclusive dark hoodie with glowing 8 emblem on back',
+    priceChips: 0,
+    reqTrophies: 0,
+    reqWins: 30,
+    description: 'Unlocked at 30 Match Wins. Features glowing neon piping and lightning 8 emblem',
     badgeColor: '#00f3ff',
-    iconLabel: '👗'
+    iconLabel: '🧢'
   },
   {
-    id: 'wearable_gold_bomber',
-    name: 'Champion Gold Bomber',
+    id: 'wearable_shades_chain',
+    name: 'Designer Shades & Tee',
     category: 'wearable',
-    priceChips: 15000,
-    reqTrophies: 1000,
-    description: 'Awarded to the Weekly Billboard #1 Champion on Sundays',
+    priceChips: 0,
+    reqTrophies: 0,
+    reqWins: 60,
+    description: 'Unlocked at 60 Match Wins. 24K gold geometric shades, Cuban chain & custom tee',
     badgeColor: '#ffd700',
+    iconLabel: '🕶️'
+  },
+  {
+    id: 'wearable_vip_bomber',
+    name: 'VIP Lounge Bomber Jacket',
+    category: 'wearable',
+    priceChips: 0,
+    reqTrophies: 0,
+    reqWins: 80,
+    description: 'Unlocked at 80 Match Wins. Satin jacket with glowing King of Cards embroidery',
+    badgeColor: '#ff0055',
     iconLabel: '🧥'
+  },
+  {
+    id: 'wearable_champion_crown_hoodie',
+    name: "Champion Crown & Hoodie",
+    category: 'wearable',
+    priceChips: 0,
+    reqTrophies: 0,
+    description: 'Ultimate prestige awarded to the #1 Weekly Billboard Champion',
+    badgeColor: '#ffd700',
+    iconLabel: '👑'
   }
 ]
 
@@ -410,7 +439,10 @@ export function isItemUnlocked(itemId: string): boolean {
   if (item.category === 'deck') return profile.unlockedDecks.includes(itemId)
   if (item.category === 'aura') return profile.unlockedAuras.includes(itemId)
   if (item.category === 'title') return profile.unlockedTitles.includes(item.name)
-  if (item.category === 'wearable') return profile.unlockedWearables.includes(itemId)
+  if (item.category === 'wearable') {
+    if (item.reqWins !== undefined && profile.totalWins >= item.reqWins) return true
+    return profile.unlockedWearables.includes(itemId)
+  }
   return false
 }
 
@@ -436,7 +468,14 @@ export function buyShopItem(itemId: string): { success: boolean; message: string
   if (!item) return { success: false, message: 'Item not found' }
 
   if (isItemUnlocked(itemId)) {
-    return { success: false, message: 'Item already owned!' }
+    return { success: false, message: 'Item already unlocked!' }
+  }
+
+  if (item.reqWins !== undefined) {
+    return {
+      success: false,
+      message: `Unlocked by winning matches! (${profile.totalWins}/${item.reqWins} Wins)`
+    }
   }
 
   if (profile.trophies < item.reqTrophies) {
@@ -493,6 +532,12 @@ export function equipShopItem(itemId: string): { success: boolean; message: stri
 
   cosmeticListeners.forEach(fn => fn(item.category, itemId, item))
   return { success: true, message: `Equipped ${item.name}!` }
+}
+
+export function getStreakReminderMessage(): string {
+  const nextDay = (profile.loginStreak % 7) + 1
+  const nextReward = STREAK_SCHEDULE[nextDay - 1]
+  return `🔥 Day ${profile.loginStreak} Streak Active! Return tomorrow to claim Day ${nextDay} (+${nextReward.chips} 🪙)!`
 }
 
 // Modal open/close state

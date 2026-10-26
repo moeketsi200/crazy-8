@@ -18,6 +18,7 @@ import {
   isItemEquipped,
   buyShopItem,
   equipShopItem,
+  getStreakReminderMessage,
   STREAK_SCHEDULE
 } from './economy'
 
@@ -242,7 +243,10 @@ export function DailyRewardsModal() {
               textureMode: 'stretch',
               texture: { src: 'assets/images/btn_close_hazard.png' }
             }}
-            onMouseDown={() => setRewardsModalOpen(false)}
+            onMouseDown={() => {
+              setRewardsModalOpen(false)
+              showRewardToast(getStreakReminderMessage())
+            }}
           />
         </UiEntity>
 
@@ -897,9 +901,13 @@ export function DailyRewardsModal() {
                         />
                         <UiEntity
                           uiText={{
-                            value: item.priceChips === 0 ? 'FREE' : `🟡 ${item.priceChips.toLocaleString()} Chips | 🏆 ${item.reqTrophies} req`,
+                            value: item.reqWins !== undefined
+                              ? `🏆 Milestone: ${profile.totalWins}/${item.reqWins} Wins`
+                              : item.priceChips === 0
+                              ? 'FREE'
+                              : `🟡 ${item.priceChips.toLocaleString()} Chips | 🏆 ${item.reqTrophies} req`,
                             fontSize: 10,
-                            color: Color4.fromHexString('#ffd700'),
+                            color: unlocked ? Color4.fromHexString('#00f3ff') : Color4.fromHexString('#ffd700'),
                             textAlign: 'middle-left',
                             font: 'sans-serif'
                           }}
@@ -934,6 +942,14 @@ export function DailyRewardsModal() {
                         }}
                         onMouseDown={() => {
                           if (equipped) return
+                          if (item.reqWins !== undefined) {
+                            if (unlocked) {
+                              showRewardToast(`✔ ${item.name} Unlocked! Active in Avatar inventory.`)
+                            } else {
+                              showRewardToast(`Win ${item.reqWins - profile.totalWins} more matches to unlock ${item.name}!`)
+                            }
+                            return
+                          }
                           if (unlocked) {
                             const res = equipShopItem(item.id)
                             showRewardToast(res.message)
@@ -950,7 +966,9 @@ export function DailyRewardsModal() {
                             value: equipped
                               ? '✔ EQUIPPED'
                               : unlocked
-                              ? 'EQUIP'
+                              ? (item.reqWins !== undefined ? '✔ UNLOCKED' : 'EQUIP')
+                              : item.reqWins !== undefined
+                              ? `${profile.totalWins}/${item.reqWins} WINS`
                               : canAfford
                               ? 'BUY'
                               : '🔒 LOCKED',
@@ -961,7 +979,7 @@ export function DailyRewardsModal() {
                               ? Color4.fromHexString('#00f3ff')
                               : canAfford
                               ? Color4.fromHexString('#ffd700')
-                              : Color4.fromHexString('#64748b'),
+                              : Color4.fromHexString('#94a3b8'),
                             textAlign: 'middle-center',
                             font: 'sans-serif'
                           }}
