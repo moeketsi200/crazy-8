@@ -22,6 +22,7 @@ export class CrazyEightsGame {
   public onDeclareSafe?: (playerId: PlayerId) => void
 
   public safeDeclared: Set<PlayerId> = new Set()
+  public queuedPlayers: PlayerId[] = []
   public onNotification?: (message: string) => void
   public playerNameResolver?: (playerId: PlayerId) => string
 
@@ -91,18 +92,33 @@ export class CrazyEightsGame {
     }
   }
 
-  public startGame() {
-    // Ensure we always have the player and the bot ready before dealing
-    if (this.playerOrder.length === 0) {
-      this.addPlayer('player1')
-    }
-    if (!this.playerOrder.includes('bot')) {
-      this.addPlayer('bot')
-    }
-    if (this.playerOrder.length < 2) {
-      this.addPlayer('bot')
+  public startGame(seatedPlayers?: PlayerId[], withBot: boolean = true) {
+    if (seatedPlayers && seatedPlayers.length > 0) {
+      // Remove empty/invalid and deduplicate
+      const uniquePlayers = Array.from(new Set(seatedPlayers)).filter(p => !!p && p.trim().length > 0)
+      this.players.clear()
+      this.playerOrder = []
+      this.scores.clear()
+
+      for (const p of uniquePlayers) {
+        this.addPlayer(p)
+      }
+
+      // If only 1 human is seated, add exactly 1 bot to play head-to-head!
+      if (uniquePlayers.length === 1 && withBot) {
+        this.addPlayer('bot')
+      }
+    } else {
+      // Fallback if no specific seated players supplied
+      if (this.playerOrder.length === 0) {
+        this.addPlayer('player1')
+      }
+      if (!this.playerOrder.includes('bot') && this.playerOrder.length < 2) {
+        this.addPlayer('bot')
+      }
     }
 
+    this.queuedPlayers = []
     this.drawPile = shuffleDeck(generateDeck())
     this.discardPile = []
     this.pendingDraws = 0
@@ -126,7 +142,61 @@ export class CrazyEightsGame {
     this.onStateChanged?.()
   }
 
+  public joinGame(playerId: PlayerId) {
+    if (!playerId) return
+    if (!this.playerOrder.includes(playerId)) {
+      if (!this.queuedPlayers.includes(playerId)) {
+        this.queuedPlayers.push(playerId)
+      }
+      this.onStateChanged?.()
+    }
+  }
+
+  public removePlayer(playerId: PlayerId) {
+    if (!playerId) return
+    this.queuedPlayers = this.queuedPlayers.filter(p => p !== playerId)
+
+    if (this.players.has(playerId)) {
+      this.eliminatedPlayers.add(playerId)
+      this.players.delete(playerId)
+      const orderIdx = this.playerOrder.indexOf(playerId)
+      if (orderIdx !== -1) {
+        this.playerOrder.splice(orderIdx, 1)
+      }
+
+      const activePlayers = this.playerOrder.filter(p => !this.eliminatedPlayers.has(p))
+      if (activePlayers.length <= 1 && this.isStarted && !this.gameOver) {
+        const winner = activePlayers[0] || 'bot'
+        this.gameOver = true
+        this.isStarted = false
+        const winnerName = this.getDisplayName(winner)
+        this.onRoundEnd?.(playerId, winner, `${winnerName} wins!`, winner)
+      } else if (this.isStarted && activePlayers.length > 0) {
+        this.currentTurnIndex = this.currentTurnIndex % activePlayers.length
+        const current = activePlayers[this.currentTurnIndex]
+        if (current === 'bot') {
+          if (this.onBotTurnStart) {
+            this.onBotTurnStart()
+          } else {
+            this.runBotTurn()
+          }
+        }
+      }
+      this.onStateChanged?.()
+    }
+  }
+
   public startNextRound() {
+    // Add any queued players who joined mid-game into the active player roster!
+    if (this.queuedPlayers.length > 0) {
+      for (const qp of this.queuedPlayers) {
+        if (!this.playerOrder.includes(qp)) {
+          this.addPlayer(qp)
+        }
+      }
+      this.queuedPlayers = []
+    }
+
     const activePlayers = this.playerOrder.filter(p => !this.eliminatedPlayers.has(p))
     if (activePlayers.length < 2) return
 
@@ -353,10 +423,15 @@ export class CrazyEightsGame {
   }
 
   private botTryChallenge() {
-    const humanHand = this.players.get('player1')
-    if (this.isHandVulnerable(humanHand) && !this.safeDeclared.has('player1')) {
-      if (Math.random() <= 0.6) {
-        this.challengePlayer('bot', 'player1')
+    for (const pId of this.playerOrder) {
+      if (pId !== 'bot' && !this.eliminatedPlayers.has(pId)) {
+        const pHand = this.players.get(pId)
+        if (this.isHandVulnerable(pHand) && !this.safeDeclared.has(pId)) {
+          if (Math.random() <= 0.6) {
+            this.challengePlayer('bot', pId)
+            break
+          }
+        }
       }
     }
   }

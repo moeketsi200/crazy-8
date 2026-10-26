@@ -1,18 +1,25 @@
-import { engine, Transform, MeshRenderer, MeshCollider, TextShape, Material, Entity, pointerEventsSystem, inputSystem, InputAction, TextAlignMode } from '@dcl/sdk/ecs'
+import { engine, Transform, MeshRenderer, MeshCollider, TextShape, Material, Entity, pointerEventsSystem, InputAction, TextAlignMode } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion, Color4 } from '@dcl/sdk/math'
 import { CrazyEightsGame } from './logic'
-import { update3DTable, resolvePlayerId } from './table'
+import { update3DTable, resolvePlayerId, getSeatedPlayerIds, sitPlayerAtOpenChair, getPlayerSeated } from './table'
 import { updateScoreBoardText } from './score_board'
+import { showRewardToast } from './rewards_ui'
 
 export let buttonEntity: Entity
 export let buttonTextEntity: Entity
 let cachedGameEngine: CrazyEightsGame | null = null
+
+export type GameButtonAction = 'START' | 'COUNTDOWN' | 'JOIN' | 'CONTINUE'
+let currentButtonAction: GameButtonAction = 'START'
+let lobbyCountdown = 0
+let isLobbyActive = false
 
 export function buildInfoBoard(parentHouse: Entity, gameEngine: CrazyEightsGame) {
   cachedGameEngine = gameEngine
   createBoardBackground(parentHouse)
   createRulesText(parentHouse)
   createStartButton(parentHouse)
+  setupLobbyCountdownSystem()
 }
 
 function createBoardBackground(parentHouse: Entity) {
@@ -58,48 +65,132 @@ function createRulesText(parentHouse: Entity) {
   })
 }
 
-export function showGameButton(text: string, actionType: 'START' | 'CONTINUE') {
-  if (buttonEntity && buttonTextEntity) {
-    Transform.getMutable(buttonEntity).scale = Vector3.create(3.0, 0.6, 1.0)
-    Transform.getMutable(buttonTextEntity).scale = Vector3.create(1, 1, 1)
-    
-    TextShape.getMutable(buttonTextEntity).text = text
-    
-    pointerEventsSystem.onPointerDown(
-      { entity: buttonEntity, opts: { button: InputAction.IA_POINTER, hoverText: text } },
-      () => handleButtonClick(actionType)
-    )
-    pointerEventsSystem.onPointerDown(
-      { entity: buttonTextEntity, opts: { button: InputAction.IA_POINTER, hoverText: text } },
-      () => handleButtonClick(actionType)
-    )
-  }
+export function showGameButton(text: string, actionType: GameButtonAction) {
+  setButtonState(actionType, text)
 }
 
-function handleButtonClick(actionType: 'START' | 'CONTINUE') {
+function setButtonState(action: GameButtonAction, text?: string) {
+  currentButtonAction = action
+  if (!buttonEntity || !buttonTextEntity) return
+
+  Transform.getMutable(buttonEntity).scale = Vector3.create(3.0, 0.6, 1.0)
+  Transform.getMutable(buttonTextEntity).scale = Vector3.create(1, 1, 1)
+
+  let label = text || 'START THE GAME'
+  let colorHex = '#C91D1D' // Default red
+
+  switch (action) {
+    case 'START':
+      label = text || 'START THE GAME'
+      colorHex = '#C91D1D' // Red
+      break
+    case 'COUNTDOWN':
+      label = text || `STARTING IN ${Math.ceil(lobbyCountdown)}s\nTAKE A SEAT`
+      colorHex = '#FF8800' // Gold/Orange
+      break
+    case 'JOIN':
+      label = text || 'JOIN THE GAME'
+      colorHex = '#0099FF' // Electric Cyan/Blue
+      break
+    case 'CONTINUE':
+      label = text || 'CONTINUE\n(Next Round)'
+      colorHex = '#10B981' // Emerald Green
+      break
+  }
+
+  TextShape.getMutable(buttonTextEntity).text = label
+  Material.setPbrMaterial(buttonEntity, { albedoColor: Color4.fromHexString(colorHex) })
+}
+
+function handleButtonClick() {
   const gameEngine = cachedGameEngine
   if (!gameEngine) return
 
-  const myId = resolvePlayerId(gameEngine)
-  if (!gameEngine.players.has(myId)) {
-    gameEngine.addPlayer(myId)
-  }
-  if (!gameEngine.players.has('bot')) {
-    gameEngine.addPlayer('bot')
+  if (currentButtonAction === 'START') {
+    // 1. Player presses Start: If not seated, sit them down at first open chair!
+    if (!getPlayerSeated()) {
+      sitPlayerAtOpenChair()
+    }
+    // 2. Begin 15-second lobby countdown
+    isLobbyActive = true
+    lobbyCountdown = 15.0
+    setButtonState('COUNTDOWN', 'STARTING IN 15s\nTAKE A SEAT!')
+    showRewardToast('⏱️ Game starting in 15s! Grab a seat at the table to play!')
+    return
   }
 
-  if (actionType === 'START') {
-    gameEngine.startGame()
-  } else if (actionType === 'CONTINUE') {
+  if (currentButtonAction === 'COUNTDOWN') {
+    // If clicked during countdown, take a seat!
+    if (!getPlayerSeated()) {
+      sitPlayerAtOpenChair()
+      showRewardToast('🪑 You took a seat! Waiting for countdown to finish.')
+    }
+    return
+  }
+
+  if (currentButtonAction === 'JOIN') {
+    // Game already started: Player joins the table!
+    if (!getPlayerSeated()) {
+      sitPlayerAtOpenChair()
+    }
+    const myId = resolvePlayerId(gameEngine)
+    gameEngine.joinGame(myId)
+    showRewardToast('🎮 You joined the table! You will be dealt in next round.')
+    return
+  }
+
+  if (currentButtonAction === 'CONTINUE') {
+    // Start the next round with all currently seated players
     gameEngine.startNextRound()
+    update3DTable(gameEngine)
+    updateScoreBoardText(`SCOREBOARD\n\nRound ${gameEngine.roundNumber}\n\nGame in progress!`)
+    setButtonState('JOIN', 'JOIN THE GAME')
   }
+}
 
-  update3DTable(gameEngine)
-  
-  updateScoreBoardText(`SCOREBOARD\n\nRound ${gameEngine.roundNumber}\n\nGame is running!\nLet's go!`)
+function setupLobbyCountdownSystem() {
+  let lastSecondAnnounced = 16
 
-  Transform.getMutable(buttonEntity).scale = Vector3.Zero()
-  Transform.getMutable(buttonTextEntity).scale = Vector3.Zero()
+  engine.addSystem((dt) => {
+    if (!isLobbyActive) return
+
+    lobbyCountdown -= dt
+    const secondLeft = Math.ceil(lobbyCountdown)
+
+    if (secondLeft !== lastSecondAnnounced && secondLeft > 0) {
+      lastSecondAnnounced = secondLeft
+      if (buttonTextEntity) {
+        TextShape.getMutable(buttonTextEntity).text = `STARTING IN ${secondLeft}s\nTAKE A SEAT`
+      }
+    }
+
+    if (lobbyCountdown <= 0) {
+      isLobbyActive = false
+      const gameEngine = cachedGameEngine
+      if (!gameEngine) return
+
+      // Gather all currently seated players
+      const seatedPlayers = getSeatedPlayerIds()
+
+      if (seatedPlayers.length === 0) {
+        showRewardToast('⚠️ No players were seated! Sit at the table to play.')
+        setButtonState('START', 'START THE GAME')
+        return
+      }
+
+      // If only 1 human is seated, spawn exactly 1 bot to play against.
+      // If 2 or more humans are seated, they play together without extra bots!
+      const needBot = seatedPlayers.length === 1
+      gameEngine.startGame(seatedPlayers, needBot)
+
+      update3DTable(gameEngine)
+      updateScoreBoardText(`SCOREBOARD\n\nRound 1\n\nGame is running!\n${seatedPlayers.length} Seated Player${seatedPlayers.length > 1 ? 's' : ''}`)
+
+      // Change button to "JOIN THE GAME" so observers can join mid-game
+      setButtonState('JOIN', 'JOIN THE GAME')
+      showRewardToast('🃏 Round 1 Started! Cards dealt to all seated players.')
+    }
+  })
 }
 
 function createStartButton(parentHouse: Entity) {
@@ -131,21 +222,21 @@ function createStartButton(parentHouse: Entity) {
   })
   MeshCollider.setBox(buttonTextEntity)
 
-  // Attach default start logic initially (both E key and Click)
+  // Attach click listeners (both E key and Click)
   pointerEventsSystem.onPointerDown(
-    { entity: buttonEntity, opts: { button: InputAction.IA_POINTER, hoverText: 'Start The Game' } },
-    () => handleButtonClick('START')
+    { entity: buttonEntity, opts: { button: InputAction.IA_POINTER, hoverText: 'Interact' } },
+    () => handleButtonClick()
   )
   pointerEventsSystem.onPointerDown(
-    { entity: buttonEntity, opts: { button: InputAction.IA_PRIMARY, hoverText: 'Start The Game' } },
-    () => handleButtonClick('START')
+    { entity: buttonEntity, opts: { button: InputAction.IA_PRIMARY, hoverText: 'Interact' } },
+    () => handleButtonClick()
   )
   pointerEventsSystem.onPointerDown(
-    { entity: buttonTextEntity, opts: { button: InputAction.IA_POINTER, hoverText: 'Start The Game' } },
-    () => handleButtonClick('START')
+    { entity: buttonTextEntity, opts: { button: InputAction.IA_POINTER, hoverText: 'Interact' } },
+    () => handleButtonClick()
   )
   pointerEventsSystem.onPointerDown(
-    { entity: buttonTextEntity, opts: { button: InputAction.IA_PRIMARY, hoverText: 'Start The Game' } },
-    () => handleButtonClick('START')
+    { entity: buttonTextEntity, opts: { button: InputAction.IA_PRIMARY, hoverText: 'Interact' } },
+    () => handleButtonClick()
   )
 }

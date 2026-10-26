@@ -42,7 +42,7 @@ let globalHouseEntity: Entity
 let spawnedOpponentCards: Entity[] = []
 export let globalGame: CrazyEightsGame | null = null
 
-export function resolvePlayerId(game?: CrazyEightsGame): string {
+export function resolvePlayerId(game?: CrazyEightsGame | null): string {
   const actualId = getPlayer()?.userId
   const targetGame = game || globalGame
 
@@ -175,17 +175,18 @@ export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
     outlineColor: Color4.White()
   })
 
-  // 3. SETUP CHAIRS USING OUR NEW CLASS
+// 3. SETUP CHAIRS USING OUR NEW CLASS
+  allChairs = []
+  seatedChairs.clear()
   for (let i = 0; i < 8; i++) {
     const angleRad = i * (Math.PI / 4)
     const angleDeg = i * 45
-    new CasinoChair(angleRad, angleDeg, furnitureRoot) // furnitureRoot is now houseEntity!
+    const chair = new CasinoChair(angleRad, angleDeg, furnitureRoot, i)
+    allChairs.push(chair)
   }
 
-  // 4. ADD PLAYERS
-  const initialId = resolvePlayerId(game)
-  game.addPlayer(initialId)
-  game.addPlayer('bot')
+  // 4. PREPARE GAME STATE
+  resolvePlayerId(game)
   
   // 5. BOT THINKING DELAY
   // This gives the human 5 seconds to press their DECLARE button before the bot strikes!
@@ -201,12 +202,19 @@ export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
 // ==========================================
 // CASINO CHAIR CLASS (Updated for Primitive Visuals)
 // ==========================================
-class CasinoChair {
-  private entity: Entity
-  private sitPosition: Vector3
-  private lookAtPosition: Vector3
+export let allChairs: CasinoChair[] = []
+export const seatedChairs: Map<number, string> = new Map()
+let _localSeatedChairIndex = -1
 
-  constructor(angleRad: number, angleDeg: number, houseEntity: Entity) {
+export class CasinoChair {
+  private entity: Entity
+  public sitPosition: Vector3
+  public standPosition: Vector3
+  public lookAtPosition: Vector3
+  public chairIndex: number
+
+  constructor(angleRad: number, angleDeg: number, houseEntity: Entity, chairIndex: number = 0) {
+    this.chairIndex = chairIndex
     // 1. First, build the visual primitive chair and parent it to the house.
     // We move the chairs back from the table (radius 2.2 instead of 1.95)
     const chairRadius = 2.2
@@ -225,8 +233,7 @@ class CasinoChair {
     // Use ColliderLayer.CL_POINTER so it is clickable but you can walk through it!
     MeshCollider.setBox(this.entity, ColliderLayer.CL_POINTER) 
 
-    // We calculate absolute WORLD coordinates for the player teleport!
-    // Matching chairRadius exactly to prevent any vector-math offset artifacts.
+    // Absolute WORLD coordinates for player teleport!
     const sitRadius = 2.2
     const sitCx = sitRadius * Math.cos(angleRad)
     const sitCz = sitRadius * Math.sin(angleRad)
@@ -235,6 +242,16 @@ class CasinoChair {
       16 - (sitCx * 0.9),  // World X
       0.15,                // World Y (Cleanly on top of floor surface)
       25 - (sitCz * 0.9)   // World Z
+    )
+
+    // Standing position 1.4m behind the chair for clean exit
+    const standRadius = 3.6
+    const standCx = standRadius * Math.cos(angleRad)
+    const standCz = standRadius * Math.sin(angleRad)
+    this.standPosition = Vector3.create(
+      16 - (standCx * 0.9),
+      0.15,
+      25 - (standCz * 0.9)
     )
 
     this.lookAtPosition = Vector3.create(16, 1, 25)
@@ -247,15 +264,12 @@ class CasinoChair {
     )
   }
 
-  private occupy() {
+  public occupy() {
     setPlayerSeated(true)
-    if (globalGame) {
-      resolvePlayerId(globalGame)
-      if (!globalGame.isStarted) {
-        globalGame.startGame()
-      }
-      update3DTable(globalGame)
-    }
+    _localSeatedChairIndex = this.chairIndex
+    const myId = resolvePlayerId(globalGame)
+    seatedChairs.set(this.chairIndex, myId)
+
     movePlayerTo({
       newRelativePosition: this.sitPosition,
       cameraTarget: this.lookAtPosition,
@@ -271,6 +285,10 @@ class CasinoChair {
         })
       }
     })
+
+    if (globalGame) {
+      update3DTable(globalGame)
+    }
   }
 }
 
@@ -289,7 +307,57 @@ export function setPlayerSeated(value: boolean) {
   _isPlayerSeated = value
   if (value) {
     _timeSeated = Date.now()
+  } else {
+    if (_localSeatedChairIndex >= 0) {
+      seatedChairs.delete(_localSeatedChairIndex)
+      _localSeatedChairIndex = -1
+    }
   }
+}
+
+export function standUpPlayer() {
+  if (!_isPlayerSeated) return
+  setPlayerSeated(false)
+  stopEmote({}).catch(console.error)
+
+  if (_localSeatedChairIndex >= 0 && _localSeatedChairIndex < allChairs.length) {
+    const chair = allChairs[_localSeatedChairIndex]
+    seatedChairs.delete(_localSeatedChairIndex)
+    _localSeatedChairIndex = -1
+    movePlayerTo({
+      newRelativePosition: chair.standPosition,
+      cameraTarget: chair.lookAtPosition,
+      avatarTarget: chair.lookAtPosition
+    })
+  }
+
+  if (globalGame) {
+    const myId = resolvePlayerId(globalGame)
+    globalGame.removePlayer(myId)
+    update3DTable(globalGame)
+  }
+}
+
+export function sitPlayerAtOpenChair(userId?: string): boolean {
+  const targetId = userId || resolvePlayerId(globalGame)
+  for (let i = 0; i < allChairs.length; i++) {
+    if (!seatedChairs.has(i)) {
+      allChairs[i].occupy()
+      return true
+    }
+  }
+  return false
+}
+
+export function getSeatedPlayerIds(): string[] {
+  const ids = Array.from(seatedChairs.values()).filter(id => !!id && id.trim().length > 0)
+  if (_isPlayerSeated) {
+    const myId = resolvePlayerId(globalGame)
+    if (!ids.includes(myId)) {
+      ids.push(myId)
+    }
+  }
+  return Array.from(new Set(ids))
 }
 
 // System to automatically update the 3D table when the bot (or anyone) plays a card

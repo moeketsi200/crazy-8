@@ -2,7 +2,7 @@ import ReactEcs, { ReactEcsRenderer, UiEntity } from '@dcl/sdk/react-ecs'
 import { Color4, Vector3 } from '@dcl/sdk/math'
 import { engine, Transform } from '@dcl/sdk/ecs'
 import { CrazyEightsGame } from './logic'
-import { update3DTable, resolvePlayerId, getPlayerSeated, setPlayerSeated, getPlayerDisplayName, getTimeSeated } from './table'
+import { update3DTable, resolvePlayerId, getPlayerSeated, setPlayerSeated, getPlayerDisplayName, getTimeSeated, standUpPlayer } from './table'
 import { getPlayer } from '@dcl/sdk/src/players'
 import { Card, Suit } from './deck'
 import { TopHudWidget, DailyRewardsModal, RewardToastBanner, updateRewardToast } from './rewards_ui'
@@ -553,7 +553,9 @@ function SuitPickerModal() {
 
 function uiComponent() {
   // Proximity & Seated Check:
-  // Show in-game cards only when seated or close to table (< 3.2m).
+  // Strict rule: Hand cards are ONLY shown if the avatar is actually SEATED in a chair!
+  const isSeated = getPlayerSeated()
+
   let isNearTable = false
   const playerTransform = Transform.getOrNull(engine.PlayerEntity)
   if (playerTransform) {
@@ -564,16 +566,16 @@ function uiComponent() {
     const dz = pz - 25
     const horizontalDist = Math.sqrt(dx * dx + dz * dz)
 
-    if (horizontalDist <= 3.2) {
+    if (horizontalDist <= 4.0) {
       isNearTable = true
     } else if (Date.now() - getTimeSeated() > 1000) {
-      // Avatar moved away from the table
+      // Avatar walked far away from the table
       setPlayerSeated(false)
     }
   }
 
-  const isAtTable = isNearTable || getPlayerSeated()
-  const isTableActive = !!(activeGame && activeGame.isStarted && isAtTable)
+  // Cards are strictly visible ONLY if seated at the table!
+  const isTableActive = !!(activeGame && activeGame.isStarted && isSeated)
 
   // Resolve local player's hand
   let myHand: Card[] = []
@@ -607,6 +609,50 @@ function uiComponent() {
       {/* Permanent Economy HUD in Top Right */}
       <TopHudWidget />
 
+      {/* Leave Table / Stand Up Button (Only when seated at table) */}
+      {isSeated && (
+        <UiEntity
+          uiTransform={{
+            positionType: 'absolute',
+            position: { top: 75, left: 24 },
+            width: 140,
+            height: 38,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+          uiBackground={{ color: Color4.create(0.12, 0.14, 0.20, 0.90) }}
+          onMouseDown={() => {
+            standUpPlayer()
+          }}
+        >
+          <UiEntity
+            uiTransform={{ width: '100%', height: '100%' }}
+            uiText={{ value: '🚪 LEAVE TABLE', fontSize: 13, color: Color4.fromHexString('#ff4444'), textAlign: 'middle-center' }}
+          />
+        </UiEntity>
+      )}
+
+      {/* Spectator Indicator (when standing near table unseated) */}
+      {!isSeated && isNearTable && activeGame && activeGame.isStarted && (
+        <UiEntity
+          uiTransform={{
+            positionType: 'absolute',
+            position: { bottom: 25 },
+            width: 360,
+            height: 38,
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+          uiBackground={{ color: Color4.create(0.08, 0.10, 0.16, 0.90) }}
+        >
+          <UiEntity
+            uiTransform={{ width: '100%', height: '100%' }}
+            uiText={{ value: '👀 Spectating • Sit in an open chair to join!', fontSize: 13, color: Color4.fromHexString('#00f3ff'), textAlign: 'middle-center' }}
+          />
+        </UiEntity>
+      )}
+
       {/* Rewards Toast notification */}
       <RewardToastBanner />
 
@@ -616,7 +662,7 @@ function uiComponent() {
       {/* Game Notifications */}
       <TopBannerNotification />
 
-      {/* In-Game Table Controls (Only when seated and game started) */}
+      {/* In-Game Table Controls (STRICTLY shown only when seated) */}
       {isTableActive && (
         <UiEntity
           uiTransform={{
