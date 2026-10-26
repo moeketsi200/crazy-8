@@ -74,6 +74,10 @@ export function main() {
       const myId = 'player1'
       reportGameplayAction('match_finished')
 
+      const winnerName = winner ? getPlayerDisplayName(winner) : ''
+      const eliminatedName = eliminated ? getPlayerDisplayName(eliminated) : 'None'
+      const roundWinnerName = roundWinner ? getPlayerDisplayName(roundWinner) : ''
+
       if (roundWinner === myId || winner === myId) {
         reportGameplayAction('match_won')
         addChips(150)

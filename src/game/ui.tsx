@@ -2,9 +2,9 @@ import ReactEcs, { ReactEcsRenderer, UiEntity } from '@dcl/sdk/react-ecs'
 import { Color4, Vector3 } from '@dcl/sdk/math'
 import { engine, Transform } from '@dcl/sdk/ecs'
 import { CrazyEightsGame } from './logic'
-import { update3DTable, resolvePlayerId, getPlayerSeated, setPlayerSeated, getPlayerDisplayName } from './table'
+import { update3DTable, resolvePlayerId, getPlayerSeated, setPlayerSeated, getPlayerDisplayName, getTimeSeated } from './table'
 import { getPlayer } from '@dcl/sdk/src/players'
-import { Card } from './deck'
+import { Card, Suit } from './deck'
 import { TopHudWidget, DailyRewardsModal, RewardToastBanner, updateRewardToast } from './rewards_ui'
 
 let activeGame: CrazyEightsGame | null = null
@@ -552,24 +552,8 @@ function SuitPickerModal() {
 }
 
 function uiComponent() {
-<<<<<<< HEAD
-  // Check if player is seated
-  const playerTransform = Transform.getOrNull(engine.PlayerEntity)
-  if (playerTransform) {
-    const pos = playerTransform.position
-    const tableCenter = Vector3.create(16, pos.y, 25)
-    const dist = Vector3.distance(pos, tableCenter)
-
-    // Chairs are at ~2m radius. Give 3.5m leeway so we don't accidentally hide it due to camera/avatar offsets!
-    // We add a 1 second grace period to prevent teleport race conditions!
-    if (dist > 3.5 && Date.now() - getTimeSeated() > 1000) {
-=======
-  // 1. Whenever game is not started, do not show in-game cards
-  if (!activeGame || !activeGame.isStarted) return null
-
-  // 2. Proximity & Seated Check:
-  // Show cards only when seated in a chair OR standing right next to the table (< 2.8m).
-  // When the player walks away, hide the cards immediately.
+  // Proximity & Seated Check:
+  // Show in-game cards only when seated or close to table (< 3.2m).
   let isNearTable = false
   const playerTransform = Transform.getOrNull(engine.PlayerEntity)
   if (playerTransform) {
@@ -580,40 +564,34 @@ function uiComponent() {
     const dz = pz - 25
     const horizontalDist = Math.sqrt(dx * dx + dz * dz)
 
-    if (horizontalDist <= 2.8) {
+    if (horizontalDist <= 3.2) {
       isNearTable = true
-    } else {
+    } else if (Date.now() - getTimeSeated() > 1000) {
       // Avatar moved away from the table
->>>>>>> 05d6de7a00d52c31da3ba3e9f0c528a5a0217ec1
       setPlayerSeated(false)
     }
   }
 
-<<<<<<< HEAD
-  const isTableActive = !!(activeGame && activeGame.isStarted && getPlayerSeated())
-  const myId = getPlayer()?.userId || 'player1'
-  const myHand = isTableActive ? (activeGame!.players.get(myId) || []) : []
-=======
   const isAtTable = isNearTable || getPlayerSeated()
-  if (!isAtTable) {
-    return null
-  }
+  const isTableActive = !!(activeGame && activeGame.isStarted && isAtTable)
 
-  // 3. Resolve local player's hand
-  const myId = resolvePlayerId(activeGame)
-  let myHand = activeGame.players.get(myId) || []
-  if (myHand.length === 0 && activeGame.players.has('player1')) {
-    myHand = activeGame.players.get('player1') || []
-  }
-  if (myHand.length === 0) {
-    for (const [pId, hand] of activeGame.players.entries()) {
-      if (pId !== 'bot' && hand.length > 0) {
-        myHand = hand
-        break
+  // Resolve local player's hand
+  let myHand: Card[] = []
+  if (isTableActive && activeGame) {
+    const myId = resolvePlayerId(activeGame)
+    myHand = activeGame.players.get(myId) || []
+    if (myHand.length === 0 && activeGame.players.has('player1')) {
+      myHand = activeGame.players.get('player1') || []
+    }
+    if (myHand.length === 0) {
+      for (const [pId, hand] of activeGame.players.entries()) {
+        if (pId !== 'bot' && hand.length > 0) {
+          myHand = hand
+          break
+        }
       }
     }
   }
->>>>>>> 05d6de7a00d52c31da3ba3e9f0c528a5a0217ec1
 
   return (
     <UiEntity
