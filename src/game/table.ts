@@ -5,6 +5,7 @@ import { getPlayer } from '@dcl/sdk/src/players'
 import { CrazyEightsGame } from './logic'
 import { buildPrimitiveChair } from './chairs'
 import { buildPrimitiveTable } from './table_visuals'
+import { setupTableChips, setupChairAuras, updateChairAuraVisibility } from './models_integration'
 
 // ==========================================
 // CUSTOM TIMER SYSTEM
@@ -111,6 +112,7 @@ export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
   
   // 0. GENERATE THE 3D VISUAL TABLE AND CARDS
   buildPrimitiveTable(furnitureRoot)
+  setupTableChips(furnitureRoot)
 
   // 1. CREATE THE DRAW PILE
   Transform.create(drawPile, {
@@ -184,6 +186,15 @@ export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
     const chair = new CasinoChair(angleRad, angleDeg, furnitureRoot, i)
     allChairs.push(chair)
   }
+
+  const chairCoords = allChairs.map((_, i) => {
+    const angleRad = i * (Math.PI / 4)
+    return {
+      x: 2.2 * Math.cos(angleRad),
+      z: 2.2 * Math.sin(angleRad)
+    }
+  })
+  setupChairAuras(furnitureRoot, chairCoords)
 
   // 4. PREPARE GAME STATE
   resolvePlayerId(game)
@@ -269,6 +280,7 @@ export class CasinoChair {
     _localSeatedChairIndex = this.chairIndex
     const myId = resolvePlayerId(globalGame)
     seatedChairs.set(this.chairIndex, myId)
+    updateChairAuraVisibility(new Set(seatedChairs.keys()))
 
     movePlayerTo({
       newRelativePosition: this.sitPosition,
@@ -310,6 +322,7 @@ export function setPlayerSeated(value: boolean) {
   } else {
     if (_localSeatedChairIndex >= 0) {
       seatedChairs.delete(_localSeatedChairIndex)
+      updateChairAuraVisibility(new Set(seatedChairs.keys()))
       _localSeatedChairIndex = -1
     }
   }
@@ -323,6 +336,7 @@ export function standUpPlayer() {
   if (_localSeatedChairIndex >= 0 && _localSeatedChairIndex < allChairs.length) {
     const chair = allChairs[_localSeatedChairIndex]
     seatedChairs.delete(_localSeatedChairIndex)
+    updateChairAuraVisibility(new Set(seatedChairs.keys()))
     _localSeatedChairIndex = -1
     movePlayerTo({
       newRelativePosition: chair.standPosition,

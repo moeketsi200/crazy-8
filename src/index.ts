@@ -15,6 +15,7 @@ import { buildScoreBoard, updateScoreBoardText, updateHighWinningsText } from '.
 import { setupMultiplayer, pushGameState } from './game/multiplayer'
 import { reportGameplayAction, addChips, addTrophies } from './game/economy'
 import { showRewardToast } from './game/rewards_ui'
+import { setupVipKiosk, setupTrophyShowcase, setupVictoryCelebration, triggerVictoryCelebration } from './game/models_integration'
 
 export function main() {
     // 1. Build the architectural shell (Now at 90% scale!)
@@ -35,8 +36,12 @@ export function main() {
     setupWaterEffects(houseEntity)
     
     // 3.5. Build the Rules Info Board
-    
     buildScoreBoard(houseEntity)
+
+    // 3.6. Place 3D VIP Kiosk, Showcase Trophy & Victory FX
+    setupVipKiosk(houseEntity)
+    setupTrophyShowcase(houseEntity)
+    setupVictoryCelebration(houseEntity)
 
     // 4. Start the Crazy 8 Game Backend
     const gameEngine = new CrazyEightsGame()
@@ -77,6 +82,10 @@ export function main() {
       const winnerName = winner ? getPlayerDisplayName(winner) : ''
       const eliminatedName = eliminated ? getPlayerDisplayName(eliminated) : 'None'
       const roundWinnerName = roundWinner ? getPlayerDisplayName(roundWinner) : ''
+
+      if (winner || roundWinner) {
+        triggerVictoryCelebration()
+      }
 
       if (roundWinner === myId || winner === myId) {
         reportGameplayAction('match_won')
