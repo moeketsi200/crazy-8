@@ -11,6 +11,7 @@ let activeGame: CrazyEightsGame | null = null
 let isPlayerInHouse = false
 
 export let uiNotificationMessage = ''
+export let uiNotificationSenderId: string | null = null
 export let uiNotificationTimer = 0
 
 export function setupUI(game: CrazyEightsGame) {
@@ -18,16 +19,20 @@ export function setupUI(game: CrazyEightsGame) {
   ReactEcsRenderer.setUiRenderer(uiComponent)
   
   // Wire up game notifications to our UI!
-  game.onNotification = (msg: string) => {
+  game.onNotification = (msg: string, senderId?: string) => {
     uiNotificationMessage = msg
-    uiNotificationTimer = 4.0 // Show for 4 seconds
+    uiNotificationSenderId = senderId || null
+    uiNotificationTimer = 4.5 // Show for 4.5 seconds
   }
 
   // System to countdown notifications and rewards toast
   engine.addSystem((dt) => {
     if (uiNotificationTimer > 0) {
       uiNotificationTimer -= dt
-      if (uiNotificationTimer <= 0) uiNotificationMessage = ''
+      if (uiNotificationTimer <= 0) {
+        uiNotificationMessage = ''
+        uiNotificationSenderId = null
+      }
     }
     updateRewardToast(dt)
   })
@@ -248,19 +253,42 @@ function TableArea() {
   )
 }
 
-function parseNotification(msg: string) {
+function parseNotification(msg: string, senderId?: string | null) {
   // Check for declaration: ROOI declares: "I have 3 cards left!"
   const declMatch = msg.match(/(.+?) declares: "I have (\d+)\s*cards?\s*left!"/i) || msg.match(/(.+?) declares: "I have (\d+)\s*card\(s\)\s*left!"/i)
   if (declMatch) {
     const speaker = declMatch[1]
     const count = parseInt(declMatch[2])
     const countStr = count === 1 ? '1 card' : `${count} cards`
+
+    // Resolve userId for avatar snapshot
+    let resolvedUserId: string | undefined = senderId || undefined
+    if (!resolvedUserId && activeGame) {
+      for (const pid of activeGame.playerOrder) {
+        if (getPlayerDisplayName(pid).toUpperCase() === speaker.toUpperCase() || pid.toUpperCase() === speaker.toUpperCase()) {
+          resolvedUserId = pid
+          break
+        }
+      }
+    }
+    if (!resolvedUserId) {
+      const local = getPlayer()
+      if (local && (local.name?.toUpperCase() === speaker.toUpperCase() || speaker.toUpperCase() === 'ROOI' || speaker.toUpperCase() === 'PLAYER 1')) {
+        resolvedUserId = local.userId
+      }
+    }
+
+    const isBot = !resolvedUserId || resolvedUserId.toLowerCase().includes('bot')
+
     return {
+      isDeclaration: true,
       speaker,
       action: 'declares: "I have ',
       highlight: countStr,
       suffix: ' left!"',
-      icon: '🎴'
+      icon: '🎴',
+      userId: isBot ? undefined : resolvedUserId,
+      isBot
     }
   }
 
@@ -268,92 +296,132 @@ function parseNotification(msg: string) {
   const suitMatch = msg.match(/(.+?) changed the suit to (.+?)!/i)
   if (suitMatch) {
     return {
+      isDeclaration: false,
       speaker: suitMatch[1],
       action: 'switched suit to ',
       highlight: suitMatch[2],
       suffix: '!',
-      icon: '✨'
+      icon: '✨',
+      userId: undefined,
+      isBot: false
     }
   }
 
   // Check for caught challenge
   if (msg.includes('CAUGHT')) {
     return {
+      isDeclaration: false,
       speaker: '🚨 CAUGHT',
       action: msg.replace(/🚨\s*CAUGHT!\s*/i, ''),
       highlight: '',
       suffix: '',
-      icon: '🚨'
+      icon: '🚨',
+      userId: undefined,
+      isBot: false
     }
   }
 
   // Generic fallback
   return {
+    isDeclaration: false,
     speaker: '',
     action: msg,
     highlight: '',
     suffix: '',
-    icon: '⚡'
+    icon: '⚡',
+    userId: undefined,
+    isBot: false
   }
 }
 
 function TopBannerNotification() {
   if (uiNotificationMessage === '') return null
-  const parsed = parseNotification(uiNotificationMessage)
+  const parsed = parseNotification(uiNotificationMessage, uiNotificationSenderId)
 
   return (
     <UiEntity
       uiTransform={{
         positionType: 'absolute',
-        position: { top: 28 },
-        height: 56,
-        flexDirection: 'row',
+        position: { top: 24 },
+        width: 566,
+        height: 68,
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 2
+        flexDirection: 'row'
       }}
-      uiBackground={{ color: Color4.fromHexString('#00f3ff') }}
+      uiBackground={{
+        textureMode: 'stretch',
+        texture: { src: 'assets/images/declaration_banner_frame.png' }
+      }}
     >
       <UiEntity
         uiTransform={{
+          width: '100%',
           height: '100%',
           flexDirection: 'row',
           alignItems: 'center',
-          padding: { left: 16, right: 20, top: 4, bottom: 4 }
+          padding: { left: 22, right: 28 }
         }}
-        uiBackground={{ color: Color4.fromHexString('#090d16fa') }}
       >
-        {/* Left Tech Bracket */}
-        <UiEntity
-          uiTransform={{ margin: { right: 8 } }}
-          uiText={{ value: '⟨', fontSize: 24, color: Color4.fromHexString('#00f3ff'), textAlign: 'middle-center' }}
-        />
-
-        {/* Circular Avatar / Badge Icon */}
+        {/* Circular Avatar Container with Cyan Rim & Speech Badge */}
         <UiEntity
           uiTransform={{
-            width: 40,
-            height: 40,
+            width: 44,
+            height: 44,
             alignItems: 'center',
             justifyContent: 'center',
-            margin: { right: 12 }
+            margin: { left: 10, right: 14 }
           }}
-          uiBackground={{ color: Color4.fromHexString('#162238') }}
         >
+          {/* Avatar Face (Real Snapshot) or Cyber Bot Icon */}
           <UiEntity
-            uiText={{
-              value: parsed.icon,
-              fontSize: 20,
-              textAlign: 'middle-center'
+            uiTransform={{
+              width: 42,
+              height: 42,
+              borderRadius: 21,
+              borderWidth: 1.5,
+              borderColor: Color4.fromHexString('#00f3ff'),
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            uiBackground={
+              parsed.userId
+                ? { avatarTexture: { userId: parsed.userId } }
+                : { color: Color4.fromHexString('#141f33') }
+            }
+          >
+            {!parsed.userId && (
+              <UiEntity
+                uiText={{
+                  value: parsed.icon || '🤖',
+                  fontSize: 22,
+                  textAlign: 'middle-center'
+                }}
+              />
+            )}
+          </UiEntity>
+
+          {/* Speech Bubble Icon Badge at bottom-right corner of avatar */}
+          <UiEntity
+            uiTransform={{
+              positionType: 'absolute',
+              position: { bottom: -2, right: -2 },
+              width: 18,
+              height: 18
+            }}
+            uiBackground={{
+              textureMode: 'stretch',
+              texture: { src: 'assets/images/speech_badge.png' }
             }}
           />
         </UiEntity>
 
-        {/* Text Segments: Speaker (Cyan) + Action (White) + Highlight (Gold) + Suffix */}
+        {/* Text Line: SPEAKER (Cyan) + declares: "I have (White) + COUNT (Gold) + left!" (White) */}
         <UiEntity
           uiTransform={{
             flexDirection: 'row',
-            alignItems: 'center'
+            alignItems: 'center',
+            flexGrow: 1
           }}
         >
           {parsed.speaker !== '' && (
@@ -361,9 +429,10 @@ function TopBannerNotification() {
               uiTransform={{ margin: { right: 6 } }}
               uiText={{
                 value: parsed.speaker,
-                fontSize: 17,
+                fontSize: 18,
                 color: Color4.fromHexString('#00f3ff'),
-                textAlign: 'middle-left'
+                textAlign: 'middle-left',
+                font: 'sans-serif'
               }}
             />
           )}
@@ -371,9 +440,10 @@ function TopBannerNotification() {
           <UiEntity
             uiText={{
               value: parsed.action,
-              fontSize: 16,
-              color: Color4.fromHexString('#e2e8f0'),
-              textAlign: 'middle-left'
+              fontSize: 17,
+              color: Color4.fromHexString('#ffffff'),
+              textAlign: 'middle-left',
+              font: 'sans-serif'
             }}
           />
 
@@ -382,9 +452,10 @@ function TopBannerNotification() {
               uiTransform={{ margin: { left: 4, right: 4 } }}
               uiText={{
                 value: parsed.highlight,
-                fontSize: 17,
+                fontSize: 18,
                 color: Color4.fromHexString('#ffd700'),
-                textAlign: 'middle-left'
+                textAlign: 'middle-left',
+                font: 'sans-serif'
               }}
             />
           )}
@@ -393,19 +464,14 @@ function TopBannerNotification() {
             <UiEntity
               uiText={{
                 value: parsed.suffix,
-                fontSize: 16,
-                color: Color4.fromHexString('#e2e8f0'),
-                textAlign: 'middle-left'
+                fontSize: 17,
+                color: Color4.fromHexString('#ffffff'),
+                textAlign: 'middle-left',
+                font: 'sans-serif'
               }}
             />
           )}
         </UiEntity>
-
-        {/* Right Tech Bracket */}
-        <UiEntity
-          uiTransform={{ margin: { left: 12 } }}
-          uiText={{ value: '⟩', fontSize: 24, color: Color4.fromHexString('#00f3ff'), textAlign: 'middle-center' }}
-        />
       </UiEntity>
     </UiEntity>
   )

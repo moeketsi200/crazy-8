@@ -23,7 +23,7 @@ export class CrazyEightsGame {
 
   public safeDeclared: Set<PlayerId> = new Set()
   public queuedPlayers: PlayerId[] = []
-  public onNotification?: (message: string) => void
+  public onNotification?: (message: string, senderId?: PlayerId) => void
   public playerNameResolver?: (playerId: PlayerId) => string
 
   public getDisplayName(playerId: PlayerId): string {
@@ -252,7 +252,8 @@ export class CrazyEightsGame {
       if (this.onDeclareSafe) this.onDeclareSafe(playerId)
       const count = hand!.length
       const cardStr = count === 1 ? '1 card' : `${count} cards`
-      if (this.onNotification) this.onNotification(`${playerId.toUpperCase()} declares: "I have ${cardStr} left!"`)
+      const displayName = this.getDisplayName(playerId).toUpperCase()
+      if (this.onNotification) this.onNotification(`${displayName} declares: "I have ${cardStr} left!"`, playerId)
       this.onStateChanged?.()
       return true
     }
