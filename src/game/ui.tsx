@@ -163,19 +163,42 @@ function PlayingCard(props: { key?: string|number, card: Card, isPlayable: boole
 }
 
 function DrawDeckCard(props: { onClick?: () => void }) {
+  const penalty = activeGame && activeGame.pendingDraws > 0 ? activeGame.pendingDraws : 0
+  const isMyTurn = activeGame ? isLocalPlayerTurn(activeGame) : false
+  const borderColor = penalty > 0 && isMyTurn ? Color4.fromHexString('#FF2A6D') : Color4.fromHexString('#00f3ff')
+
   return (
     <UiEntity
-      uiTransform={{ width: 82, height: 122, margin: { left: 15, right: 15 }, padding: 2 }}
-      uiBackground={{ color: Color4.fromHexString('#00f3ff') }}
+      uiTransform={{ width: 84, height: 124, margin: { left: 15, right: 15 }, padding: 2, positionType: 'relative' }}
+      uiBackground={{ color: borderColor }}
       onMouseDown={props.onClick}
     >
       <UiEntity
-        uiTransform={{ width: '100%', height: '100%' }}
+        uiTransform={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}
         uiBackground={{
           textureMode: 'stretch',
           texture: { src: 'assets/images/card_back_logo.png' }
         }}
-      />
+      >
+        {penalty > 0 && (
+          <UiEntity
+            uiTransform={{
+              positionType: 'absolute',
+              position: { bottom: 6 },
+              width: 76,
+              height: 22,
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            uiBackground={{ color: Color4.fromHexString('#C91D1Dee') }}
+          >
+            <UiEntity
+              uiTransform={{ width: '100%', height: '100%' }}
+              uiText={{ value: `TAKE +${penalty}`, fontSize: 11, color: Color4.White(), textAlign: 'middle-center' }}
+            />
+          </UiEntity>
+        )}
+      </UiEntity>
     </UiEntity>
   )
 }
@@ -410,15 +433,16 @@ function GameInfoBar() {
   const activeSuit = activeGame.activeSuit
   const activePlayerId = activeGame.playerOrder[activeGame.currentTurnIndex]
   const turnLabel = isMyTurn ? 'YOUR TURN!' : `${getPlayerDisplayName(activePlayerId).toUpperCase()}'S TURN`
+  const penaltyLabel = activeGame.pendingDraws > 0 ? ` • 🔥 PENALTY: +${activeGame.pendingDraws}` : ''
 
   return (
     <UiEntity
       uiTransform={{ width: '100%', height: 35, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', margin: { bottom: 15 } }}
-      uiBackground={{ color: Color4.fromHexString('#000000cc') }}
+      uiBackground={{ color: activeGame.pendingDraws > 0 ? Color4.fromHexString('#8b0000dd') : Color4.fromHexString('#000000cc') }}
     >
       <UiEntity
         uiText={{
-          value: `${turnLabel} (Active Suit: ${activeSuit})`,
+          value: `${turnLabel}${penaltyLabel} (Suit: ${activeSuit})`,
           fontSize: 18, color: Color4.White(), textAlign: 'middle-center'
         }}
       />
@@ -465,7 +489,7 @@ function PlayerHandArea({ myHand }: { myHand: Card[] }) {
             isPlayable={!!canPlay}
             onClick={() => {
               if (canPlay && activeGame) {
-                if (card.action === 'Wild') {
+                if (card.action === 'Wild' || card.action === 'Draw4') {
                   pendingWildCardIndex = index
                 } else {
                   const success = activeGame.playCard(myId, index)

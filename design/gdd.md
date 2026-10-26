@@ -70,10 +70,14 @@
   - A card can be legally played if its **Suit** matches the active suit, OR its **Rank** matches the top card.
   - An **8** is completely **WILD** and can be played on any card at any time; the player immediately selects the next active suit.
 - **Special Action Cards**:
-  - **2 (Draw Two)**: Next player is forced to draw 2 cards and misses their turn (unless chained/stacked in custom house rules).
+  - **2 (Draw Two)**: Forces the next player to draw 2 penalty cards, OR they can counter-attack by stacking another 2 (+2) or a Joker (+4)!
   - **Jack (Reverse)**: Reverses the direction of play around the table (clockwise / counter-clockwise).
   - **7 (Skip)**: Skips the turn of the next player in sequence.
-  - **Joker (Mega Wild + Draw Four)**: Changes the suit AND forces the next player to draw 4 penalty cards.
+  - **Joker (Mega Wild + Draw Four)**: Changes active suit AND forces next player to draw 4 penalty cards, OR they can counter-attack by stacking any 2 (+2) or another Joker (+4)!
+- **Bidirectional Penalty Stacking ("Shooting")**:
+  - When a Joker (+4) is played, the targeted player can deflect and stack ANY 2 (+2) on top, building a **6-card penalty** for the following player!
+  - Vice versa: When a 2 (+2) is played, the next player can counter with another 2 (+2, total 4) OR shoot a Joker (+4, total 6)!
+  - Players continue chaining and stacking penalties as long as they hold 2s or Jokers. The first player unable to counter must draw the entire accumulated penalty pool!
 
 ### 2.2 The Declaration & Challenge Mechanic
 Crazy 8s introduces psychological tension with active declaration calls:

@@ -292,8 +292,13 @@ export class CrazyEightsGame {
   }
 
   private isValidPlayDuringDrawPenalty(card: Card, topCard: Card): boolean {
-    if (topCard.action === 'Draw4' && card.action === 'Draw4') return true
-    if (topCard.action === 'Draw2' && card.action === 'Draw2') return true
+    // Bidirectional penalty stacking:
+    // When facing a draw penalty (from a Joker or a 2):
+    // - Any 2 (of any suit) can be played (+2 added to penalty pile)
+    // - Any Joker (Draw4) can be played (+4 added to penalty pile)
+    if (card.action === 'Draw2' || card.action === 'Draw4') {
+      return true
+    }
     return false
   }
 
@@ -351,10 +356,17 @@ export class CrazyEightsGame {
 
   private handleActionCardEffects(cardToPlay: Card): boolean {
     let skipNext = false
-    if (cardToPlay.action === 'Draw2') {
-      this.pendingDraws += 2
-    } else if (cardToPlay.action === 'Draw4') {
-      this.pendingDraws += 4
+    if (cardToPlay.action === 'Draw2' || cardToPlay.action === 'Draw4') {
+      const added = cardToPlay.action === 'Draw4' ? 4 : 2
+      const wasPending = this.pendingDraws
+      this.pendingDraws += added
+      if (this.onNotification) {
+        if (wasPending > 0) {
+          this.onNotification(`🔥 PENALTY STACKED! Draw pool is now +${this.pendingDraws} cards!`)
+        } else {
+          this.onNotification(`⚡ ${cardToPlay.rank} played! Counter with a 2 or Joker, or draw +${this.pendingDraws}!`)
+        }
+      }
     } else if (cardToPlay.action === 'Reverse') {
       const activePlayersCount = this.playerOrder.filter(p => !this.eliminatedPlayers.has(p)).length
       if (activePlayersCount === 2) {
@@ -374,10 +386,15 @@ export class CrazyEightsGame {
     this.safeDeclared.delete(playerId)
 
     if (this.pendingDraws > 0) {
-      for (let i = 0; i < this.pendingDraws; i++) {
+      const count = this.pendingDraws
+      for (let i = 0; i < count; i++) {
         this.drawOne(playerId)
       }
       this.pendingDraws = 0
+      if (this.onNotification) {
+        const name = this.getDisplayName(playerId).toUpperCase()
+        this.onNotification(`💥 ${name} drew ${count} penalty cards!`)
+      }
       this.nextTurn(1)
       this.onStateChanged?.()
       return true
