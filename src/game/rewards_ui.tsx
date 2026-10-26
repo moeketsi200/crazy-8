@@ -10,6 +10,14 @@ import {
   setRewardsModalOpen,
   getActiveRewardsTab,
   setActiveRewardsTab,
+  getActiveShopCategory,
+  setActiveShopCategory,
+  SHOP_CATALOG,
+  ShopItem,
+  isItemUnlocked,
+  isItemEquipped,
+  buyShopItem,
+  equipShopItem,
   STREAK_SCHEDULE
 } from './economy'
 
@@ -46,7 +54,7 @@ export function TopHudWidget() {
         padding: 4
       }}
     >
-      {/* 1. Chips Pill */}
+      {/* 1. Chips Pill (Click to open Pro Shop) */}
       <UiEntity
         uiTransform={{
           flexDirection: 'row',
@@ -59,6 +67,10 @@ export function TopHudWidget() {
           borderColor: Color4.fromHexString('#ffd700aa')
         }}
         uiBackground={{ color: Color4.fromHexString('#0b1422ea') }}
+        onMouseDown={() => {
+          setActiveRewardsTab('shop')
+          setRewardsModalOpen(true)
+        }}
       >
         <UiEntity
           uiText={{
@@ -71,7 +83,7 @@ export function TopHudWidget() {
         />
       </UiEntity>
 
-      {/* 2. Trophies Pill */}
+      {/* 2. Trophies Pill (Click to open Streak & Trophies) */}
       <UiEntity
         uiTransform={{
           flexDirection: 'row',
@@ -84,6 +96,10 @@ export function TopHudWidget() {
           borderColor: Color4.fromHexString('#00f3ffaa')
         }}
         uiBackground={{ color: Color4.fromHexString('#0b1422ea') }}
+        onMouseDown={() => {
+          setActiveRewardsTab('streak')
+          setRewardsModalOpen(true)
+        }}
       >
         <UiEntity
           uiText={{
@@ -96,7 +112,7 @@ export function TopHudWidget() {
         />
       </UiEntity>
 
-      {/* 3. Streak Pill */}
+      {/* 3. Streak Pill (Click to open Streak) */}
       <UiEntity
         uiTransform={{
           flexDirection: 'row',
@@ -109,6 +125,10 @@ export function TopHudWidget() {
           borderColor: Color4.fromHexString('#ff7700aa')
         }}
         uiBackground={{ color: Color4.fromHexString('#0b1422ea') }}
+        onMouseDown={() => {
+          setActiveRewardsTab('streak')
+          setRewardsModalOpen(true)
+        }}
       >
         <UiEntity
           uiText={{
@@ -232,20 +252,20 @@ export function DailyRewardsModal() {
             width: '100%',
             height: 40,
             flexDirection: 'row',
+            justifyContent: 'space-between',
             margin: { bottom: 16 }
           }}
         >
-          {/* Streak Tab Button */}
+          {/* 1. Streak Tab Button */}
           <UiEntity
             uiTransform={{
-              width: '50%',
+              width: '32.5%',
               height: '100%',
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: 4,
               borderWidth: activeTab === 'streak' ? 0 : 1,
-              borderColor: Color4.fromHexString('#ffd70055'),
-              margin: { right: 4 }
+              borderColor: Color4.fromHexString('#ffd70055')
             }}
             uiBackground={{
               color: activeTab === 'streak'
@@ -256,8 +276,8 @@ export function DailyRewardsModal() {
           >
             <UiEntity
               uiText={{
-                value: `🔥 7-DAY LOGIN STREAK`,
-                fontSize: 15,
+                value: `🔥 7-DAY STREAK`,
+                fontSize: 14,
                 color: activeTab === 'streak' ? Color4.Black() : Color4.fromHexString('#ffd700'),
                 textAlign: 'middle-center',
                 font: 'sans-serif'
@@ -265,17 +285,16 @@ export function DailyRewardsModal() {
             />
           </UiEntity>
 
-          {/* Bounties Tab Button */}
+          {/* 2. Bounties Tab Button */}
           <UiEntity
             uiTransform={{
-              width: '50%',
+              width: '32.5%',
               height: '100%',
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: 4,
               borderWidth: activeTab === 'bounties' ? 0 : 1,
-              borderColor: Color4.fromHexString('#00f3ff55'),
-              margin: { left: 4 }
+              borderColor: Color4.fromHexString('#00f3ff55')
             }}
             uiBackground={{
               color: activeTab === 'bounties'
@@ -286,9 +305,38 @@ export function DailyRewardsModal() {
           >
             <UiEntity
               uiText={{
-                value: `🎯 DAILY BOUNTIES`,
-                fontSize: 15,
+                value: `🎯 BOUNTIES`,
+                fontSize: 14,
                 color: activeTab === 'bounties' ? Color4.Black() : Color4.fromHexString('#00f3ff'),
+                textAlign: 'middle-center',
+                font: 'sans-serif'
+              }}
+            />
+          </UiEntity>
+
+          {/* 3. Pro Shop Tab Button */}
+          <UiEntity
+            uiTransform={{
+              width: '32.5%',
+              height: '100%',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 4,
+              borderWidth: activeTab === 'shop' ? 0 : 1,
+              borderColor: Color4.fromHexString('#ff005555')
+            }}
+            uiBackground={{
+              color: activeTab === 'shop'
+                ? Color4.fromHexString('#ff0055')
+                : Color4.fromHexString('#101726')
+            }}
+            onMouseDown={() => setActiveRewardsTab('shop')}
+          >
+            <UiEntity
+              uiText={{
+                value: `🛍️ PRO SHOP`,
+                fontSize: 14,
+                color: activeTab === 'shop' ? Color4.White() : Color4.fromHexString('#ff5588'),
                 textAlign: 'middle-center',
                 font: 'sans-serif'
               }}
@@ -690,6 +738,239 @@ export function DailyRewardsModal() {
                 </UiEntity>
               )
             })}
+          </UiEntity>
+        )}
+
+        {/* TAB 3: VIP PRO SHOP */}
+        {activeTab === 'shop' && (
+          <UiEntity
+            uiTransform={{
+              width: '100%',
+              flexDirection: 'column',
+              alignItems: 'center'
+            }}
+          >
+            {/* Sub-Category Filter Bar */}
+            <UiEntity
+              uiTransform={{
+                width: '100%',
+                height: 32,
+                flexDirection: 'row',
+                justifyContent: 'center',
+                margin: { bottom: 12 }
+              }}
+            >
+              {(
+                [
+                  { id: 'all', label: '🌟 ALL' },
+                  { id: 'deck', label: '🃏 CARDS' },
+                  { id: 'aura', label: '💫 AURAS' },
+                  { id: 'title', label: '👑 TITLES' },
+                  { id: 'wearable', label: '👗 GEAR' }
+                ] as const
+              ).map(cat => {
+                const isSelected = getActiveShopCategory() === cat.id
+                return (
+                  <UiEntity
+                    key={cat.id}
+                    uiTransform={{
+                      padding: { left: 12, right: 12, top: 4, bottom: 4 },
+                      margin: { left: 4, right: 4 },
+                      borderRadius: 4,
+                      borderWidth: isSelected ? 1.5 : 1,
+                      borderColor: isSelected
+                        ? Color4.fromHexString('#ff0055')
+                        : Color4.fromHexString('#ffffff22'),
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    uiBackground={{
+                      color: isSelected
+                        ? Color4.fromHexString('#ff005544')
+                        : Color4.fromHexString('#0d1726aa')
+                    }}
+                    onMouseDown={() => setActiveShopCategory(cat.id)}
+                  >
+                    <UiEntity
+                      uiText={{
+                        value: cat.label,
+                        fontSize: 12,
+                        color: isSelected ? Color4.fromHexString('#ff5588') : Color4.fromHexString('#a0aec0'),
+                        textAlign: 'middle-center',
+                        font: 'sans-serif'
+                      }}
+                    />
+                  </UiEntity>
+                )
+              })}
+            </UiEntity>
+
+            {/* Shop Items 2-Column Grid */}
+            <UiEntity
+              uiTransform={{
+                width: '100%',
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                justifyContent: 'space-between'
+              }}
+            >
+              {SHOP_CATALOG.filter(
+                item => getActiveShopCategory() === 'all' || item.category === getActiveShopCategory()
+              )
+                .slice(0, 6)
+                .map(item => {
+                  const unlocked = isItemUnlocked(item.id)
+                  const equipped = isItemEquipped(item.id)
+                  const canAfford = profile.chips >= item.priceChips && profile.trophies >= item.reqTrophies
+
+                  return (
+                    <UiEntity
+                      key={item.id}
+                      uiTransform={{
+                        width: 350,
+                        height: 74,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: 8,
+                        margin: { bottom: 8 },
+                        borderRadius: 6,
+                        borderWidth: 1.5,
+                        borderColor: equipped
+                          ? Color4.fromHexString('#10b981aa')
+                          : unlocked
+                          ? Color4.fromHexString('#00f3ffaa')
+                          : Color4.fromHexString('#ffd70044')
+                      }}
+                      uiBackground={{
+                        color: Color4.fromHexString('#0b1424fa')
+                      }}
+                    >
+                      {/* Left: Icon Badge */}
+                      <UiEntity
+                        uiTransform={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 22,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderWidth: 1.5,
+                          borderColor: Color4.fromHexString(item.badgeColor)
+                        }}
+                        uiBackground={{ color: Color4.fromHexString('#06111f') }}
+                      >
+                        <UiEntity
+                          uiText={{
+                            value: item.iconLabel || '⭐',
+                            fontSize: 20,
+                            textAlign: 'middle-center'
+                          }}
+                        />
+                      </UiEntity>
+
+                      {/* Center Info */}
+                      <UiEntity
+                        uiTransform={{
+                          width: 190,
+                          flexDirection: 'column',
+                          justifyContent: 'center',
+                          margin: { left: 8 }
+                        }}
+                      >
+                        <UiEntity
+                          uiText={{
+                            value: item.name,
+                            fontSize: 13,
+                            color: Color4.fromHexString(item.badgeColor),
+                            textAlign: 'middle-left',
+                            font: 'sans-serif'
+                          }}
+                        />
+                        <UiEntity
+                          uiText={{
+                            value: item.description,
+                            fontSize: 10,
+                            color: Color4.fromHexString('#94a3b8'),
+                            textAlign: 'middle-left',
+                            font: 'sans-serif'
+                          }}
+                        />
+                        <UiEntity
+                          uiText={{
+                            value: item.priceChips === 0 ? 'FREE' : `🟡 ${item.priceChips.toLocaleString()} Chips | 🏆 ${item.reqTrophies} req`,
+                            fontSize: 10,
+                            color: Color4.fromHexString('#ffd700'),
+                            textAlign: 'middle-left',
+                            font: 'sans-serif'
+                          }}
+                        />
+                      </UiEntity>
+
+                      {/* Right: Action Button */}
+                      <UiEntity
+                        uiTransform={{
+                          width: 88,
+                          height: 32,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 4,
+                          borderWidth: 1.5,
+                          borderColor: equipped
+                            ? Color4.fromHexString('#10b981')
+                            : unlocked
+                            ? Color4.fromHexString('#00f3ff')
+                            : canAfford
+                            ? Color4.fromHexString('#ffd700')
+                            : Color4.fromHexString('#475569')
+                        }}
+                        uiBackground={{
+                          color: equipped
+                            ? Color4.fromHexString('#062414fa')
+                            : unlocked
+                            ? Color4.fromHexString('#00f3ff22')
+                            : canAfford
+                            ? Color4.fromHexString('#ffd70033')
+                            : Color4.fromHexString('#1e293b')
+                        }}
+                        onMouseDown={() => {
+                          if (equipped) return
+                          if (unlocked) {
+                            const res = equipShopItem(item.id)
+                            showRewardToast(res.message)
+                          } else if (canAfford) {
+                            const res = buyShopItem(item.id)
+                            showRewardToast(res.message)
+                          } else {
+                            showRewardToast(`Need ${item.priceChips.toLocaleString()} Chips & ${item.reqTrophies} 🏆!`)
+                          }
+                        }}
+                      >
+                        <UiEntity
+                          uiText={{
+                            value: equipped
+                              ? '✔ EQUIPPED'
+                              : unlocked
+                              ? 'EQUIP'
+                              : canAfford
+                              ? 'BUY'
+                              : '🔒 LOCKED',
+                            fontSize: 11,
+                            color: equipped
+                              ? Color4.fromHexString('#10b981')
+                              : unlocked
+                              ? Color4.fromHexString('#00f3ff')
+                              : canAfford
+                              ? Color4.fromHexString('#ffd700')
+                              : Color4.fromHexString('#64748b'),
+                            textAlign: 'middle-center',
+                            font: 'sans-serif'
+                          }}
+                        />
+                      </UiEntity>
+                    </UiEntity>
+                  )
+                })}
+            </UiEntity>
           </UiEntity>
         )}
       </UiEntity>

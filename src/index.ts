@@ -11,11 +11,17 @@ import { buildRooftop } from './game/rooftop'
 import { setupWaterEffects } from './game/water_effects'
 import { setupUI } from './game/ui'
 import { buildInfoBoard, showGameButton } from './game/info_board'
-import { buildScoreBoard, updateScoreBoardText, updateHighWinningsText } from './game/score_board'
+import { buildScoreBoard, updateScoreBoardText, updateHighWinningsText, renderOutdoorHallOfFame } from './game/score_board'
 import { setupMultiplayer, pushGameState } from './game/multiplayer'
 import { reportGameplayAction, addChips, addTrophies } from './game/economy'
 import { showRewardToast } from './game/rewards_ui'
-import { setupVipKiosk, setupTrophyShowcase, setupVictoryCelebration, triggerVictoryCelebration } from './game/models_integration'
+import {
+  setupVipKiosk,
+  setupTrophyShowcase,
+  setupVictoryCelebration,
+  triggerVictoryCelebration,
+  setupWearableShowcases
+} from './game/models_integration'
 
 export function main() {
     // 1. Build the architectural shell (Now at 90% scale!)
@@ -38,10 +44,11 @@ export function main() {
     // 3.5. Build the Rules Info Board
     buildScoreBoard(houseEntity)
 
-    // 3.6. Place 3D VIP Kiosk, Showcase Trophy & Victory FX
+    // 3.6. Place 3D VIP Kiosk, Showcase Trophy, Victory FX & Wearable Pedestals
     setupVipKiosk(houseEntity)
     setupTrophyShowcase(houseEntity)
     setupVictoryCelebration(houseEntity)
+    setupWearableShowcases(houseEntity)
 
     // 4. Start the Crazy 8 Game Backend
     const gameEngine = new CrazyEightsGame()
@@ -100,11 +107,11 @@ export function main() {
 
       if (winner) {
         updateScoreBoardText(`SCOREBOARD\n\n🏆 WINNER: ${winnerName} 🏆\n\nRound ${gameEngine.roundNumber} Over!\n\nLast Eliminated: ${eliminatedName}\n\nScores:\n${scoreBreakdown || ''}`)
-        updateHighWinningsText(`HIGH WINNINGS\n\n🏆 ${winnerName} 🏆\n\nSecured the bag in Round ${gameEngine.roundNumber}!`)
+        renderOutdoorHallOfFame(winnerName, gameEngine.roundNumber)
         showGameButton('START NEW GAME', 'START')
       } else {
         updateScoreBoardText(`SCOREBOARD\n\n🎉 ${roundWinnerName} WENT OUT! 🎉\n\nRound ${gameEngine.roundNumber} Over!\n\nEliminated: ${eliminatedName}\n\nScores:\n${scoreBreakdown || ''}\n\nWaiting for next round...`)
-        updateHighWinningsText(`HIGH WINNINGS\n\nRound ${gameEngine.roundNumber} Winner:\n${roundWinnerName}\n\nGame still in progress!`)
+        renderOutdoorHallOfFame(roundWinnerName, gameEngine.roundNumber)
         showGameButton('CONTINUE\n(Next Round)', 'CONTINUE')
       }
     }

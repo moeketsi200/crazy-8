@@ -9,10 +9,20 @@ import {
   InputAction,
   ColliderLayer,
   MeshRenderer,
-  Material
+  Material,
+  TextShape,
+  TextAlignMode,
+  MaterialTransparencyMode
 } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion, Color4, Color3 } from '@dcl/sdk/math'
-import { setRewardsModalOpen } from './economy'
+import {
+  setRewardsModalOpen,
+  setActiveRewardsTab,
+  setActiveShopCategory,
+  onCosmeticEquipped,
+  getProfile
+} from './economy'
+import { showRewardToast } from './rewards_ui'
 
 // ----------------------------------------------------
 // 1. VIP KIOSK (Interactive 3D Terminal)
@@ -155,6 +165,7 @@ export function setupTableChips(houseEntity: Entity) {
 // 4. CHAIR AURA RINGS (Underglow Floor Aura when Seated)
 // ----------------------------------------------------
 const chairAuraEntities: Entity[] = []
+const chairGlowDisks: Entity[] = []
 
 export function setupChairAuras(houseEntity: Entity, chairPositions: { x: number; z: number }[]) {
   chairPositions.forEach((pos, idx) => {
@@ -169,9 +180,50 @@ export function setupChairAuras(houseEntity: Entity, chairPositions: { x: number
       visibleMeshesCollisionMask: 0,
       invisibleMeshesCollisionMask: 0
     })
+
+    // Rich emissive colored disk beneath the ring for dynamic aura colors
+    const glowDisk = engine.addEntity()
+    Transform.create(glowDisk, {
+      parent: aura,
+      position: Vector3.create(0, 0.01, 0),
+      scale: Vector3.create(1.02, 0.04, 1.02)
+    })
+    MeshRenderer.setCylinder(glowDisk)
+    Material.setPbrMaterial(glowDisk, {
+      albedoColor: Color4.fromHexString('#00f3ff'),
+      emissiveColor: Color3.fromHexString('#00f3ff'),
+      emissiveIntensity: 2.2,
+      metallic: 0.1,
+      roughness: 0.2
+    })
+    chairGlowDisks[idx] = glowDisk
+
     // Start inactive/dim
     VisibilityComponent.create(aura, { visible: false })
     chairAuraEntities[idx] = aura
+  })
+
+  // Listen to aura cosmetic changes from Pro Shop
+  onCosmeticEquipped((category, _itemId, item) => {
+    if (category === 'aura' && item.auraHex) {
+      setChairAuraColor(item.auraHex)
+    }
+  })
+}
+
+export function setChairAuraColor(hex: string) {
+  const col = Color4.fromHexString(hex)
+  const em = Color3.fromHexString(hex.length >= 7 ? hex.slice(0, 7) : '#00f3ff')
+  chairGlowDisks.forEach(disk => {
+    if (disk) {
+      Material.setPbrMaterial(disk, {
+        albedoColor: col,
+        emissiveColor: em,
+        emissiveIntensity: 2.5,
+        metallic: 0.1,
+        roughness: 0.2
+      })
+    }
   })
 }
 
@@ -273,3 +325,219 @@ export function triggerVictoryCelebration() {
     }
   }
 }
+
+// ----------------------------------------------------
+// 6. VIP WEARABLE SHOWCASES (3D Mannequin Pedestals)
+// ----------------------------------------------------
+export function setupWearableShowcases(houseEntity: Entity) {
+  // Showcase 1: Crazy 8 Cyber Hoodie
+  const hoodieGroup = engine.addEntity()
+  Transform.create(hoodieGroup, {
+    parent: houseEntity,
+    position: Vector3.create(5.2, 0.0, -2.4),
+    rotation: Quaternion.fromEulerDegrees(0, -90, 0)
+  })
+
+  // Pedestal cylinder
+  const ped1 = engine.addEntity()
+  Transform.create(ped1, {
+    parent: hoodieGroup,
+    position: Vector3.create(0, 0.45, 0),
+    scale: Vector3.create(0.85, 0.9, 0.85)
+  })
+  MeshRenderer.setCylinder(ped1)
+  Material.setPbrMaterial(ped1, {
+    albedoColor: Color4.fromHexString('#0b1424'),
+    emissiveColor: Color3.fromHexString('#00f3ff'),
+    emissiveIntensity: 0.8,
+    metallic: 0.8,
+    roughness: 0.2
+  })
+
+  // Glowing neon rim
+  const ring1 = engine.addEntity()
+  Transform.create(ring1, {
+    parent: hoodieGroup,
+    position: Vector3.create(0, 0.91, 0),
+    scale: Vector3.create(0.88, 0.03, 0.88)
+  })
+  MeshRenderer.setCylinder(ring1)
+  Material.setPbrMaterial(ring1, {
+    albedoColor: Color4.fromHexString('#00f3ff'),
+    emissiveColor: Color3.fromHexString('#00f3ff'),
+    emissiveIntensity: 3.0
+  })
+
+  // Floating rotating showcase diamond
+  const emblem1 = engine.addEntity()
+  Transform.create(emblem1, {
+    parent: hoodieGroup,
+    position: Vector3.create(0, 1.45, 0),
+    scale: Vector3.create(0.42, 0.42, 0.42)
+  })
+  MeshRenderer.setBox(emblem1)
+  Material.setPbrMaterial(emblem1, {
+    texture: Material.Texture.Common({ src: 'assets/images/crazy8_logo.png' }),
+    emissiveTexture: Material.Texture.Common({ src: 'assets/images/crazy8_logo.png' }),
+    emissiveIntensity: 2.2,
+    transparencyMode: MaterialTransparencyMode.MTM_ALPHA_BLEND
+  })
+
+  // Glass enclosure cylinder
+  const glass1 = engine.addEntity()
+  Transform.create(glass1, {
+    parent: hoodieGroup,
+    position: Vector3.create(0, 1.45, 0),
+    scale: Vector3.create(0.78, 1.05, 0.78)
+  })
+  MeshRenderer.setCylinder(glass1)
+  Material.setPbrMaterial(glass1, {
+    albedoColor: Color4.fromHexString('#00f3ff15'),
+    roughness: 0.1,
+    metallic: 0.9,
+    transparencyMode: MaterialTransparencyMode.MTM_ALPHA_BLEND
+  })
+
+  // Floating 3D label
+  const label1 = engine.addEntity()
+  Transform.create(label1, {
+    parent: hoodieGroup,
+    position: Vector3.create(0, 2.15, 0),
+    rotation: Quaternion.fromEulerDegrees(0, 180, 0)
+  })
+  TextShape.create(label1, {
+    text: `👗 CRAZY 8 CYBER HOODIE\n🟡 10,000 CHIPS | 🏆 600 req\n[Click to Inspect]`,
+    fontSize: 1.3,
+    textColor: Color4.fromHexString('#00f3ff'),
+    outlineColor: Color4.Black(),
+    outlineWidth: 0.15,
+    textAlign: TextAlignMode.TAM_MIDDLE_CENTER
+  })
+
+  pointerEventsSystem.onPointerDown(
+    {
+      entity: ped1,
+      opts: {
+        button: InputAction.IA_PRIMARY,
+        hoverText: '👗 Inspect Crazy 8 Cyber Hoodie'
+      }
+    },
+    () => {
+      setActiveRewardsTab('shop')
+      setActiveShopCategory('wearable')
+      setRewardsModalOpen(true)
+      showRewardToast('👗 Crazy 8 Cyber Hoodie! Unlocked in VIP Pro Shop!')
+    }
+  )
+
+  // Showcase 2: Champion Gold Bomber
+  const bomberGroup = engine.addEntity()
+  Transform.create(bomberGroup, {
+    parent: houseEntity,
+    position: Vector3.create(5.2, 0.0, -0.6),
+    rotation: Quaternion.fromEulerDegrees(0, -90, 0)
+  })
+
+  // Pedestal cylinder
+  const ped2 = engine.addEntity()
+  Transform.create(ped2, {
+    parent: bomberGroup,
+    position: Vector3.create(0, 0.45, 0),
+    scale: Vector3.create(0.85, 0.9, 0.85)
+  })
+  MeshRenderer.setCylinder(ped2)
+  Material.setPbrMaterial(ped2, {
+    albedoColor: Color4.fromHexString('#1a1506'),
+    emissiveColor: Color3.fromHexString('#ffd700'),
+    emissiveIntensity: 0.8,
+    metallic: 0.8,
+    roughness: 0.2
+  })
+
+  // Glowing neon rim
+  const ring2 = engine.addEntity()
+  Transform.create(ring2, {
+    parent: bomberGroup,
+    position: Vector3.create(0, 0.91, 0),
+    scale: Vector3.create(0.88, 0.03, 0.88)
+  })
+  MeshRenderer.setCylinder(ring2)
+  Material.setPbrMaterial(ring2, {
+    albedoColor: Color4.fromHexString('#ffd700'),
+    emissiveColor: Color3.fromHexString('#ffd700'),
+    emissiveIntensity: 3.0
+  })
+
+  // Floating rotating crown emblem
+  const emblem2 = engine.addEntity()
+  Transform.create(emblem2, {
+    parent: bomberGroup,
+    position: Vector3.create(0, 1.45, 0),
+    scale: Vector3.create(0.42, 0.42, 0.42)
+  })
+  MeshRenderer.setBox(emblem2)
+  Material.setPbrMaterial(emblem2, {
+    texture: Material.Texture.Common({ src: 'assets/images/crown.jpg' }),
+    emissiveTexture: Material.Texture.Common({ src: 'assets/images/crown.jpg' }),
+    emissiveIntensity: 2.2
+  })
+
+  // Glass enclosure cylinder
+  const glass2 = engine.addEntity()
+  Transform.create(glass2, {
+    parent: bomberGroup,
+    position: Vector3.create(0, 1.45, 0),
+    scale: Vector3.create(0.78, 1.05, 0.78)
+  })
+  MeshRenderer.setCylinder(glass2)
+  Material.setPbrMaterial(glass2, {
+    albedoColor: Color4.fromHexString('#ffd70015'),
+    roughness: 0.1,
+    metallic: 0.9,
+    transparencyMode: MaterialTransparencyMode.MTM_ALPHA_BLEND
+  })
+
+  // Floating 3D label
+  const label2 = engine.addEntity()
+  Transform.create(label2, {
+    parent: bomberGroup,
+    position: Vector3.create(0, 2.15, 0),
+    rotation: Quaternion.fromEulerDegrees(0, 180, 0)
+  })
+  TextShape.create(label2, {
+    text: `🧥 CHAMPION GOLD BOMBER\n👑 SUNDAY MIDNIGHT #1 RANK\n[Click to Inspect]`,
+    fontSize: 1.3,
+    textColor: Color4.fromHexString('#ffd700'),
+    outlineColor: Color4.Black(),
+    outlineWidth: 0.15,
+    textAlign: TextAlignMode.TAM_MIDDLE_CENTER
+  })
+
+  pointerEventsSystem.onPointerDown(
+    {
+      entity: ped2,
+      opts: {
+        button: InputAction.IA_PRIMARY,
+        hoverText: '🧥 Inspect Champion Gold Bomber'
+      }
+    },
+    () => {
+      setActiveRewardsTab('shop')
+      setActiveShopCategory('wearable')
+      setRewardsModalOpen(true)
+      showRewardToast('🧥 Champion Gold Bomber! Awarded to Sunday Midnight #1 Champion!')
+    }
+  )
+
+  // System to rotate showcase emblems
+  let rotAngle = 0
+  engine.addSystem((dt) => {
+    rotAngle += dt * 45
+    if (rotAngle >= 360) rotAngle -= 360
+    const t1 = Transform.getMutableOrNull(emblem1)
+    if (t1) t1.rotation = Quaternion.fromEulerDegrees(rotAngle * 0.4, rotAngle, 0)
+    const t2 = Transform.getMutableOrNull(emblem2)
+    if (t2) t2.rotation = Quaternion.fromEulerDegrees(0, rotAngle, 0)
+  })
+}
+

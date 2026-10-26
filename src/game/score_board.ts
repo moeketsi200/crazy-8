@@ -1,8 +1,69 @@
 import { engine, Transform, TextShape, Entity, TextAlignMode, MeshRenderer, MeshCollider, Material, MaterialTransparencyMode } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion, Color4 } from '@dcl/sdk/math'
+import { getProfile } from './economy'
 
 export let scoreTextEntity: Entity
 export let exteriorScoreTextEntity: Entity
+
+// Dynamic weekly rankings
+export interface LeaderboardEntry {
+  rank: number
+  name: string
+  title: string
+  wins: number
+  trophies: number
+}
+
+const weeklyLeaders: LeaderboardEntry[] = [
+  { rank: 1, name: 'ROOI', title: 'Grandmaster', wins: 5, trophies: 380 },
+  { rank: 2, name: 'CYBER BOT 1', title: 'High Roller', wins: 3, trophies: 220 },
+  { rank: 3, name: 'CYBER BOT 2', title: 'Card Shark', wins: 2, trophies: 150 },
+  { rank: 4, name: 'NEO DEALER', title: 'Card Rookie', wins: 1, trophies: 90 }
+]
+
+export function renderOutdoorHallOfFame(recentWinnerName?: string, roundNum?: number) {
+  if (!exteriorScoreTextEntity) return
+
+  const profile = getProfile()
+  if (recentWinnerName) {
+    const leader = weeklyLeaders.find(l => l.name.toLowerCase() === recentWinnerName.toLowerCase())
+    if (leader) {
+      leader.wins += 1
+      leader.trophies += 20
+    }
+  }
+
+  // Update profile player stats into leaderboard
+  const rooi = weeklyLeaders.find(l => l.name === 'ROOI')
+  if (rooi) {
+    rooi.trophies = Math.max(rooi.trophies, profile.trophies)
+    rooi.title = profile.equippedTitle
+  }
+
+  // Sort leaders by trophies
+  weeklyLeaders.sort((a, b) => b.trophies - a.trophies)
+  weeklyLeaders.forEach((l, i) => { l.rank = i + 1 })
+
+  const top1 = weeklyLeaders[0]
+  const top2 = weeklyLeaders[1]
+  const top3 = weeklyLeaders[2]
+
+  const recentWinLine = recentWinnerName 
+    ? `⭐ Round ${roundNum || 1} Champion: ${recentWinnerName}! ⭐\n\n`
+    : `⭐ CURRENT JACKPOT: 2,500 CHIPS ⭐\n\n`
+
+  const billboardContent = 
+    `👑 WEEKLY HALL OF FAME 👑\n\n` +
+    recentWinLine +
+    `🥇 #1: ${top1.name} [${top1.title}] - ${top1.wins} Wins | ${top1.trophies} 🏆\n` +
+    `🥈 #2: ${top2.name} [${top2.title}] - ${top2.wins} Wins | ${top2.trophies} 🏆\n` +
+    `🥉 #3: ${top3.name} [${top3.title}] - ${top3.wins} Wins | ${top3.trophies} 🏆\n\n` +
+    `🔥 Longest Streak: ${top1.name} (${top1.wins} Games) | Resets Sunday Midnight`
+
+  const textShape = TextShape.getMutable(exteriorScoreTextEntity)
+  textShape.text = billboardContent
+  textShape.fontSize = 1.3
+}
 
 function createBox(parent: Entity, pos: Vector3, scale: Vector3, color: Color4, rot: Quaternion = Quaternion.Identity()) {
   const ent = engine.addEntity()
@@ -138,6 +199,9 @@ export function buildScoreBoard(parentHouse: Entity) {
   })
   MeshRenderer.setPlane(crownRight)
   Material.setPbrMaterial(crownRight, crownMat)
+
+  // Initialize Billboard with Weekly Hall of Fame
+  renderOutdoorHallOfFame()
 }
 
 export function updateScoreBoardText(text: string) {

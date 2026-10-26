@@ -86,8 +86,11 @@ export interface PlayerProfile {
   lastClaimDateStr: string // 'YYYY-MM-DD'
   equippedTitle: string
   equippedDeck: string
+  equippedAura: string
   unlockedTitles: string[]
   unlockedDecks: string[]
+  unlockedAuras: string[]
+  unlockedWearables: string[]
   quests: PlayerQuest[]
   lastQuestDateStr: string
 }
@@ -120,9 +123,12 @@ const profile: PlayerProfile = {
   loginStreak: 1,
   lastClaimDateStr: '', // Not claimed yet today
   equippedTitle: 'Card Rookie',
-  equippedDeck: 'Classic',
+  equippedDeck: 'deck_classic',
+  equippedAura: 'aura_none',
   unlockedTitles: ['Card Rookie'],
-  unlockedDecks: ['Classic'],
+  unlockedDecks: ['deck_classic'],
+  unlockedAuras: ['aura_none'],
+  unlockedWearables: [],
   quests: generateDailyQuests(),
   lastQuestDateStr: getTodayStr()
 }
@@ -229,9 +235,270 @@ export function hasUnclaimedRewards(): boolean {
   return false
 }
 
+// ----------------------------------------------------
+// VIP PRO SHOP CATALOG & ITEM DEFINITIONS
+// ----------------------------------------------------
+export interface ShopItem {
+  id: string
+  name: string
+  category: 'deck' | 'aura' | 'title' | 'wearable'
+  priceChips: number
+  reqTrophies: number
+  description: string
+  badgeColor: string
+  auraHex?: string
+  iconLabel?: string
+}
+
+export const SHOP_CATALOG: ShopItem[] = [
+  // 1. Card Decks
+  {
+    id: 'deck_classic',
+    name: 'Classic Standard',
+    category: 'deck',
+    priceChips: 0,
+    reqTrophies: 0,
+    description: 'Standard casino midnight blue deck',
+    badgeColor: '#00f3ff',
+    iconLabel: '🃏'
+  },
+  {
+    id: 'deck_cyberpunk',
+    name: 'Cyberpunk Neon',
+    category: 'deck',
+    priceChips: 750,
+    reqTrophies: 20,
+    description: 'Glowing laser cyan & magenta circuit lines',
+    badgeColor: '#00f3ff',
+    iconLabel: '⚡'
+  },
+  {
+    id: 'deck_gold_vip',
+    name: 'Gold Foil VIP',
+    category: 'deck',
+    priceChips: 2200,
+    reqTrophies: 100,
+    description: 'Black obsidian card with metallic 24K gold filigree',
+    badgeColor: '#ffd700',
+    iconLabel: '👑'
+  },
+  {
+    id: 'deck_dcl_holo',
+    name: 'DCL Holographic',
+    category: 'deck',
+    priceChips: 3800,
+    reqTrophies: 250,
+    description: 'Decentraland Mana prismatic holographic sheen',
+    badgeColor: '#b026ff',
+    iconLabel: '✨'
+  },
+
+  // 2. Chair Underglow Auras
+  {
+    id: 'aura_none',
+    name: 'No Underglow',
+    category: 'aura',
+    priceChips: 0,
+    reqTrophies: 0,
+    description: 'Default ambient table underglow',
+    badgeColor: '#888888',
+    auraHex: '#00000000',
+    iconLabel: '🔘'
+  },
+  {
+    id: 'aura_cyan',
+    name: 'Cyan Cyber Glow',
+    category: 'aura',
+    priceChips: 1200,
+    reqTrophies: 50,
+    description: 'Floor ring glows laser cyan when seated',
+    badgeColor: '#00f3ff',
+    auraHex: '#00f3ff',
+    iconLabel: '💠'
+  },
+  {
+    id: 'aura_purple',
+    name: 'Neon Violet Glow',
+    category: 'aura',
+    priceChips: 2500,
+    reqTrophies: 120,
+    description: 'Floor ring pulses royal violet when seated',
+    badgeColor: '#b026ff',
+    auraHex: '#b026ff',
+    iconLabel: '🔮'
+  },
+  {
+    id: 'aura_gold',
+    name: 'High-Roller Gold',
+    category: 'aura',
+    priceChips: 5000,
+    reqTrophies: 350,
+    description: 'Floor ring shines 24K radiant gold when seated',
+    badgeColor: '#ffd700',
+    auraHex: '#ffd700',
+    iconLabel: '🌟'
+  },
+
+  // 3. Player Titles
+  {
+    id: 'title_rookie',
+    name: 'Card Rookie',
+    category: 'title',
+    priceChips: 0,
+    reqTrophies: 0,
+    description: 'Fresh face in the Crazy 8 VIP Lounge',
+    badgeColor: '#888888',
+    iconLabel: '🌱'
+  },
+  {
+    id: 'title_shark',
+    name: 'Card Shark',
+    category: 'title',
+    priceChips: 500,
+    reqTrophies: 30,
+    description: 'Calculating player with razor instincts',
+    badgeColor: '#00f3ff',
+    iconLabel: '🦈'
+  },
+  {
+    id: 'title_high_roller',
+    name: 'High Roller',
+    category: 'title',
+    priceChips: 2000,
+    reqTrophies: 150,
+    description: 'Plays big stakes and never backs down',
+    badgeColor: '#ffd700',
+    iconLabel: '💰'
+  },
+  {
+    id: 'title_legend',
+    name: 'Crazy 8 Legend',
+    category: 'title',
+    priceChips: 6000,
+    reqTrophies: 500,
+    description: 'Master of the table with Parcel-wide renown',
+    badgeColor: '#ff0055',
+    iconLabel: '👑'
+  },
+
+  // 4. Wearables (Showcase Preview Items)
+  {
+    id: 'wearable_cyber_hoodie',
+    name: 'Crazy 8 Cyber Hoodie',
+    category: 'wearable',
+    priceChips: 10000,
+    reqTrophies: 600,
+    description: 'Lounge-exclusive dark hoodie with glowing 8 emblem on back',
+    badgeColor: '#00f3ff',
+    iconLabel: '👗'
+  },
+  {
+    id: 'wearable_gold_bomber',
+    name: 'Champion Gold Bomber',
+    category: 'wearable',
+    priceChips: 15000,
+    reqTrophies: 1000,
+    description: 'Awarded to the Weekly Billboard #1 Champion on Sundays',
+    badgeColor: '#ffd700',
+    iconLabel: '🧥'
+  }
+]
+
+export function isItemUnlocked(itemId: string): boolean {
+  const item = SHOP_CATALOG.find(i => i.id === itemId)
+  if (!item) return false
+  if (item.category === 'deck') return profile.unlockedDecks.includes(itemId)
+  if (item.category === 'aura') return profile.unlockedAuras.includes(itemId)
+  if (item.category === 'title') return profile.unlockedTitles.includes(item.name)
+  if (item.category === 'wearable') return profile.unlockedWearables.includes(itemId)
+  return false
+}
+
+export function isItemEquipped(itemId: string): boolean {
+  const item = SHOP_CATALOG.find(i => i.id === itemId)
+  if (!item) return false
+  if (item.category === 'deck') return profile.equippedDeck === itemId
+  if (item.category === 'aura') return profile.equippedAura === itemId
+  if (item.category === 'title') return profile.equippedTitle === item.name
+  return false
+}
+
+// Listeners for cosmetic changes
+type CosmeticChangeListener = (category: string, itemId: string, item: ShopItem) => void
+const cosmeticListeners: CosmeticChangeListener[] = []
+
+export function onCosmeticEquipped(listener: CosmeticChangeListener) {
+  cosmeticListeners.push(listener)
+}
+
+export function buyShopItem(itemId: string): { success: boolean; message: string } {
+  const item = SHOP_CATALOG.find(i => i.id === itemId)
+  if (!item) return { success: false, message: 'Item not found' }
+
+  if (isItemUnlocked(itemId)) {
+    return { success: false, message: 'Item already owned!' }
+  }
+
+  if (profile.trophies < item.reqTrophies) {
+    return {
+      success: false,
+      message: `Need ${item.reqTrophies} Trophies to unlock! (You have ${profile.trophies})`
+    }
+  }
+
+  if (profile.chips < item.priceChips) {
+    return {
+      success: false,
+      message: `Need ${item.priceChips.toLocaleString()} Chips! (You have ${profile.chips.toLocaleString()})`
+    }
+  }
+
+  // Deduct chips
+  profile.chips -= item.priceChips
+
+  if (item.category === 'deck') {
+    profile.unlockedDecks.push(itemId)
+    profile.equippedDeck = itemId
+  } else if (item.category === 'aura') {
+    profile.unlockedAuras.push(itemId)
+    profile.equippedAura = itemId
+  } else if (item.category === 'title') {
+    profile.unlockedTitles.push(item.name)
+    profile.equippedTitle = item.name
+  } else if (item.category === 'wearable') {
+    profile.unlockedWearables.push(itemId)
+  }
+
+  // Notify listeners
+  cosmeticListeners.forEach(fn => fn(item.category, itemId, item))
+
+  return { success: true, message: `Unlocked & Equipped ${item.name}!` }
+}
+
+export function equipShopItem(itemId: string): { success: boolean; message: string } {
+  const item = SHOP_CATALOG.find(i => i.id === itemId)
+  if (!item) return { success: false, message: 'Item not found' }
+
+  if (!isItemUnlocked(itemId)) {
+    return { success: false, message: 'Item is not unlocked yet!' }
+  }
+
+  if (item.category === 'deck') {
+    profile.equippedDeck = itemId
+  } else if (item.category === 'aura') {
+    profile.equippedAura = itemId
+  } else if (item.category === 'title') {
+    profile.equippedTitle = item.name
+  }
+
+  cosmeticListeners.forEach(fn => fn(item.category, itemId, item))
+  return { success: true, message: `Equipped ${item.name}!` }
+}
+
 // Modal open/close state
 let isRewardsModalOpen = false
-let activeRewardsTab: 'streak' | 'bounties' = 'streak'
+let activeRewardsTab: 'streak' | 'bounties' | 'shop' = 'streak'
+let activeShopCategory: 'all' | 'deck' | 'aura' | 'title' | 'wearable' = 'all'
 
 export function getIsRewardsModalOpen(): boolean {
   return isRewardsModalOpen
@@ -241,10 +508,18 @@ export function setRewardsModalOpen(open: boolean) {
   isRewardsModalOpen = open
 }
 
-export function getActiveRewardsTab(): 'streak' | 'bounties' {
+export function getActiveRewardsTab(): 'streak' | 'bounties' | 'shop' {
   return activeRewardsTab
 }
 
-export function setActiveRewardsTab(tab: 'streak' | 'bounties') {
+export function setActiveRewardsTab(tab: 'streak' | 'bounties' | 'shop') {
   activeRewardsTab = tab
+}
+
+export function getActiveShopCategory(): 'all' | 'deck' | 'aura' | 'title' | 'wearable' {
+  return activeShopCategory
+}
+
+export function setActiveShopCategory(category: 'all' | 'deck' | 'aura' | 'title' | 'wearable') {
+  activeShopCategory = category
 }
