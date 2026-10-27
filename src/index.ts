@@ -22,6 +22,7 @@ import {
   triggerVictoryCelebration,
   setupWearableShowcases
 } from './game/models_integration'
+import { setupWearablesSystem } from './game/wearables'
 
 export function main() {
     // 1. Build the architectural shell (Now at 90% scale!)
@@ -49,6 +50,7 @@ export function main() {
     setupTrophyShowcase(houseEntity)
     setupVictoryCelebration(houseEntity)
     setupWearableShowcases(houseEntity)
+    setupWearablesSystem()
 
     // 4. Start the Crazy 8 Game Backend
     const gameEngine = new CrazyEightsGame()

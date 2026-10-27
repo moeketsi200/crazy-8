@@ -88,6 +88,7 @@ export interface PlayerProfile {
   equippedTitle: string
   equippedDeck: string
   equippedAura: string
+  equippedWearable?: string
   unlockedTitles: string[]
   unlockedDecks: string[]
   unlockedAuras: string[]
@@ -452,6 +453,7 @@ export function isItemEquipped(itemId: string): boolean {
   if (item.category === 'deck') return profile.equippedDeck === itemId
   if (item.category === 'aura') return profile.equippedAura === itemId
   if (item.category === 'title') return profile.equippedTitle === item.name
+  if (item.category === 'wearable') return profile.equippedWearable === itemId
   return false
 }
 
@@ -506,6 +508,7 @@ export function buyShopItem(itemId: string): { success: boolean; message: string
     profile.equippedTitle = item.name
   } else if (item.category === 'wearable') {
     profile.unlockedWearables.push(itemId)
+    profile.equippedWearable = itemId
   }
 
   // Notify listeners
@@ -528,6 +531,15 @@ export function equipShopItem(itemId: string): { success: boolean; message: stri
     profile.equippedAura = itemId
   } else if (item.category === 'title') {
     profile.equippedTitle = item.name
+  } else if (item.category === 'wearable') {
+    if (profile.equippedWearable === itemId) {
+      // Toggle unequip
+      profile.equippedWearable = undefined
+      cosmeticListeners.forEach(fn => fn(item.category, '', item))
+      return { success: true, message: `Unequipped ${item.name}` }
+    } else {
+      profile.equippedWearable = itemId
+    }
   }
 
   cosmeticListeners.forEach(fn => fn(item.category, itemId, item))

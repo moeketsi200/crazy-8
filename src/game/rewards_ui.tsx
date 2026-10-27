@@ -941,10 +941,15 @@ export function DailyRewardsModal() {
                             : Color4.fromHexString('#1e293b')
                         }}
                         onMouseDown={() => {
-                          if (equipped) return
+                          if (equipped) {
+                            const res = equipShopItem(item.id)
+                            showRewardToast(res.message)
+                            return
+                          }
                           if (item.reqWins !== undefined) {
                             if (unlocked) {
-                              showRewardToast(`✔ ${item.name} Unlocked! Active in Avatar inventory.`)
+                              const res = equipShopItem(item.id)
+                              showRewardToast(res.message)
                             } else {
                               showRewardToast(`Win ${item.reqWins - profile.totalWins} more matches to unlock ${item.name}!`)
                             }
@@ -966,7 +971,7 @@ export function DailyRewardsModal() {
                             value: equipped
                               ? '✔ EQUIPPED'
                               : unlocked
-                              ? (item.reqWins !== undefined ? '✔ UNLOCKED' : 'EQUIP')
+                              ? 'EQUIP'
                               : item.reqWins !== undefined
                               ? `${profile.totalWins}/${item.reqWins} WINS`
                               : canAfford
