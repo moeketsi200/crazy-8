@@ -9,6 +9,7 @@ import {
   InputAction,
   ColliderLayer,
   MeshRenderer,
+  MeshCollider,
   Material,
   TextShape,
   TextAlignMode,
@@ -352,8 +353,8 @@ export function setupWearableShowcases(houseEntity: Entity) {
       modelScale: Vector3.create(1.7, 1.7, 1.7),
       modelPos: Vector3.create(0, 1.38, 0),
       themeColor: '#00f3ff',
-      pos: Vector3.create(-5.2, 0.0, 9.2),
-      rotY: 90
+      pos: Vector3.create(0.0, 0.0, 23.5),
+      rotY: 0
     },
     {
       id: 'wearable_shades_chain',
@@ -363,8 +364,8 @@ export function setupWearableShowcases(houseEntity: Entity) {
       modelScale: Vector3.create(1.8, 1.8, 1.8),
       modelPos: Vector3.create(0, 1.42, 0),
       themeColor: '#ffd700',
-      pos: Vector3.create(-5.2, 0.0, 11.5),
-      rotY: 90
+      pos: Vector3.create(2.5, 0.0, 23.5),
+      rotY: 0
     },
     {
       id: 'wearable_vip_bomber',
@@ -374,8 +375,8 @@ export function setupWearableShowcases(houseEntity: Entity) {
       modelScale: Vector3.create(1.15, 1.15, 1.15),
       modelPos: Vector3.create(0, 1.38, 0),
       themeColor: '#ff0055',
-      pos: Vector3.create(-5.2, 0.0, 13.8),
-      rotY: 90
+      pos: Vector3.create(5.0, 0.0, 23.5),
+      rotY: 0
     },
     {
       id: 'wearable_champion_crown_hoodie',
@@ -385,8 +386,8 @@ export function setupWearableShowcases(houseEntity: Entity) {
       modelScale: Vector3.create(0.72, 0.72, 0.72),
       modelPos: Vector3.create(0, 1.36, 0),
       themeColor: '#ffd700',
-      pos: Vector3.create(-5.2, 0.0, 16.1),
-      rotY: 90
+      pos: Vector3.create(7.5, 0.0, 23.5),
+      rotY: 0
     }
   ]
 
@@ -408,6 +409,7 @@ export function setupWearableShowcases(houseEntity: Entity) {
       scale: Vector3.create(0.85, 0.9, 0.85)
     })
     MeshRenderer.setCylinder(ped)
+    MeshCollider.setCylinder(ped)
     Material.setPbrMaterial(ped, {
       albedoColor: Color4.fromHexString('#0b1424'),
       emissiveColor: Color3.fromHexString(item.themeColor),
@@ -450,6 +452,7 @@ export function setupWearableShowcases(houseEntity: Entity) {
       scale: Vector3.create(0.78, 1.05, 0.78)
     })
     MeshRenderer.setCylinder(glass)
+    MeshCollider.setCylinder(glass)
     Material.setPbrMaterial(glass, {
       albedoColor: Color4.fromHexString(`${item.themeColor}15`),
       roughness: 0.1,
@@ -474,6 +477,13 @@ export function setupWearableShowcases(houseEntity: Entity) {
     })
 
     // Interaction to inspect & equip in Pro Shop
+    const onInspect = () => {
+      setActiveRewardsTab('shop')
+      setActiveShopCategory('wearable')
+      setRewardsModalOpen(true)
+      showRewardToast(`${item.title}! Check VIP Pro Shop to view and equip!`)
+    }
+
     pointerEventsSystem.onPointerDown(
       {
         entity: ped,
@@ -482,12 +492,17 @@ export function setupWearableShowcases(houseEntity: Entity) {
           hoverText: `Inspect ${item.title}`
         }
       },
-      () => {
-        setActiveRewardsTab('shop')
-        setActiveShopCategory('wearable')
-        setRewardsModalOpen(true)
-        showRewardToast(`${item.title}! Check VIP Pro Shop to view and equip!`)
-      }
+      onInspect
+    )
+    pointerEventsSystem.onPointerDown(
+      {
+        entity: glass,
+        opts: {
+          button: InputAction.IA_PRIMARY,
+          hoverText: `Inspect ${item.title}`
+        }
+      },
+      onInspect
     )
   }
 

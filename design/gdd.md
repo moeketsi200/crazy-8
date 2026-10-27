@@ -206,13 +206,15 @@ The scene is built cleanly on the **Decentraland SDK7 Entity Component System**:
 * **Automated Sliding Glass Doors**: Smooth proximity-sensing glass doors with tinted cyan transparency.
 
 ### 6.2 Ground Floor Terrace: Chillers Oasis
-* **Outdoor Poolside VIP Wearable Showcases**:
-  * **Crazy 8 Cyber Hoodie Showcase**: Dark obsidian pedestal, glass enclosure, and rotating holographic diamond emblem by the pool.
-  * **Champion Gold Bomber Showcase**: Obsidian pedestal, glass enclosure, and rotating 3D crown emblem.
+* **4 VIP Wearable Showcase Pedestals**: Arranged in an exhibition gallery directly behind the poolside sun loungers (at Z = 23.5), featuring rotating 3D GLB models, glowing neon rims, glass enclosures, and click-to-equip inspect interactions:
+  * 🧢 **Electric Streak Snapback Cap** (`assets/Models/electric_cap.glb`) — 30 Wins Milestone (X: 0.0, Z: 23.5)
+  * 🕶️ **Designer Shades & Gold Chain** (`assets/Models/shades_chain.glb`) — 60 Wins Milestone (X: 2.5, Z: 23.5)
+  * 🧥 **VIP Lounge Bomber Jacket** (`assets/Models/vip_bomber.glb`) — 80 Wins Milestone (X: 5.0, Z: 23.5)
+  * 👑 **Champion Floating Crown & Hoodie** (`assets/Models/winner_crown.glb`) — Weekly #1 Spot (X: 7.5, Z: 23.5)
 * **Neon Luxury Pool**: Deep navy basin with glowing cyan rim, animated wading wake, positional water splash sound FX, and surface ripple rings when avatars enter or exit.
 * **Heated Boiling Jacuzzi**: Magenta neon trim, turbulent boiling water surface physics, and rising/wobbling bubbles that pop at the surface.
 * **South African Braai Stand**: Relocated to the far corner of the outdoor patio deck (X: -8.5, Z: 24.0), placed safely away from both the pool and jacuzzi water overlooking the open horizon.
-* **Sun Loungers & Umbrellas**: Luxury poolside seating facing the scenic Decentraland horizon.
+* **Sun Loungers & Umbrellas**: 4 luxury loungers paired with overhead shade umbrellas, perfectly aligned in front of each milestone showcase facing the pool.
 * **Outdoor Hall of Fame Billboard**: Live weekly leaderboard displaying #1 King of the Table, #2 High Roller, #3 Card Shark, longest win streak, and 2,500 Chip jackpot.
 
 ### 6.3 The Rooftop Penthouse & Glass Elevator

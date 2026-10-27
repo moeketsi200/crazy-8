@@ -51,6 +51,7 @@ export function buildBeachSeats(houseEntity: Entity) {
     createLounger(0, 20.5, 180)
     createLounger(2.5, 20.5, 180)
     createLounger(5.0, 20.5, 180)
+    createLounger(7.5, 20.5, 180)
     
     // Umbrellas for the back row
     createUmbrella(1.25, 21.5)
