@@ -330,12 +330,12 @@ export function triggerVictoryCelebration() {
 // 6. VIP WEARABLE SHOWCASES (3D Mannequin Pedestals)
 // ----------------------------------------------------
 export function setupWearableShowcases(houseEntity: Entity) {
-  // Showcase 1: Crazy 8 Cyber Hoodie
+  // Showcase 1: Crazy 8 Cyber Hoodie (Outdoor Poolside Terrace)
   const hoodieGroup = engine.addEntity()
   Transform.create(hoodieGroup, {
     parent: houseEntity,
-    position: Vector3.create(5.2, 0.0, -2.4),
-    rotation: Quaternion.fromEulerDegrees(0, -90, 0)
+    position: Vector3.create(-5.2, 0.0, 11.5),
+    rotation: Quaternion.fromEulerDegrees(0, 90, 0)
   })
 
   // Pedestal cylinder
@@ -430,12 +430,12 @@ export function setupWearableShowcases(houseEntity: Entity) {
     }
   )
 
-  // Showcase 2: Champion Gold Bomber
+  // Showcase 2: Champion Gold Bomber (Outdoor Poolside Terrace)
   const bomberGroup = engine.addEntity()
   Transform.create(bomberGroup, {
     parent: houseEntity,
-    position: Vector3.create(5.2, 0.0, -0.6),
-    rotation: Quaternion.fromEulerDegrees(0, -90, 0)
+    position: Vector3.create(-5.2, 0.0, 14.2),
+    rotation: Quaternion.fromEulerDegrees(0, 90, 0)
   })
 
   // Pedestal cylinder

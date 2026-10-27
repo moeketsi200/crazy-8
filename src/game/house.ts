@@ -41,10 +41,24 @@ export function buildHouse() {
     return ent
   }
 
+  function makePlaneUvs(u: number, v: number): number[] {
+    return [
+      0, 0,
+      0, v,
+      u, v,
+      u, 0,
+      // back face
+      0, 0,
+      0, v,
+      u, v,
+      u, 0
+    ]
+  }
+
   function addWallpaperPlane(pos: Vector3, scale: Vector3, rot: Quaternion, tiling: Vector2): Entity {
     const ent = engine.addEntity()
     Transform.create(ent, { parent: houseEntity, position: pos, scale: scale, rotation: rot })
-    MeshRenderer.setPlane(ent)
+    MeshRenderer.setPlane(ent, makePlaneUvs(tiling.x, tiling.y))
     Material.setPbrMaterial(ent, {
       texture: Material.Texture.Common({
         src: 'assets/images/dark_hex_grid.png',
@@ -69,7 +83,7 @@ export function buildHouse() {
   function addBrickWallPlane(pos: Vector3, scale: Vector3, rot: Quaternion, tiling: Vector2): Entity {
     const ent = engine.addEntity()
     Transform.create(ent, { parent: houseEntity, position: pos, scale: scale, rotation: rot })
-    MeshRenderer.setPlane(ent)
+    MeshRenderer.setPlane(ent, makePlaneUvs(tiling.x, tiling.y))
     Material.setPbrMaterial(ent, {
       texture: Material.Texture.Common({
         src: 'assets/images/dark_brick_wallpaper.jpg',
@@ -92,7 +106,7 @@ export function buildHouse() {
       scale: scale,
       rotation: Quaternion.fromEulerDegrees(90, 0, 0)
     })
-    MeshRenderer.setPlane(ent)
+    MeshRenderer.setPlane(ent, makePlaneUvs(tiling.x, tiling.y))
     Material.setPbrMaterial(ent, {
       texture: Material.Texture.Common({
         src: 'assets/images/polished_black_obsidian.png',
@@ -115,7 +129,7 @@ export function buildHouse() {
       scale: scale,
       rotation: Quaternion.fromEulerDegrees(90, 0, 0)
     })
-    MeshRenderer.setPlane(ent)
+    MeshRenderer.setPlane(ent, makePlaneUvs(tiling.x, tiling.y))
     Material.setPbrMaterial(ent, {
       texture: Material.Texture.Common({
         src: 'assets/images/charcoal_slate_patio.png',
@@ -153,7 +167,7 @@ export function buildHouse() {
     Vector3.create(-6.78, 4.0, 0),
     Vector3.create(11.8, 8.0, 1.0),
     Quaternion.fromEulerDegrees(0, -90, 0),
-    Vector2.create(3.0, 2.0)
+    Vector2.create(10.0, 7.0)
   )
 
   // Right Interior Wall (facing -X into the room)
@@ -161,7 +175,7 @@ export function buildHouse() {
     Vector3.create(6.78, 4.0, 0),
     Vector3.create(11.8, 8.0, 1.0),
     Quaternion.fromEulerDegrees(0, 90, 0),
-    Vector2.create(3.0, 2.0)
+    Vector2.create(10.0, 7.0)
   )
 
   // Back Interior Stub Walls & Header (facing +Z into the room)
@@ -169,19 +183,19 @@ export function buildHouse() {
     Vector3.create(-5.8, 4.0, -5.76),
     Vector3.create(2.38, 8.0, 1.0),
     Quaternion.fromEulerDegrees(0, 180, 0),
-    Vector2.create(0.6, 2.0)
+    Vector2.create(2.0, 7.0)
   )
   addWallpaperPlane(
     Vector3.create(5.8, 4.0, -5.76),
     Vector3.create(2.38, 8.0, 1.0),
     Quaternion.fromEulerDegrees(0, 180, 0),
-    Vector2.create(0.6, 2.0)
+    Vector2.create(2.0, 7.0)
   )
   addWallpaperPlane(
     Vector3.create(0, 6.75, -5.76),
     Vector3.create(9.2, 2.50, 1.0),
     Quaternion.fromEulerDegrees(0, 180, 0),
-    Vector2.create(2.3, 0.625)
+    Vector2.create(7.8, 2.2)
   )
 
   // Front Interior Stub Walls & Header (facing -Z into the room)
@@ -189,19 +203,19 @@ export function buildHouse() {
     Vector3.create(-5.8, 4.0, 5.76),
     Vector3.create(2.38, 8.0, 1.0),
     Quaternion.fromEulerDegrees(0, 0, 0),
-    Vector2.create(0.6, 2.0)
+    Vector2.create(2.0, 7.0)
   )
   addWallpaperPlane(
     Vector3.create(5.8, 4.0, 5.76),
     Vector3.create(2.38, 8.0, 1.0),
     Quaternion.fromEulerDegrees(0, 0, 0),
-    Vector2.create(0.6, 2.0)
+    Vector2.create(2.0, 7.0)
   )
   addWallpaperPlane(
     Vector3.create(0, 6.75, 5.76),
     Vector3.create(9.2, 2.50, 1.0),
     Quaternion.fromEulerDegrees(0, 0, 0),
-    Vector2.create(2.3, 0.625)
+    Vector2.create(7.8, 2.2)
   ) 
 
   // Interior Ceiling / Underside of Roof (facing -Y downwards into the room)
@@ -209,7 +223,7 @@ export function buildHouse() {
     Vector3.create(0, 7.98, 0),
     Vector3.create(13.6, 11.6, 1.0),
     Quaternion.fromEulerDegrees(-90, 0, 0),
-    Vector2.create(3.4, 2.9)
+    Vector2.create(11.5, 9.8)
   )
 
   // 3.8. EXTERIOR DARK BRICK WALLPAPER

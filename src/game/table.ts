@@ -114,7 +114,6 @@ export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
   
   // 0. GENERATE THE 3D VISUAL TABLE AND CARDS
   buildPrimitiveTable(furnitureRoot)
-  setupTableChips(furnitureRoot)
 
   // 1. CREATE THE DRAW PILE
   Transform.create(drawPile, {
