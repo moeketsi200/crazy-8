@@ -1,4 +1,4 @@
-import { engine, Transform, MeshRenderer, Material, Entity } from '@dcl/sdk/ecs'
+import { engine, Transform, MeshRenderer, Material, Entity, MaterialTransparencyMode } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion, Color4, Color3 } from '@dcl/sdk/math'
 
 const colorBaseWood = Color4.fromHexString('#141110')
@@ -94,11 +94,14 @@ export function buildPrimitiveTable(houseEntity: Entity) {
   const feltPlane = engine.addEntity()
   Transform.create(feltPlane, {
     parent: houseEntity,
-    position: Vector3.create(0, 0.785, 0),
+    position: Vector3.create(0, 0.7895, 0),
     scale: Vector3.create(2.84, 2.84, 1.0),
-    rotation: Quaternion.fromEulerDegrees(90, 0, 0)
+    rotation: Quaternion.fromEulerDegrees(-90, 0, 0)
   })
-  MeshRenderer.setPlane(feltPlane)
+  MeshRenderer.setPlane(feltPlane, [
+    0, 0,  0, 1,  1, 1,  1, 0,
+    0, 0,  0, 1,  1, 1,  1, 0
+  ])
   Material.setPbrMaterial(feltPlane, {
     texture: Material.Texture.Common({
       src: 'assets/images/cyber_table_felt.png'
@@ -107,8 +110,9 @@ export function buildPrimitiveTable(houseEntity: Entity) {
       src: 'assets/images/cyber_table_emissive.png'
     }),
     emissiveColor: Color3.create(0.0, 0.95, 1.0),
-    emissiveIntensity: 2.2,
-    roughness: 0.6,
+    emissiveIntensity: 2.5,
+    transparencyMode: MaterialTransparencyMode.MTM_ALPHA_BLEND,
+    roughness: 0.5,
     metallic: 0.1
   })
 
