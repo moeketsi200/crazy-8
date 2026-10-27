@@ -111,10 +111,8 @@ function handleButtonClick() {
     if (!getPlayerSeated()) {
       sitPlayerAtOpenChair()
     }
-    // 2. Begin 15-second lobby countdown
-    isLobbyActive = true
-    lobbyCountdown = 15.0
-    setButtonState('COUNTDOWN', 'STARTING IN 15s\nTAKE A SEAT!')
+    // 2. Begin 15-second network-synced lobby countdown
+    gameEngine.startLobby(15)
     showRewardToast('⏱️ Game starting in 15s! Grab a seat at the table to play!')
     return
   }
@@ -144,51 +142,63 @@ function handleButtonClick() {
     gameEngine.startNextRound()
     update3DTable(gameEngine)
     updateScoreBoardText(`SCOREBOARD\n\nRound ${gameEngine.roundNumber}\n\nGame in progress!`)
-    setButtonState('JOIN', 'JOIN THE GAME')
   }
 }
 
 function setupLobbyCountdownSystem() {
-  let lastSecondAnnounced = 16
+  let lastSecondAnnounced = -1
 
-  engine.addSystem((dt) => {
-    if (!isLobbyActive) return
+  engine.addSystem(() => {
+    const gameEngine = cachedGameEngine
+    if (!gameEngine || !buttonEntity || !buttonTextEntity) return
 
-    lobbyCountdown -= dt
-    const secondLeft = Math.ceil(lobbyCountdown)
+    const now = Date.now()
 
-    if (secondLeft !== lastSecondAnnounced && secondLeft > 0) {
-      lastSecondAnnounced = secondLeft
-      if (buttonTextEntity) {
-        TextShape.getMutable(buttonTextEntity).text = `STARTING IN ${secondLeft}s\nTAKE A SEAT`
+    // 1. Network-synced lobby countdown active
+    if (gameEngine.lobbyEndTime > now) {
+      const secondLeft = Math.ceil((gameEngine.lobbyEndTime - now) / 1000)
+      if (secondLeft !== lastSecondAnnounced) {
+        lastSecondAnnounced = secondLeft
+        setButtonState('COUNTDOWN', `STARTING IN ${secondLeft}s\nTAKE A SEAT`)
       }
+      return
     }
 
-    if (lobbyCountdown <= 0) {
-      isLobbyActive = false
-      const gameEngine = cachedGameEngine
-      if (!gameEngine) return
-
-      // Gather all currently seated players
+    // 2. Countdown just expired and game hasn't started yet: Start the game!
+    if (gameEngine.lobbyEndTime > 0 && !gameEngine.isStarted) {
+      gameEngine.lobbyEndTime = 0
       const seatedPlayers = getSeatedPlayerIds()
-
-      if (seatedPlayers.length === 0) {
+      if (seatedPlayers.length > 0) {
+        const needBot = seatedPlayers.length === 1
+        gameEngine.startGame(seatedPlayers, needBot)
+        update3DTable(gameEngine)
+        updateScoreBoardText(`SCOREBOARD\n\nRound 1\n\nGame is running!\n${seatedPlayers.length} Seated Player${seatedPlayers.length > 1 ? 's' : ''}`)
+        showRewardToast('🃏 Round 1 Started! Cards dealt to all seated players.')
+      } else {
         showRewardToast('⚠️ No players were seated! Sit at the table to play.')
-        setButtonState('START', 'START THE GAME')
-        return
       }
+      return
+    }
 
-      // If only 1 human is seated, spawn exactly 1 bot to play against.
-      // If 2 or more humans are seated, they play together without extra bots!
-      const needBot = seatedPlayers.length === 1
-      gameEngine.startGame(seatedPlayers, needBot)
+    // 3. Game in progress: Button shows "JOIN THE GAME" (Electric Cyan) so anyone can join
+    if (gameEngine.isStarted && !gameEngine.gameOver) {
+      if (currentButtonAction !== 'JOIN') {
+        setButtonState('JOIN', 'JOIN THE GAME')
+      }
+      return
+    }
 
-      update3DTable(gameEngine)
-      updateScoreBoardText(`SCOREBOARD\n\nRound 1\n\nGame is running!\n${seatedPlayers.length} Seated Player${seatedPlayers.length > 1 ? 's' : ''}`)
+    // 4. Game is over: Button shows "CONTINUE (Next Round)"
+    if (gameEngine.gameOver) {
+      if (currentButtonAction !== 'CONTINUE') {
+        setButtonState('CONTINUE', 'CONTINUE\n(Next Round)')
+      }
+      return
+    }
 
-      // Change button to "JOIN THE GAME" so observers can join mid-game
-      setButtonState('JOIN', 'JOIN THE GAME')
-      showRewardToast('🃏 Round 1 Started! Cards dealt to all seated players.')
+    // 5. Idle / Waiting for someone to start: "START THE GAME" (Red)
+    if (currentButtonAction !== 'START') {
+      setButtonState('START', 'START THE GAME')
     }
   })
 }

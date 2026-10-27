@@ -16,6 +16,7 @@ enum SyncIds {
 }
 
 export let syncEntityInstance: any
+let localUpdateId = Date.now()
 
 export function setupMultiplayer(gameEngine: CrazyEightsGame) {
   // Create a singleton entity for syncing the game state
@@ -31,7 +32,6 @@ export function setupMultiplayer(gameEngine: CrazyEightsGame) {
   // Register with SDK7 CRDT network
   syncEntity(syncEntityInstance, [SyncGameState.componentId], SyncIds.GAME_STATE)
 
-  let localUpdateId = Date.now()
   let hasAppliedInitialSync = false
 
   // System to detect remote changes to the SyncGameState component
@@ -68,8 +68,10 @@ export function pushGameState(gameEngine: CrazyEightsGame) {
   if (!syncEntityInstance || !isStateSyncronized()) return
   
   const mutableState = SyncGameState.getMutable(syncEntityInstance)
+  const now = Date.now()
   mutableState.stateJson = gameEngine.serialize()
-  mutableState.updateId = Date.now()
+  mutableState.updateId = now
+  localUpdateId = now
   
   const player = getPlayer()
   mutableState.lastUpdater = player ? player.userId : 'unknown'

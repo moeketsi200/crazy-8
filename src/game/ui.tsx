@@ -2,7 +2,7 @@ import ReactEcs, { ReactEcsRenderer, UiEntity } from '@dcl/sdk/react-ecs'
 import { Color4, Vector3 } from '@dcl/sdk/math'
 import { engine, Transform } from '@dcl/sdk/ecs'
 import { CrazyEightsGame } from './logic'
-import { update3DTable, resolvePlayerId, getPlayerSeated, setPlayerSeated, getPlayerDisplayName, getTimeSeated, standUpPlayer } from './table'
+import { update3DTable, resolvePlayerId, getPlayerSeated, setPlayerSeated, getPlayerDisplayName, getTimeSeated, standUpPlayer, getLocalSeatedChair } from './table'
 import { getPlayer } from '@dcl/sdk/src/players'
 import { Card, Suit } from './deck'
 import { TopHudWidget, DailyRewardsModal, RewardToastBanner, updateRewardToast } from './rewards_ui'
@@ -223,9 +223,10 @@ function isLocalPlayerTurn(game: CrazyEightsGame): boolean {
   const currentTurnPlayer = game.playerOrder[game.currentTurnIndex]
   if (currentTurnPlayer === 'bot') return false
   const myId = resolvePlayerId(game)
-  if (currentTurnPlayer === myId || currentTurnPlayer === 'player1') return true
+  if (currentTurnPlayer === myId) return true
   // In single player vs bot, if current turn is not bot, it is always the local human player
-  if (game.playerOrder.length <= 2 && currentTurnPlayer !== 'bot') return true
+  if (game.playerOrder.length <= 2 && game.playerOrder.includes('bot') && currentTurnPlayer !== 'bot') return true
+  if (currentTurnPlayer === 'player1' && myId === 'player1') return true
   return false
 }
 
@@ -658,9 +659,21 @@ function uiComponent() {
 
     if (horizontalDist <= 4.0) {
       isNearTable = true
-    } else if (Date.now() - getTimeSeated() > 1000) {
-      // Avatar walked far away from the table
-      setPlayerSeated(false)
+    }
+
+    // Strict Chair-Anchor Check: If avatar stands up with WASD/Space, unseat immediately!
+    if (isSeated) {
+      const seatedChair = getLocalSeatedChair()
+      if (seatedChair) {
+        const chairDx = px - seatedChair.sitPosition.x
+        const chairDz = pz - seatedChair.sitPosition.z
+        const distFromChair = Math.sqrt(chairDx * chairDx + chairDz * chairDz)
+        if (distFromChair > 0.6 && Date.now() - getTimeSeated() > 1000) {
+          standUpPlayer()
+        }
+      } else if (horizontalDist > 3.0) {
+        standUpPlayer()
+      }
     }
   }
 

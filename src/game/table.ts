@@ -1,5 +1,5 @@
-import { engine, Transform, MeshRenderer, MeshCollider, ColliderLayer, TextShape, Material, pointerEventsSystem, InputAction, Entity, AvatarModifierArea, AvatarModifierType } from '@dcl/sdk/ecs'
-import { Vector3, Quaternion, Color4 } from '@dcl/sdk/math'
+import { engine, Transform, MeshRenderer, MeshCollider, ColliderLayer, TextShape, Material, pointerEventsSystem, InputAction, Entity, AvatarModifierArea, AvatarModifierType, Billboard } from '@dcl/sdk/ecs'
+import { Vector3, Quaternion, Color4, Color3 } from '@dcl/sdk/math'
 import { movePlayerTo, triggerEmote, stopEmote } from '~system/RestrictedActions'
 import { getPlayer } from '@dcl/sdk/src/players'
 import { CrazyEightsGame } from './logic'
@@ -329,22 +329,27 @@ export function setPlayerSeated(value: boolean) {
   }
 }
 
+export function getLocalSeatedChair(): CasinoChair | null {
+  if (_isPlayerSeated && _localSeatedChairIndex >= 0 && _localSeatedChairIndex < allChairs.length) {
+    return allChairs[_localSeatedChairIndex]
+  }
+  return null
+}
+
 export function standUpPlayer() {
   if (!_isPlayerSeated) return
-  setPlayerSeated(false)
   stopEmote({}).catch(console.error)
 
   if (_localSeatedChairIndex >= 0 && _localSeatedChairIndex < allChairs.length) {
     const chair = allChairs[_localSeatedChairIndex]
-    seatedChairs.delete(_localSeatedChairIndex)
-    updateChairAuraVisibility(new Set(seatedChairs.keys()))
-    _localSeatedChairIndex = -1
     movePlayerTo({
       newRelativePosition: chair.standPosition,
       cameraTarget: chair.lookAtPosition,
       avatarTarget: chair.lookAtPosition
     })
   }
+
+  setPlayerSeated(false)
 
   if (globalGame) {
     const myId = resolvePlayerId(globalGame)
@@ -378,20 +383,23 @@ export function getSeatedPlayerIds(): string[] {
   return Array.from(new Set(ids))
 }
 
-// System to automatically update the 3D table when the bot (or anyone) plays a card
-let lastTopCardStr = ''
-let lastBotHandSize = -1
+// System to automatically update the 3D table when the bot or any player draws, plays, or declares
+let lastHandHash = ''
 
 export function autoUpdateTableSystem(dt: number) {
   if (!globalGame || !globalGame.isStarted || globalGame.discardPile.length === 0) return
 
   const topCard = globalGame.getTopDiscard()
   const currentTopCardStr = `${topCard.suit}-${topCard.rank}`
-  const currentBotHandSize = globalGame.players.get('bot')?.length || 0
+  
+  let handHash = `${currentTopCardStr}|`
+  for (const [pId, hand] of globalGame.players.entries()) {
+    const isSafe = globalGame.safeDeclared.has(pId) ? 'S' : 'U'
+    handHash += `${pId}:${hand.length}:${isSafe};`
+  }
 
-  if (currentTopCardStr !== lastTopCardStr || currentBotHandSize !== lastBotHandSize) {
-    lastTopCardStr = currentTopCardStr
-    lastBotHandSize = currentBotHandSize
+  if (handHash !== lastHandHash) {
+    lastHandHash = handHash
     update3DTable(globalGame)
   }
 }
@@ -440,6 +448,9 @@ function spawnSingleOpponentHand(playerId: string, numCards: number) {
   const handCx = 1.15 * Math.cos(angleRad)
   const handCz = 1.15 * Math.sin(angleRad)
 
+  const isSafe = !!(globalGame && globalGame.safeDeclared.has(playerId))
+  const isVulnerable = numCards > 0 && numCards <= 3
+
   for (let i = 0; i < numCards; i++) {
     const offset = (i - (numCards - 1) / 2) * 0.05
     
@@ -461,14 +472,22 @@ function spawnSingleOpponentHand(playerId: string, numCards: number) {
       emissiveTexture: Material.Texture.Common({
         src: 'assets/images/card_back_emissive.png'
       }),
-      emissiveIntensity: 1.8,
+      emissiveColor: isSafe ? Color3.fromHexString('#00f3ff') : (isVulnerable ? Color3.fromHexString('#ff2a6d') : Color3.White()),
+      emissiveIntensity: isSafe ? 2.8 : 1.8,
       roughness: 0.3,
       metallic: 0.1
     }) 
     
+    let hoverAction = `${getPlayerDisplayName(playerId)}: ${numCards} card${numCards === 1 ? '' : 's'}`
+    if (isSafe) {
+      hoverAction = `🛡️ ${getPlayerDisplayName(playerId)} (DECLARED SAFE • ${numCards} card${numCards === 1 ? '' : 's'})`
+    } else if (isVulnerable) {
+      hoverAction = `🚨 Catch ${getPlayerDisplayName(playerId)}! (Failing to declare)`
+    }
+
     MeshCollider.setBox(cardEnt, ColliderLayer.CL_POINTER)
     pointerEventsSystem.onPointerDown(
-      { entity: cardEnt, opts: { button: InputAction.IA_PRIMARY, hoverText: `Challenge ${getPlayerDisplayName(playerId)}!` } },
+      { entity: cardEnt, opts: { button: InputAction.IA_PRIMARY, hoverText: hoverAction } },
       () => {
         if (globalGame) {
           const myId = resolvePlayerId(globalGame)
@@ -479,6 +498,25 @@ function spawnSingleOpponentHand(playerId: string, numCards: number) {
     )
 
     spawnedOpponentCards.push(cardEnt)
+  }
+
+  // 3D In-World Status Badge above the opponent hand
+  if (isVulnerable || isSafe) {
+    const statusEnt = engine.addEntity()
+    Transform.create(statusEnt, {
+      parent: globalHouseEntity,
+      position: Vector3.create(handCx, 0.96, handCz),
+      scale: Vector3.create(0.2, 0.2, 0.2)
+    })
+    Billboard.create(statusEnt)
+    TextShape.create(statusEnt, {
+      text: isSafe ? `🛡️ SAFE (${numCards})` : `🚨 NOT DECLARED! (${numCards})`,
+      fontSize: 2.5,
+      textColor: isSafe ? Color4.fromHexString('#00f3ff') : Color4.fromHexString('#ff2a6d'),
+      outlineWidth: 0.15,
+      outlineColor: Color4.Black()
+    })
+    spawnedOpponentCards.push(statusEnt)
   }
 }
 

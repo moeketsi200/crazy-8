@@ -1,7 +1,7 @@
 import { engine, Transform, Entity } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion } from '@dcl/sdk/math'
 import { CrazyEightsGame } from './game/logic'
-import { setup3DTable, getPlayerDisplayName } from './game/table'
+import { setup3DTable, getPlayerDisplayName, update3DTable, resolvePlayerId } from './game/table'
 import { setupDoors } from './game/doors'
 import { buildHouse } from './game/house'
 import { buildFurniture } from './game/furniture'
@@ -61,11 +61,14 @@ export function main() {
     gameEngine.onStateChanged = () => {
       pushGameState(gameEngine)
     }
+    gameEngine.onStateSync = () => {
+      update3DTable(gameEngine)
+    }
 
     // Connect gameplay events to the retention & economy quest system
     gameEngine.onCardPlayed = (playerId, card) => {
-      const myId = 'player1'
-      if (playerId === myId) {
+      const myId = resolvePlayerId(gameEngine)
+      if (playerId === myId || playerId === 'player1') {
         reportGameplayAction('card_played')
         if (card.rank === '8' || card.action === 'Wild' || card.action === 'Draw4') {
           reportGameplayAction('wild_eight')
@@ -77,13 +80,14 @@ export function main() {
     }
 
     gameEngine.onDeclareSafe = (playerId) => {
-      if (playerId === 'player1') {
+      const myId = resolvePlayerId(gameEngine)
+      if (playerId === myId || playerId === 'player1') {
         reportGameplayAction('declare_safe')
       }
     }
 
     gameEngine.onRoundEnd = (eliminated, winner, scoreBreakdown, roundWinner) => {
-      const myId = 'player1'
+      const myId = resolvePlayerId(gameEngine)
       reportGameplayAction('match_finished')
 
       const winnerName = winner ? getPlayerDisplayName(winner) : ''

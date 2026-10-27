@@ -119,9 +119,9 @@ function generateDailyQuests(): PlayerQuest[] {
 
 // Initial default player profile
 const profile: PlayerProfile = {
-  chips: 250, // Welcome bonus chips
-  trophies: 25,
-  totalWins: 5, // Lifetime match wins
+  chips: 0,
+  trophies: 0,
+  totalWins: 0,
   loginStreak: 1,
   lastClaimDateStr: '', // Not claimed yet today
   equippedTitle: 'Card Rookie',

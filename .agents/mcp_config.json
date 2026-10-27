@@ -2,9 +2,9 @@
   "mcpServers": {
     "creator-hub": {
       "type": "http",
-      "url": "http://127.0.0.1:62473/mcp",
+      "url": "http://127.0.0.1:49988/mcp",
       "headers": {
-        "Authorization": "Bearer 8d59bcc8b17f28e20de6088ba803244aad2536ca471f66c6"
+        "Authorization": "Bearer 5beaf73f455c5998ce34f4a97122238c8e14331d9d5c3a63"
       }
     }
   }

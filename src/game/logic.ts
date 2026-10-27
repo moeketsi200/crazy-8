@@ -23,7 +23,24 @@ export class CrazyEightsGame {
 
   public safeDeclared: Set<PlayerId> = new Set()
   public queuedPlayers: PlayerId[] = []
+  public lobbyEndTime: number = 0
   public onNotification?: (message: string, senderId?: PlayerId) => void
+  public lastNotification?: { id: number, message: string, senderId?: string }
+  private lastProcessedNotificationId: number = 0
+
+  public notify(message: string, senderId?: PlayerId) {
+    this.lastNotification = { id: Date.now(), message, senderId }
+    this.lastProcessedNotificationId = this.lastNotification.id
+    if (this.onNotification) {
+      this.onNotification(message, senderId)
+    }
+  }
+
+  public startLobby(seconds: number = 15) {
+    this.lobbyEndTime = Date.now() + (seconds * 1000)
+    this.onStateChanged?.()
+  }
+
   public playerNameResolver?: (playerId: PlayerId) => string
 
   public getDisplayName(playerId: PlayerId): string {
@@ -51,7 +68,9 @@ export class CrazyEightsGame {
       pendingDraws: this.pendingDraws,
       eliminatedPlayers: Array.from(this.eliminatedPlayers),
       scores: Array.from(this.scores.entries()),
-      safeDeclared: Array.from(this.safeDeclared)
+      safeDeclared: Array.from(this.safeDeclared),
+      lastNotification: this.lastNotification,
+      lobbyEndTime: this.lobbyEndTime
     })
   }
 
@@ -76,6 +95,15 @@ export class CrazyEightsGame {
       this.eliminatedPlayers = new Set(state.eliminatedPlayers)
       this.scores = new Map(state.scores)
       this.safeDeclared = new Set(state.safeDeclared)
+      this.lobbyEndTime = state.lobbyEndTime || 0
+
+      if (state.lastNotification && state.lastNotification.id && state.lastNotification.id > this.lastProcessedNotificationId) {
+        this.lastProcessedNotificationId = state.lastNotification.id
+        this.lastNotification = state.lastNotification
+        if (this.onNotification) {
+          this.onNotification(state.lastNotification.message, state.lastNotification.senderId)
+        }
+      }
 
       if (this.onStateSync) this.onStateSync()
     } catch (e) {
@@ -93,6 +121,7 @@ export class CrazyEightsGame {
   }
 
   public startGame(seatedPlayers?: PlayerId[], withBot: boolean = true) {
+    this.lobbyEndTime = 0
     if (seatedPlayers && seatedPlayers.length > 0) {
       // Remove empty/invalid and deduplicate
       const uniquePlayers = Array.from(new Set(seatedPlayers)).filter(p => !!p && p.trim().length > 0)
@@ -253,7 +282,7 @@ export class CrazyEightsGame {
       const count = hand!.length
       const cardStr = count === 1 ? '1 card' : `${count} cards`
       const displayName = this.getDisplayName(playerId).toUpperCase()
-      if (this.onNotification) this.onNotification(`${displayName} declares: "I have ${cardStr} left!"`, playerId)
+      this.notify(`${displayName} declares: "I have ${cardStr} left!"`, playerId)
       this.onStateChanged?.()
       return true
     }
@@ -275,11 +304,12 @@ export class CrazyEightsGame {
     if (this.isHandVulnerable(targetHand) && !this.safeDeclared.has(targetId)) {
       this.drawOne(targetId)
       this.drawOne(targetId)
-      if (this.onNotification) this.onNotification(`🚨 CAUGHT! ${challengerName} caught ${targetName} failing to declare! 2 Penalty Cards!`)
+      this.notify(`🚨 CAUGHT! ${challengerName} caught ${targetName} failing to declare! 2 Penalty Cards!`, challengerId)
       this.onStateChanged?.()
       return true
     } else {
-      if (this.onNotification) this.onNotification(`❌ False alarm! ${targetName} is safe.`)
+      this.notify(`❌ False alarm! ${targetName} is safe.`, challengerId)
+      this.onStateChanged?.()
       return false
     }
   }
@@ -331,7 +361,7 @@ export class CrazyEightsGame {
     }
 
     this.handleSuitChange(cardToPlay, newSuitForWild, playerId)
-    const skipNext = this.handleActionCardEffects(cardToPlay)
+    const skipNext = this.handleActionCardEffects(cardToPlay, playerId)
 
     if (hand.length === 0) {
       this.endRound(playerId)
@@ -346,27 +376,23 @@ export class CrazyEightsGame {
   private handleSuitChange(cardToPlay: Card, newSuitForWild: Suit | undefined, playerId: PlayerId) {
     if (cardToPlay.action === 'Wild' || cardToPlay.action === 'Draw4') {
       this.activeSuit = newSuitForWild || 'Spades'
-      if (this.onNotification) {
-        const name = this.getDisplayName(playerId).toUpperCase()
-        this.onNotification(`${name} changed the suit to ${this.activeSuit.toUpperCase()}!`)
-      }
+      const name = this.getDisplayName(playerId).toUpperCase()
+      this.notify(`${name} changed the suit to ${this.activeSuit.toUpperCase()}!`, playerId)
     } else {
       this.activeSuit = cardToPlay.suit
     }
   }
 
-  private handleActionCardEffects(cardToPlay: Card): boolean {
+  private handleActionCardEffects(cardToPlay: Card, playerId?: PlayerId): boolean {
     let skipNext = false
     if (cardToPlay.action === 'Draw2' || cardToPlay.action === 'Draw4') {
       const added = cardToPlay.action === 'Draw4' ? 4 : 2
       const wasPending = this.pendingDraws
       this.pendingDraws += added
-      if (this.onNotification) {
-        if (wasPending > 0) {
-          this.onNotification(`🔥 PENALTY STACKED! Draw pool is now +${this.pendingDraws} cards!`)
-        } else {
-          this.onNotification(`⚡ ${cardToPlay.rank} played! Counter with a 2 or Joker, or draw +${this.pendingDraws}!`)
-        }
+      if (wasPending > 0) {
+        this.notify(`🔥 PENALTY STACKED! Draw pool is now +${this.pendingDraws} cards!`, playerId)
+      } else {
+        this.notify(`⚡ ${cardToPlay.rank} played! Counter with a 2 or Joker, or draw +${this.pendingDraws}!`, playerId)
       }
     } else if (cardToPlay.action === 'Reverse') {
       const activePlayersCount = this.playerOrder.filter(p => !this.eliminatedPlayers.has(p)).length
@@ -392,10 +418,8 @@ export class CrazyEightsGame {
         this.drawOne(playerId)
       }
       this.pendingDraws = 0
-      if (this.onNotification) {
-        const name = this.getDisplayName(playerId).toUpperCase()
-        this.onNotification(`💥 ${name} drew ${count} penalty cards!`)
-      }
+      const name = this.getDisplayName(playerId).toUpperCase()
+      this.notify(`💥 ${name} drew ${count} penalty cards!`, playerId)
       this.nextTurn(1)
       this.onStateChanged?.()
       return true
@@ -521,15 +545,13 @@ export class CrazyEightsGame {
     const remaining = this.playerOrder.filter(p => !this.eliminatedPlayers.has(p))
     let winner = remaining.length === 1 ? remaining[0] : undefined
     
-    if (this.onNotification) {
-      const roundWinnerName = this.getDisplayName(roundWinnerId).toUpperCase()
-      const eliminatedName = this.getDisplayName(eliminatedPlayer).toUpperCase()
-      if (winner) {
-        const winnerName = this.getDisplayName(winner).toUpperCase()
-        this.onNotification(`🏆 GAME OVER! ${winnerName} WINS THE WHOLE GAME! 🏆`)
-      } else {
-        this.onNotification(`🎉 ${roundWinnerName} WENT OUT! 🚨 ${eliminatedName} ELIMINATED!`)
-      }
+    const roundWinnerName = this.getDisplayName(roundWinnerId).toUpperCase()
+    const eliminatedName = this.getDisplayName(eliminatedPlayer).toUpperCase()
+    if (winner) {
+      const winnerName = this.getDisplayName(winner).toUpperCase()
+      this.notify(`🏆 GAME OVER! ${winnerName} WINS THE WHOLE GAME! 🏆`, winner)
+    } else {
+      this.notify(`🎉 ${roundWinnerName} WENT OUT! 🚨 ${eliminatedName} ELIMINATED!`, roundWinnerId)
     }
 
     if (this.onRoundEnd) {
