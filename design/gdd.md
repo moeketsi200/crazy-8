@@ -211,7 +211,7 @@ The scene is built cleanly on the **Decentraland SDK7 Entity Component System**:
   * **Champion Gold Bomber Showcase**: Obsidian pedestal, glass enclosure, and rotating 3D crown emblem.
 * **Neon Luxury Pool**: Deep navy basin with glowing cyan rim, animated wading wake, positional water splash sound FX, and surface ripple rings when avatars enter or exit.
 * **Heated Boiling Jacuzzi**: Magenta neon trim, turbulent boiling water surface physics, and rising/wobbling bubbles that pop at the surface.
-* **South African Braai Stand**: Relocated to the corner patio deck on the jacuzzi side, placed safely away from pool water up against the exterior brick wall with glowing ember coals.
+* **South African Braai Stand**: Relocated to the far corner of the outdoor patio deck (X: -8.5, Z: 24.0), placed safely away from both the pool and jacuzzi water overlooking the open horizon.
 * **Sun Loungers & Umbrellas**: Luxury poolside seating facing the scenic Decentraland horizon.
 * **Outdoor Hall of Fame Billboard**: Live weekly leaderboard displaying #1 King of the Table, #2 High Roller, #3 Card Shark, longest win streak, and 2,500 Chip jackpot.
 

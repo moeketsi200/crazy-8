@@ -314,7 +314,7 @@ export function buildBraaiStand(houseEntity: Entity) {
     const braaiGroup = engine.addEntity()
     Transform.create(braaiGroup, {
         parent: houseEntity,
-        position: Vector3.create(-8.5, 0, 7.5),
+        position: Vector3.create(-8.5, 0, 24.0),
         scale: Vector3.create(1, 1, 1),
         rotation: Quaternion.fromEulerDegrees(0, 0, 0)
     })
