@@ -388,7 +388,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     iconLabel: '👑'
   },
 
-  // 4. Win Count Milestone Apparel (Caps, Bomber Jackets, Custom T-Shirts)
+  // 4. Milestone Head & Face Accessories (Retained)
   {
     id: 'wearable_electric_cap',
     name: 'Electric Streak Cap',
@@ -402,35 +402,56 @@ export const SHOP_CATALOG: ShopItem[] = [
   },
   {
     id: 'wearable_shades_chain',
-    name: 'Designer Shades & Tee',
+    name: 'Designer Shades & Chain',
     category: 'wearable',
     priceChips: 0,
     reqTrophies: 0,
     reqWins: 60,
-    description: 'Unlocked at 60 Match Wins. 24K gold geometric shades, Cuban chain & custom tee',
+    description: 'Unlocked at 60 Match Wins. 24K gold geometric shades, Cuban chain & custom card medallion',
     badgeColor: '#ffd700',
     iconLabel: '🕶️'
   },
+
+  // 5. Fitted Streetwear & Club Clothing (Purchasable with Crazy Chips)
   {
-    id: 'wearable_vip_bomber',
-    name: 'VIP Lounge Bomber Jacket',
+    id: 'wearable_holo_card_tee',
+    name: 'Holo Card Tee',
     category: 'wearable',
-    priceChips: 0,
-    reqTrophies: 0,
-    reqWins: 80,
-    description: 'Unlocked at 80 Match Wins. Satin jacket with glowing King of Cards embroidery',
-    badgeColor: '#ff0055',
+    priceChips: 1500,
+    reqTrophies: 40,
+    description: 'Deep navy tee with iridescent holographic playing card graphic and glowing cyan 8s',
+    badgeColor: '#00f3ff',
+    iconLabel: '👕'
+  },
+  {
+    id: 'wearable_high_roller_tee',
+    name: 'High Roller Tee',
+    category: 'wearable',
+    priceChips: 2800,
+    reqTrophies: 100,
+    description: 'Vintage off-white cream tee with 4 luxury casino suit emblems and High Roller typography',
+    badgeColor: '#ffd700',
+    iconLabel: '👕'
+  },
+  {
+    id: 'wearable_crest_bomber',
+    name: 'C8 Crest Bomber',
+    category: 'wearable',
+    priceChips: 5500,
+    reqTrophies: 250,
+    description: 'Sleek obsidian satin bomber with gold zipper and glowing cyan C8 neon chest crest',
+    badgeColor: '#00f3ff',
     iconLabel: '🧥'
   },
   {
-    id: 'wearable_champion_crown_hoodie',
-    name: "Champion Crown & Hoodie",
+    id: 'wearable_vip_club_bomber',
+    name: 'VIP Club Bomber',
     category: 'wearable',
-    priceChips: 0,
-    reqTrophies: 0,
-    description: 'Ultimate prestige awarded to the #1 Weekly Billboard Champion',
-    badgeColor: '#ffd700',
-    iconLabel: '👑'
+    priceChips: 10000,
+    reqTrophies: 500,
+    description: 'Grand champion jacket: obsidian satin with gold ribbing, glowing seam piping & illuminated King crown',
+    badgeColor: '#ff0055',
+    iconLabel: '🧥'
   }
 ]
 

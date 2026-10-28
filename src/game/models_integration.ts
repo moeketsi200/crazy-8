@@ -368,24 +368,24 @@ export function setupWearableShowcases(houseEntity: Entity) {
       rotY: 0
     },
     {
-      id: 'wearable_vip_bomber',
-      title: '🧥 VIP LOUNGE BOMBER',
-      subtitle: '🔥 80 MATCH WINS MILESTONE',
-      modelSrc: 'assets/Models/vip_bomber.glb',
-      modelScale: Vector3.create(1.15, 1.15, 1.15),
-      modelPos: Vector3.create(0, 1.38, 0),
-      themeColor: '#ff0055',
+      id: 'wearable_holo_card_tee',
+      title: '👕 HOLO CARD TEE',
+      subtitle: '🪙 1,500 CHIPS • 40 🏆',
+      modelSrc: 'assets/Models/crazy8_holo_card_tee.glb',
+      modelScale: Vector3.create(1.0, 1.0, 1.0),
+      modelPos: Vector3.create(0, 0.15, 0),
+      themeColor: '#00f3ff',
       pos: Vector3.create(5.0, 0.0, 23.5),
       rotY: 0
     },
     {
-      id: 'wearable_champion_crown_hoodie',
-      title: '👑 CHAMPION CROWN & HOODIE',
-      subtitle: '🏆 #1 WEEKLY CHAMPION RANK',
-      modelSrc: 'assets/Models/winner_crown.glb',
-      modelScale: Vector3.create(0.72, 0.72, 0.72),
-      modelPos: Vector3.create(0, 1.36, 0),
-      themeColor: '#ffd700',
+      id: 'wearable_vip_club_bomber',
+      title: '🧥 VIP CLUB BOMBER',
+      subtitle: '👑 10,000 CHIPS • 500 🏆',
+      modelSrc: 'assets/Models/crazy8_vip_club_bomber.glb',
+      modelScale: Vector3.create(1.0, 1.0, 1.0),
+      modelPos: Vector3.create(0, 0.15, 0),
+      themeColor: '#ff0055',
       pos: Vector3.create(7.5, 0.0, 23.5),
       rotY: 0
     }

@@ -32,19 +32,33 @@ export const WEARABLE_CONFIGS: Record<string, WearableAttachConfig> = {
     rotation: Quaternion.fromEulerDegrees(0, 0, 0),
     scale: Vector3.create(1.02, 1.02, 1.02)
   },
-  wearable_vip_bomber: {
-    modelPath: 'assets/Models/vip_bomber.glb',
-    anchorPoint: AvatarAnchorPointType.AAPT_SPINE2,
-    position: Vector3.create(0, -0.16, 0.0),
+  wearable_holo_card_tee: {
+    modelPath: 'assets/Models/crazy8_holo_card_tee.glb',
+    anchorPoint: AvatarAnchorPointType.AAPT_POSITION,
+    position: Vector3.create(0, 0.0, 0.0),
     rotation: Quaternion.fromEulerDegrees(0, 0, 0),
-    scale: Vector3.create(1.12, 1.12, 1.12)
+    scale: Vector3.create(1.0, 1.0, 1.0)
   },
-  wearable_champion_crown_hoodie: {
-    modelPath: 'assets/Models/winner_crown.glb',
-    anchorPoint: AvatarAnchorPointType.AAPT_HEAD,
-    position: Vector3.create(0, 0.28, 0.0),
+  wearable_high_roller_tee: {
+    modelPath: 'assets/Models/crazy8_high_roller_tee.glb',
+    anchorPoint: AvatarAnchorPointType.AAPT_POSITION,
+    position: Vector3.create(0, 0.0, 0.0),
     rotation: Quaternion.fromEulerDegrees(0, 0, 0),
-    scale: Vector3.create(0.50, 0.50, 0.50)
+    scale: Vector3.create(1.0, 1.0, 1.0)
+  },
+  wearable_crest_bomber: {
+    modelPath: 'assets/Models/crazy8_crest_bomber.glb',
+    anchorPoint: AvatarAnchorPointType.AAPT_POSITION,
+    position: Vector3.create(0, 0.0, 0.0),
+    rotation: Quaternion.fromEulerDegrees(0, 0, 0),
+    scale: Vector3.create(1.0, 1.0, 1.0)
+  },
+  wearable_vip_club_bomber: {
+    modelPath: 'assets/Models/crazy8_vip_club_bomber.glb',
+    anchorPoint: AvatarAnchorPointType.AAPT_POSITION,
+    position: Vector3.create(0, 0.0, 0.0),
+    rotation: Quaternion.fromEulerDegrees(0, 0, 0),
+    scale: Vector3.create(1.0, 1.0, 1.0)
   }
 }
 
