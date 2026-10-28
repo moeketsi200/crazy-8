@@ -10,10 +10,7 @@ import {
   ColliderLayer,
   MeshRenderer,
   MeshCollider,
-  Material,
-  TextShape,
-  TextAlignMode,
-  MaterialTransparencyMode
+  Material
 } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion, Color4, Color3 } from '@dcl/sdk/math'
 import {
@@ -329,152 +326,60 @@ export function triggerVictoryCelebration() {
 
 // ----------------------------------------------------
 // ----------------------------------------------------
-// 6. VIP WEARABLE SHOWCASES (3D Showcase Pedestals)
+// 6. VIP WEARABLE SHOWCASES (Creator Hub composite entities)
 // ----------------------------------------------------
-export function setupWearableShowcases(houseEntity: Entity) {
+export function setupWearableShowcases() {
   interface ShowcaseItem {
     id: string
+    entityName: string
     title: string
     subtitle: string
-    modelSrc: string
-    modelScale: Vector3
-    modelPos: Vector3
-    themeColor: string
-    pos: Vector3
-    rotY: number
   }
 
   const showcases: ShowcaseItem[] = [
     {
-      id: 'wearable_electric_cap',
-      title: '🧢 ELECTRIC STREAK CAP',
-      subtitle: '⚡ 30 MATCH WINS MILESTONE',
-      modelSrc: 'assets/Models/electric_cap.glb',
-      modelScale: Vector3.create(1.7, 1.7, 1.7),
-      modelPos: Vector3.create(0, 1.38, 0),
-      themeColor: '#00f3ff',
-      pos: Vector3.create(0.0, 0.0, 23.5),
-      rotY: 0
-    },
-    {
-      id: 'wearable_shades_chain',
-      title: '🕶️ DESIGNER SHADES & CHAIN',
-      subtitle: '✨ 60 MATCH WINS MILESTONE',
-      modelSrc: 'assets/Models/shades_chain.glb',
-      modelScale: Vector3.create(1.8, 1.8, 1.8),
-      modelPos: Vector3.create(0, 1.42, 0),
-      themeColor: '#ffd700',
-      pos: Vector3.create(2.5, 0.0, 23.5),
-      rotY: 0
-    },
-    {
       id: 'wearable_holo_card_tee',
+      entityName: 'Holo Card Tee',
       title: '👕 HOLO CARD TEE',
-      subtitle: '🪙 1,500 CHIPS • 40 🏆',
-      modelSrc: 'assets/Models/crazy8_holo_card_tee.glb',
-      modelScale: Vector3.create(1.0, 1.0, 1.0),
-      modelPos: Vector3.create(0, 0.15, 0),
-      themeColor: '#00f3ff',
-      pos: Vector3.create(5.0, 0.0, 23.5),
-      rotY: 0
+      subtitle: '🪙 1,500 CHIPS • 40 🏆'
+    },
+    {
+      id: 'wearable_high_roller_tee',
+      entityName: 'High Roller Tee',
+      title: '👕 HIGH ROLLER TEE',
+      subtitle: '🪙 2,800 CHIPS • 100 🏆'
+    },
+    {
+      id: 'wearable_crest_bomber',
+      entityName: 'C8 Crest Bomber',
+      title: '🧥 C8 CREST BOMBER',
+      subtitle: '⚡ 5,500 CHIPS • 250 🏆'
     },
     {
       id: 'wearable_vip_club_bomber',
+      entityName: 'VIP Club Bomber',
       title: '🧥 VIP CLUB BOMBER',
-      subtitle: '👑 10,000 CHIPS • 500 🏆',
-      modelSrc: 'assets/Models/crazy8_vip_club_bomber.glb',
-      modelScale: Vector3.create(1.0, 1.0, 1.0),
-      modelPos: Vector3.create(0, 0.15, 0),
-      themeColor: '#ff0055',
-      pos: Vector3.create(7.5, 0.0, 23.5),
-      rotY: 0
+      subtitle: '👑 10,000 CHIPS • 500 🏆'
     }
   ]
 
   const rotatingEntities: Entity[] = []
 
   for (const item of showcases) {
-    const group = engine.addEntity()
-    Transform.create(group, {
-      parent: houseEntity,
-      position: item.pos,
-      rotation: Quaternion.fromEulerDegrees(0, item.rotY, 0)
-    })
+    const pedestal = engine.getEntityOrNullByName(`${item.entityName} Pedestal`)
+    const glass = engine.getEntityOrNullByName(`${item.entityName} Glass`)
+    const model = engine.getEntityOrNullByName(`${item.entityName} Model`)
 
-    // Pedestal cylinder base
-    const ped = engine.addEntity()
-    Transform.create(ped, {
-      parent: group,
-      position: Vector3.create(0, 0.45, 0),
-      scale: Vector3.create(0.85, 0.9, 0.85)
-    })
-    MeshRenderer.setCylinder(ped)
-    MeshCollider.setCylinder(ped)
-    Material.setPbrMaterial(ped, {
-      albedoColor: Color4.fromHexString('#0b1424'),
-      emissiveColor: Color3.fromHexString(item.themeColor),
-      emissiveIntensity: 0.6,
-      metallic: 0.85,
-      roughness: 0.2
-    })
+    if (!pedestal || !glass || !model) {
+      console.error(`[Wearable] Missing composite display entities for ${item.id}`)
+      continue
+    }
 
-    // Glowing neon ring rim
-    const ring = engine.addEntity()
-    Transform.create(ring, {
-      parent: group,
-      position: Vector3.create(0, 0.91, 0),
-      scale: Vector3.create(0.88, 0.03, 0.88)
-    })
-    MeshRenderer.setCylinder(ring)
-    Material.setPbrMaterial(ring, {
-      albedoColor: Color4.fromHexString(item.themeColor),
-      emissiveColor: Color3.fromHexString(item.themeColor),
-      emissiveIntensity: 3.2
-    })
-
-    // Real 3D Model floating inside pedestal
-    const modelEnt = engine.addEntity()
-    Transform.create(modelEnt, {
-      parent: group,
-      position: item.modelPos,
-      scale: item.modelScale
-    })
-    GltfContainer.create(modelEnt, {
-      src: item.modelSrc
-    })
+    // Models and stands are authored in main.composite so they remain selectable in Creator Hub.
+    // Runtime code only adds the existing rotation and click-to-inspect behavior.
+    const ped = pedestal
+    const modelEnt = model
     rotatingEntities.push(modelEnt)
-
-    // Glass enclosure cylinder
-    const glass = engine.addEntity()
-    Transform.create(glass, {
-      parent: group,
-      position: Vector3.create(0, 1.45, 0),
-      scale: Vector3.create(0.78, 1.05, 0.78)
-    })
-    MeshRenderer.setCylinder(glass)
-    MeshCollider.setCylinder(glass)
-    Material.setPbrMaterial(glass, {
-      albedoColor: Color4.fromHexString(`${item.themeColor}15`),
-      roughness: 0.1,
-      metallic: 0.9,
-      transparencyMode: MaterialTransparencyMode.MTM_ALPHA_BLEND
-    })
-
-    // Floating 3D label
-    const label = engine.addEntity()
-    Transform.create(label, {
-      parent: group,
-      position: Vector3.create(0, 2.15, 0),
-      rotation: Quaternion.fromEulerDegrees(0, 180, 0)
-    })
-    TextShape.create(label, {
-      text: `${item.title}\n${item.subtitle}\n[Click to Inspect & Equip]`,
-      fontSize: 1.2,
-      textColor: Color4.fromHexString(item.themeColor),
-      outlineColor: Color4.Black(),
-      outlineWidth: 0.15,
-      textAlign: TextAlignMode.TAM_MIDDLE_CENTER
-    })
 
     // Interaction to inspect & equip in Pro Shop
     const onInspect = () => {

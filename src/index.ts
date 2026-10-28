@@ -49,7 +49,7 @@ export function main() {
     setupVipKiosk(houseEntity)
     setupTrophyShowcase(houseEntity)
     setupVictoryCelebration(houseEntity)
-    setupWearableShowcases(houseEntity)
+    setupWearableShowcases()
     setupWearablesSystem()
 
     // 4. Start the Crazy 8 Game Backend
