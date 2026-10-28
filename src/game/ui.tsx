@@ -2,7 +2,7 @@ import ReactEcs, { ReactEcsRenderer, UiEntity } from '@dcl/sdk/react-ecs'
 import { Color4, Vector3 } from '@dcl/sdk/math'
 import { engine, Transform } from '@dcl/sdk/ecs'
 import { CrazyEightsGame } from './logic'
-import { update3DTable, resolvePlayerId, getPlayerSeated, setPlayerSeated, getPlayerDisplayName, getTimeSeated, standUpPlayer, getLocalSeatedChair } from './table'
+import { update3DTable, resolvePlayerId, getPlayerSeated, setPlayerSeated, getPlayerDisplayName, getTimeSeated, standUpPlayer, getLocalSeatedChair, sitPlayerAtOpenChair } from './table'
 import { getPlayer } from '@dcl/sdk/src/players'
 import { Card, Suit } from './deck'
 import { TopHudWidget, DailyRewardsModal, RewardToastBanner, updateRewardToast } from './rewards_ui'
@@ -685,16 +685,8 @@ function uiComponent() {
   if (isTableActive && activeGame) {
     const myId = resolvePlayerId(activeGame)
     myHand = activeGame.players.get(myId) || []
-    if (myHand.length === 0 && activeGame.players.has('player1')) {
+    if (myHand.length === 0 && activeGame.players.has('player1') && (myId === 'player1' || !myId)) {
       myHand = activeGame.players.get('player1') || []
-    }
-    if (myHand.length === 0) {
-      for (const [pId, hand] of activeGame.players.entries()) {
-        if (pId !== 'bot' && hand.length > 0) {
-          myHand = hand
-          break
-        }
-      }
     }
   }
 
@@ -742,16 +734,24 @@ function uiComponent() {
           uiTransform={{
             positionType: 'absolute',
             position: { bottom: 25 },
-            width: 360,
-            height: 38,
+            width: 380,
+            height: 42,
             alignItems: 'center',
             justifyContent: 'center'
           }}
-          uiBackground={{ color: Color4.create(0.08, 0.10, 0.16, 0.90) }}
+          uiBackground={{ color: Color4.create(0.08, 0.10, 0.16, 0.95) }}
+          onMouseDown={() => {
+            sitPlayerAtOpenChair()
+            if (activeGame) {
+              const myId = resolvePlayerId(activeGame)
+              activeGame.joinActiveGame(myId)
+              update3DTable(activeGame)
+            }
+          }}
         >
           <UiEntity
             uiTransform={{ width: '100%', height: '100%' }}
-            uiText={{ value: '👀 Spectating • Sit in an open chair to join!', fontSize: 13, color: Color4.fromHexString('#00f3ff'), textAlign: 'middle-center' }}
+            uiText={{ value: '👉 Click Here to Sit & Join Game!', fontSize: 13, color: Color4.fromHexString('#00f3ff'), textAlign: 'middle-center' }}
           />
         </UiEntity>
       )}

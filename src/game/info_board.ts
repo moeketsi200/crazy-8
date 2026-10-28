@@ -111,6 +111,8 @@ function handleButtonClick() {
     if (!getPlayerSeated()) {
       sitPlayerAtOpenChair()
     }
+    const myId = resolvePlayerId(gameEngine)
+    gameEngine.registerPlayer(myId)
     // 2. Begin 15-second network-synced lobby countdown
     gameEngine.startLobby(15)
     showRewardToast('⏱️ Game starting in 15s! Grab a seat at the table to play!')
@@ -118,22 +120,26 @@ function handleButtonClick() {
   }
 
   if (currentButtonAction === 'COUNTDOWN') {
-    // If clicked during countdown, take a seat!
-    if (!getPlayerSeated()) {
-      sitPlayerAtOpenChair()
-      showRewardToast('🪑 You took a seat! Waiting for countdown to finish.')
-    }
-    return
-  }
-
-  if (currentButtonAction === 'JOIN') {
-    // Game already started: Player joins the table!
+    // If clicked during countdown, take a seat and register for match!
     if (!getPlayerSeated()) {
       sitPlayerAtOpenChair()
     }
     const myId = resolvePlayerId(gameEngine)
-    gameEngine.joinGame(myId)
-    showRewardToast('🎮 You joined the table! You will be dealt in next round.')
+    gameEngine.registerPlayer(myId)
+    showRewardToast('🪑 You took a seat! Registered for the upcoming match.')
+    return
+  }
+
+  if (currentButtonAction === 'JOIN') {
+    // Game already started: Player joins the table immediately!
+    if (!getPlayerSeated()) {
+      sitPlayerAtOpenChair()
+    }
+    const myId = resolvePlayerId(gameEngine)
+    gameEngine.joinActiveGame(myId)
+    update3DTable(gameEngine)
+    updateScoreBoardText(`SCOREBOARD\n\nRound ${gameEngine.roundNumber}\n\nGame is running!\n${gameEngine.playerOrder.length} Players`)
+    showRewardToast('🎮 You joined the game! Cards have been dealt to your hand.')
     return
   }
 
@@ -168,11 +174,12 @@ function setupLobbyCountdownSystem() {
     if (gameEngine.lobbyEndTime > 0 && !gameEngine.isStarted) {
       gameEngine.lobbyEndTime = 0
       const seatedPlayers = getSeatedPlayerIds()
-      if (seatedPlayers.length > 0) {
-        const needBot = seatedPlayers.length === 1
-        gameEngine.startGame(seatedPlayers, needBot)
+      const allPlayers = Array.from(new Set([...seatedPlayers, ...gameEngine.playerOrder]))
+      if (allPlayers.length > 0) {
+        const needBot = allPlayers.length === 1
+        gameEngine.startGame(allPlayers, needBot)
         update3DTable(gameEngine)
-        updateScoreBoardText(`SCOREBOARD\n\nRound 1\n\nGame is running!\n${seatedPlayers.length} Seated Player${seatedPlayers.length > 1 ? 's' : ''}`)
+        updateScoreBoardText(`SCOREBOARD\n\nRound 1\n\nGame is running!\n${gameEngine.playerOrder.length} Player${gameEngine.playerOrder.length > 1 ? 's' : ''}`)
         showRewardToast('🃏 Round 1 Started! Cards dealt to all seated players.')
       } else {
         showRewardToast('⚠️ No players were seated! Sit at the table to play.')

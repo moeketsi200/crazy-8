@@ -300,6 +300,11 @@ export class CasinoChair {
     })
 
     if (globalGame) {
+      if (globalGame.isStarted && !globalGame.gameOver) {
+        globalGame.joinActiveGame(myId)
+      } else {
+        globalGame.registerPlayer(myId)
+      }
       update3DTable(globalGame)
     }
   }
@@ -378,6 +383,13 @@ export function getSeatedPlayerIds(): string[] {
     const myId = resolvePlayerId(globalGame)
     if (!ids.includes(myId)) {
       ids.push(myId)
+    }
+  }
+  if (globalGame && globalGame.playerOrder) {
+    for (const p of globalGame.playerOrder) {
+      if (p !== 'bot' && !ids.includes(p)) {
+        ids.push(p)
+      }
     }
   }
   return Array.from(new Set(ids))

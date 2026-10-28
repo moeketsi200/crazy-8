@@ -120,29 +120,48 @@ export class CrazyEightsGame {
     }
   }
 
+  public registerPlayer(playerId: PlayerId) {
+    if (!playerId) return
+    if (!this.playerOrder.includes(playerId)) {
+      this.playerOrder.push(playerId)
+    }
+    if (!this.players.has(playerId)) {
+      this.players.set(playerId, [])
+    }
+    if (!this.scores.has(playerId)) {
+      this.scores.set(playerId, 0)
+    }
+    this.eliminatedPlayers.delete(playerId)
+    this.onStateChanged?.()
+  }
+
   public startGame(seatedPlayers?: PlayerId[], withBot: boolean = true) {
     this.lobbyEndTime = 0
-    if (seatedPlayers && seatedPlayers.length > 0) {
-      // Remove empty/invalid and deduplicate
-      const uniquePlayers = Array.from(new Set(seatedPlayers)).filter(p => !!p && p.trim().length > 0)
-      this.players.clear()
-      this.playerOrder = []
-      this.scores.clear()
+    
+    // Merge any passed seatedPlayers with existing registered human players in playerOrder
+    const candidatePlayers = [
+      ...(seatedPlayers || []),
+      ...this.playerOrder
+    ].filter(p => !!p && p !== 'bot' && p.trim().length > 0)
 
+    const uniquePlayers = Array.from(new Set(candidatePlayers))
+
+    this.players.clear()
+    this.playerOrder = []
+    this.scores.clear()
+
+    if (uniquePlayers.length > 0) {
       for (const p of uniquePlayers) {
         this.addPlayer(p)
       }
 
-      // If only 1 human is seated, add exactly 1 bot to play head-to-head!
+      // If only 1 human is seated, add bot for head-to-head match
       if (uniquePlayers.length === 1 && withBot) {
         this.addPlayer('bot')
       }
     } else {
-      // Fallback if no specific seated players supplied
-      if (this.playerOrder.length === 0) {
-        this.addPlayer('player1')
-      }
-      if (!this.playerOrder.includes('bot') && this.playerOrder.length < 2) {
+      this.addPlayer('player1')
+      if (withBot) {
         this.addPlayer('bot')
       }
     }
@@ -171,14 +190,65 @@ export class CrazyEightsGame {
     this.onStateChanged?.()
   }
 
-  public joinGame(playerId: PlayerId) {
+  public reshuffleDiscardIntoDraw() {
+    if (this.discardPile.length <= 1) return
+    const topCard = this.discardPile.pop()!
+    this.drawPile = shuffleDeck(this.discardPile)
+    this.discardPile = [topCard]
+  }
+
+  public joinActiveGame(playerId: PlayerId) {
     if (!playerId) return
-    if (!this.playerOrder.includes(playerId)) {
-      if (!this.queuedPlayers.includes(playerId)) {
-        this.queuedPlayers.push(playerId)
+    
+    // If game has not started or is over, register player for upcoming match
+    if (!this.isStarted || this.gameOver) {
+      this.registerPlayer(playerId)
+      return
+    }
+
+    // If player already has cards and is active, ensure not eliminated
+    if (this.players.has(playerId) && (this.players.get(playerId)?.length || 0) > 0) {
+      this.eliminatedPlayers.delete(playerId)
+      if (!this.playerOrder.includes(playerId)) {
+        this.playerOrder.push(playerId)
       }
       this.onStateChanged?.()
+      return
     }
+
+    // Un-eliminate
+    this.eliminatedPlayers.delete(playerId)
+
+    // Add to playerOrder if not present
+    if (!this.playerOrder.includes(playerId)) {
+      this.playerOrder.push(playerId)
+    }
+
+    // Deal 8 cards from the draw pile
+    const newHand: Card[] = []
+    for (let i = 0; i < 8; i++) {
+      if (this.drawPile.length === 0) {
+        this.reshuffleDiscardIntoDraw()
+      }
+      if (this.drawPile.length > 0) {
+        newHand.push(this.drawPile.pop()!)
+      }
+    }
+
+    this.players.set(playerId, newHand)
+    if (!this.scores.has(playerId)) {
+      this.scores.set(playerId, 0)
+    }
+    this.safeDeclared.delete(playerId)
+
+    const displayName = this.getDisplayName(playerId).toUpperCase()
+    this.notify(`🎮 ${displayName} joined the game! Cards dealt.`, playerId)
+
+    this.onStateChanged?.()
+  }
+
+  public joinGame(playerId: PlayerId) {
+    this.joinActiveGame(playerId)
   }
 
   public removePlayer(playerId: PlayerId) {
@@ -433,15 +503,14 @@ export class CrazyEightsGame {
 
   private drawOne(playerId: PlayerId) {
     if (this.drawPile.length === 0) {
-      if (this.discardPile.length <= 1) return
-      const topCard = this.discardPile.pop()!
-      this.drawPile = shuffleDeck(this.discardPile)
-      this.discardPile = [topCard]
+      this.reshuffleDiscardIntoDraw()
     }
     
     if (this.drawPile.length > 0) {
-      const hand = this.players.get(playerId)!
-      hand.push(this.drawPile.pop()!)
+      const hand = this.players.get(playerId)
+      if (hand) {
+        hand.push(this.drawPile.pop()!)
+      }
     }
   }
 
