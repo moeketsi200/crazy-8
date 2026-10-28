@@ -37,28 +37,28 @@ export const WEARABLE_CONFIGS: Record<string, WearableAttachConfig> = {
     anchorPoint: AvatarAnchorPointType.AAPT_POSITION,
     position: Vector3.create(0, 0.0, 0.0),
     rotation: Quaternion.fromEulerDegrees(0, 0, 0),
-    scale: Vector3.create(1.0, 1.0, 1.0)
+    scale: Vector3.create(1.03, 1.03, 1.03)
   },
   wearable_high_roller_tee: {
     modelPath: 'assets/Models/crazy8_high_roller_tee.glb',
     anchorPoint: AvatarAnchorPointType.AAPT_POSITION,
     position: Vector3.create(0, 0.0, 0.0),
     rotation: Quaternion.fromEulerDegrees(0, 0, 0),
-    scale: Vector3.create(1.0, 1.0, 1.0)
+    scale: Vector3.create(1.03, 1.03, 1.03)
   },
   wearable_crest_bomber: {
     modelPath: 'assets/Models/crazy8_crest_bomber.glb',
     anchorPoint: AvatarAnchorPointType.AAPT_POSITION,
     position: Vector3.create(0, 0.0, 0.0),
     rotation: Quaternion.fromEulerDegrees(0, 0, 0),
-    scale: Vector3.create(1.0, 1.0, 1.0)
+    scale: Vector3.create(1.05, 1.05, 1.05)
   },
   wearable_vip_club_bomber: {
     modelPath: 'assets/Models/crazy8_vip_club_bomber.glb',
     anchorPoint: AvatarAnchorPointType.AAPT_POSITION,
     position: Vector3.create(0, 0.0, 0.0),
     rotation: Quaternion.fromEulerDegrees(0, 0, 0),
-    scale: Vector3.create(1.0, 1.0, 1.0)
+    scale: Vector3.create(1.05, 1.05, 1.05)
   }
 }
 
