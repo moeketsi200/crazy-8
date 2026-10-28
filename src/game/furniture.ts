@@ -1,4 +1,15 @@
-import { engine, Transform, MeshRenderer, MeshCollider, Material, Entity, TextShape, TextAlignMode, GltfContainer } from '@dcl/sdk/ecs'
+import {
+    engine,
+    Transform,
+    MeshRenderer,
+    MeshCollider,
+    Material,
+    Entity,
+    TextShape,
+    TextAlignMode,
+    AvatarShape,
+    GltfContainer
+} from '@dcl/sdk/ecs'
 import { Vector3, Quaternion, Color4, Color3 } from '@dcl/sdk/math'
 
 function createBox(parent: Entity, pos: Vector3, scale: Vector3, color: Color4, rot: Quaternion = Quaternion.Identity()) {
@@ -15,15 +26,6 @@ function createCylinder(parent: Entity, pos: Vector3, scale: Vector3, color: Col
     Transform.create(ent, { parent, position: pos, scale, rotation: rot })
     MeshRenderer.setCylinder(ent)
     MeshCollider.setCylinder(ent) // Added collider
-    Material.setPbrMaterial(ent, { albedoColor: color })
-    return ent
-}
-
-function createSphere(parent: Entity, pos: Vector3, scale: Vector3, color: Color4, rot: Quaternion = Quaternion.Identity()) {
-    const ent = engine.addEntity()
-    Transform.create(ent, { parent, position: pos, scale, rotation: rot })
-    MeshRenderer.setSphere(ent)
-    MeshCollider.setSphere(ent) // Added collider
     Material.setPbrMaterial(ent, { albedoColor: color })
     return ent
 }
@@ -428,111 +430,48 @@ export function buildBraaiStand(houseEntity: Entity) {
 }
 
 export function buildDJAvatar(houseEntity: Entity) {
-    const avatarGroup = engine.addEntity()
-    Transform.create(avatarGroup, {
+    const djAvatar = engine.addEntity()
+    Transform.create(djAvatar, {
         parent: houseEntity,
-        // Position behind the DJ booth (DJ booth is at 5.2, 0, 1.0, desk is at 4.55)
-        position: Vector3.create(5.15, 0, 1.0),
+        // Keep the avatar behind the DJ console on the raised platform.
+        position: Vector3.create(5.15, 0.2, 1.0),
         scale: Vector3.create(1, 1, 1),
         rotation: Quaternion.fromEulerDegrees(0, -90, 0)
     })
 
-    const matSkin       = Color4.create(0.38, 0.23, 0.15, 1.0)
-    const matHair       = Color4.create(0.04, 0.04, 0.04, 1.0)
-    const matBeard      = Color4.create(0.09, 0.06, 0.04, 1.0)
-    const matTeeWhite   = Color4.create(0.95, 0.95, 0.96, 1.0)
-    const matNikeBlack  = Color4.create(0.02, 0.02, 0.02, 1.0)
-    const matNikeOrange = Color4.create(0.95, 0.35, 0.04, 1.0)
-    const matPants      = Color4.create(0.07, 0.07, 0.08, 1.0)
-    const matSneakers   = Color4.create(0.92, 0.92, 0.94, 1.0)
-    const matPhonesCush = Color4.create(0.03, 0.03, 0.03, 1.0)
-    const matPhonesRim  = Color4.create(0.01, 0.01, 0.01, 1.0)
+    const baseAvatar = 'urn:decentraland:off-chain:base-avatars:'
+    AvatarShape.create(djAvatar, {
+        id: 'crazy8-dj-avatar',
+        name: 'DJ Crazy 8',
+        bodyShape: `${baseAvatar}BaseMale`,
+        emotes: [],
+        wearables: [
+            `${baseAvatar}eyebrows_00`,
+            `${baseAvatar}mouth_00`,
+            `${baseAvatar}eyes_00`,
+            `${baseAvatar}black_tshirt`,
+            `${baseAvatar}blue_jeans`,
+            `${baseAvatar}sneakers`,
+            `${baseAvatar}short_hair`
+        ],
+        hairColor: { r: 0.06, g: 0.04, b: 0.03 },
+        skinColor: { r: 0.45, g: 0.28, b: 0.2 },
+        eyeColor: { r: 0.12, g: 0.07, b: 0.04 }
+    })
 
-    const mapPos = (x: number, y: number, z: number) => Vector3.create(x, z, y)
+    // Keep the custom jacket aligned with the NPC's full transform and scale.
+    const bomberModel = engine.addEntity()
+    Transform.create(bomberModel, {
+        parent: djAvatar,
+        position: Vector3.create(0, 0, 0),
+        scale: Vector3.create(1.05, 1.05, 1.05)
+    })
+    GltfContainer.create(bomberModel, { src: 'assets/Models/crazy8_crest_bomber.glb' })
 
-    const addCube = (x: number, y: number, z: number, sx: number, sy: number, sz: number, color: Color4, rot?: Quaternion) => {
-        createBox(avatarGroup, mapPos(x, y, z), Vector3.create(sx, sz, sy), color, rot)
-    }
-    const addCyl = (x: number, y: number, z: number, radius: number, depth: number, color: Color4, rot?: Quaternion) => {
-        createCylinder(avatarGroup, mapPos(x, y, z), Vector3.create(radius * 2, depth, radius * 2), color, rot) 
-    }
-    const addSphere = (x: number, y: number, z: number, sx: number, sy: number, sz: number, color: Color4, rot?: Quaternion) => {
-        createSphere(avatarGroup, mapPos(x, y, z), Vector3.create(sx * 2, sz * 2, sy * 2), color, rot)
-    }
-
-    // 1. Sneakers
-    addSphere(-0.18, 0.04, 0.06, 0.07, 0.12, 0.05, matSneakers)
-    addSphere(-0.18, 0.12, 0.05, 0.06, 0.06, 0.04, matNikeBlack)
-    addCube(-0.18, 0.04, 0.01, 0.13, 0.22, 0.02, matNikeOrange)
-
-    addSphere(0.18, 0.04, 0.06, 0.07, 0.12, 0.05, matSneakers)
-    addSphere(0.18, 0.12, 0.05, 0.06, 0.06, 0.04, matNikeBlack)
-    addCube(0.18, 0.04, 0.01, 0.13, 0.22, 0.02, matNikeOrange)
-
-    // 2. Legs (Pants)
-    addCyl(-0.18, 0.00, 0.28, 0.06, 0.45, matPants, Quaternion.fromEulerDegrees(90, 0, 0))
-    addCyl(0.18, 0.00, 0.28, 0.06, 0.45, matPants, Quaternion.fromEulerDegrees(90, 0, 0))
-
-    // 3. Hips / Waist (Pants)
-    addSphere(0.00, 0.00, 0.52, 0.19, 0.14, 0.12, matPants)
-
-    // 4. Torso (Tee)
-    addSphere(0.00, 0.00, 0.72, 0.20, 0.14, 0.16, matTeeWhite) // lower torso
-    addSphere(0.00, -0.02, 0.98, 0.23, 0.15, 0.18, matTeeWhite) // upper torso chest
-
-    // Swoosh Logo (approximated on chest)
-    addCube(0.04, -0.16, 0.98, 0.06, 0.01, 0.02, matNikeBlack, Quaternion.fromEulerDegrees(0, 0, 15))
-    addCube(0.00, -0.16, 0.96, 0.04, 0.01, 0.015, matNikeBlack, Quaternion.fromEulerDegrees(0, 0, -25))
-
-    // 5. Shoulders (Tee Sleeves)
-    addSphere(-0.25, -0.02, 1.02, 0.08, 0.08, 0.10, matTeeWhite)
-    addSphere(0.25, -0.02, 1.02, 0.08, 0.08, 0.10, matTeeWhite)
-
-    // 6. Arms & Hands (Skin) - Posed for DJing
-    // Left Arm (Reaching forward to mixer)
-    addCyl(-0.28, 0.06, 0.92, 0.045, 0.25, matSkin, Quaternion.fromEulerDegrees(45, -20, 0)) // Upper
-    addCyl(-0.24, 0.18, 0.76, 0.04, 0.25, matSkin, Quaternion.fromEulerDegrees(0, -30, 0))  // Lower
-    addSphere(-0.16, 0.24, 0.74, 0.045, 0.05, 0.03, matSkin) // Hand
-
-    // Right Arm (Tweaking a knob, slightly raised)
-    addCyl(0.28, 0.06, 0.92, 0.045, 0.25, matSkin, Quaternion.fromEulerDegrees(40, 20, 0)) // Upper
-    addCyl(0.22, 0.22, 0.78, 0.04, 0.25, matSkin, Quaternion.fromEulerDegrees(-10, 30, 0)) // Lower
-    addSphere(0.12, 0.28, 0.78, 0.045, 0.05, 0.03, matSkin) // Hand
-
-    // 7. Neck & Head
-    addCyl(0.00, -0.02, 1.15, 0.05, 0.10, matSkin, Quaternion.fromEulerDegrees(90, 0, 0)) // Neck
-    addSphere(0.00, -0.04, 1.28, 0.09, 0.10, 0.11, matSkin) // Head base
-
-    // 8. Facial Hair (Goatee & Fade)
-    addSphere(0.00, -0.14, 1.22, 0.04, 0.03, 0.04, matBeard) // Chin Goatee
-    addSphere(0.00, -0.14, 1.26, 0.05, 0.02, 0.015, matBeard) // Mustache
-    addSphere(-0.09, -0.08, 1.25, 0.015, 0.06, 0.08, matHair) // Sideburn L
-    addSphere(0.09, -0.08, 1.25, 0.015, 0.06, 0.08, matHair) // Sideburn R
-
-    // 9. Hair (Textured top fade)
-    addSphere(0.00, -0.02, 1.39, 0.095, 0.095, 0.04, matHair)
-
-    // 10. Headphones (Around neck/ears) - Placed over ears
-    addCyl(-0.11, -0.04, 1.28, 0.05, 0.02, matPhonesCush, Quaternion.fromEulerDegrees(0, 90, 90)) // L Cush (adjusted rotation for DCL Cylinder)
-    addCyl(0.11, -0.04, 1.28, 0.05, 0.02, matPhonesCush, Quaternion.fromEulerDegrees(0, 90, 90))  // R Cush
-    addCyl(-0.12, -0.04, 1.28, 0.04, 0.01, matPhonesRim, Quaternion.fromEulerDegrees(0, 90, 90)) // L Cup
-    addCyl(0.12, -0.04, 1.28, 0.04, 0.01, matPhonesRim, Quaternion.fromEulerDegrees(0, 90, 90))  // R Cup
-    
-    // Headphone Band
-    addSphere(0.00, -0.02, 1.395, 0.11, 0.06, 0.02, matPhonesRim) // Simple band over top
-
-    // Motion for DJing
+    // Keep a subtle DJ sway without moving the AvatarShape off its platform.
     let time = 0
     engine.addSystem((dt) => {
         time += dt
-        // Bop up and down to the beat
-        const bop = Math.abs(Math.sin(time * 4)) * 0.03
-        // Sway slightly left and right
-        const sway = Math.sin(time * 2) * 5
-        
-        const transform = Transform.getMutable(avatarGroup)
-        transform.position.y = bop
-        // Base rotation is -90 on Y, add sway
-        transform.rotation = Quaternion.fromEulerDegrees(0, -90 + sway, 0)
+        Transform.getMutable(djAvatar).rotation = Quaternion.fromEulerDegrees(0, -90 + Math.sin(time * 2) * 3, 0)
     })
 }

@@ -286,8 +286,7 @@ function buildRooftopBar(houseEntity: Entity) {
 
 /**
  * 5. VIP SUN LOUNGERS OVERLOOKING POOL
- * Placed along the front glass balustrade (z ~ 3.2 to 4.2),
- * positioned so players look directly down at the swimming pool and patio.
+ * Grouped along the back-right side of the deck, facing inward toward the pool.
  */
 function buildRooftopLoungers(houseEntity: Entity) {
   const colWood = Color4.fromHexString('#2A1A10')
@@ -326,12 +325,12 @@ function buildRooftopLoungers(houseEntity: Entity) {
     )
   }
 
-  // Two luxury loungers along the front glass railing
-  createRooftopLounger(-5.2, 3.8)
-  createRooftopLounger(-3.6, 3.8)
+  // Two luxury loungers in a quiet back-right seating nook
+  createRooftopLounger(4.4, -4.35)
+  createRooftopLounger(6.0, -4.35)
 
   // Drinks side table between them
-  const tablePos = Vector3.create(-4.4, 8.21, 3.8)
+  const tablePos = Vector3.create(5.2, 8.21, -4.35)
   createBox(houseEntity, Vector3.create(tablePos.x, tablePos.y + 0.18, tablePos.z), Vector3.create(0.5, 0.36, 0.5), colWood)
   // Neon accent ring on side table
   createBox(

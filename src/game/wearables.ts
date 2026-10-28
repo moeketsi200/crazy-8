@@ -21,16 +21,16 @@ export const WEARABLE_CONFIGS: Record<string, WearableAttachConfig> = {
   wearable_electric_cap: {
     modelPath: 'assets/Models/electric_cap.glb',
     anchorPoint: AvatarAnchorPointType.AAPT_HEAD,
-    position: Vector3.create(0, 0.06, 0.0),
+    position: Vector3.create(0, 0.0, 0.0),
     rotation: Quaternion.fromEulerDegrees(0, 0, 0),
     scale: Vector3.create(1.05, 1.05, 1.05)
   },
   wearable_shades_chain: {
     modelPath: 'assets/Models/shades_chain.glb',
     anchorPoint: AvatarAnchorPointType.AAPT_HEAD,
-    position: Vector3.create(0, 0.02, 0.0),
+    position: Vector3.create(0, 0.0, 0.0),
     rotation: Quaternion.fromEulerDegrees(0, 0, 0),
-    scale: Vector3.create(1.02, 1.02, 1.02)
+    scale: Vector3.create(1.0, 1.0, 1.0)
   },
   wearable_holo_card_tee: {
     modelPath: 'assets/Models/crazy8_holo_card_tee.glb',
