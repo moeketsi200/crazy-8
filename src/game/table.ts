@@ -352,6 +352,11 @@ export function standUpPlayer() {
 
   setPlayerSeated(false)
 
+  if (globalGame) update3DTable(globalGame)
+}
+
+export function exitGame() {
+  if (_isPlayerSeated) standUpPlayer()
   if (globalGame) {
     const myId = resolvePlayerId(globalGame)
     globalGame.removePlayer(myId)

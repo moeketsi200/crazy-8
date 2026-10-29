@@ -2,7 +2,7 @@ import ReactEcs, { ReactEcsRenderer, UiEntity } from '@dcl/sdk/react-ecs'
 import { Color4, Vector3 } from '@dcl/sdk/math'
 import { engine, Transform } from '@dcl/sdk/ecs'
 import { CrazyEightsGame, GameMode, isBotPlayer } from './logic'
-import { update3DTable, resolvePlayerId, getPlayerSeated, setPlayerSeated, getPlayerDisplayName, getTimeSeated, standUpPlayer, getLocalSeatedChair, sitPlayerAtOpenChair } from './table'
+import { update3DTable, resolvePlayerId, getPlayerSeated, setPlayerSeated, getPlayerDisplayName, getTimeSeated, standUpPlayer, exitGame, getLocalSeatedChair, sitPlayerAtOpenChair } from './table'
 import { getPlayer } from '@dcl/sdk/src/players'
 import { Card, Suit } from './deck'
 import { TopHudWidget, DailyRewardsModal, RewardToastBanner, updateRewardToast, showRewardToast } from './rewards_ui'
@@ -768,13 +768,14 @@ function uiComponent() {
     }
   }
 
-  // Cards are strictly visible ONLY if seated at the table!
-  const isTableActive = !!(activeGame && activeGame.isStarted && isSeated)
+  // Standing up releases the chair, but doesn't leave the match. Only Exit Game removes the player.
+  const myId = activeGame ? resolvePlayerId(activeGame) : ''
+  const isInActiveGame = !!(activeGame && activeGame.gameMode !== 'idle' && activeGame.players.has(myId))
+  const isTableActive = !!(activeGame && activeGame.isStarted && activeGame.players.has(myId))
 
   // Resolve local player's hand
   let myHand: Card[] = []
   if (isTableActive && activeGame) {
-    const myId = resolvePlayerId(activeGame)
     myHand = activeGame.players.get(myId) || []
     if (myHand.length === 0 && activeGame.players.has('player1') && (myId === 'player1' || !myId)) {
       myHand = activeGame.players.get('player1') || []
@@ -815,6 +816,28 @@ function uiComponent() {
           <UiEntity
             uiTransform={{ width: '100%', height: '100%' }}
             uiText={{ value: '🚪 LEAVE TABLE', fontSize: 13, color: Color4.fromHexString('#ff4444'), textAlign: 'middle-center' }}
+          />
+        </UiEntity>
+      )}
+
+      {/* Match membership lasts until the player explicitly exits, even after standing up. */}
+      {isInActiveGame && (
+        <UiEntity
+          uiTransform={{
+            positionType: 'absolute',
+            position: { top: 75, left: 174 },
+            width: 132,
+            height: 38,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+          uiBackground={{ color: Color4.create(0.28, 0.08, 0.10, 0.96) }}
+          onMouseDown={() => exitGame()}
+        >
+          <UiEntity
+            uiTransform={{ width: '100%', height: '100%' }}
+            uiText={{ value: 'EXIT GAME', fontSize: 13, color: Color4.fromHexString('#ff7777'), textAlign: 'middle-center' }}
           />
         </UiEntity>
       )}

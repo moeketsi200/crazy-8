@@ -449,7 +449,6 @@ export function buildDJAvatar(houseEntity: Entity) {
             `${baseAvatar}eyebrows_00`,
             `${baseAvatar}mouth_00`,
             `${baseAvatar}eyes_00`,
-            `${baseAvatar}black_tshirt`,
             `${baseAvatar}blue_jeans`,
             `${baseAvatar}sneakers`,
             `${baseAvatar}short_hair`
@@ -459,12 +458,14 @@ export function buildDJAvatar(houseEntity: Entity) {
         eyeColor: { r: 0.12, g: 0.07, b: 0.04 }
     })
 
-    // Keep the custom jacket aligned with the NPC's full transform and scale.
+    // The bomber GLB is already authored in avatar-space dimensions (about 1.37m wide
+    // and 0.53m tall), so keep it at native scale over the torso.
     const bomberModel = engine.addEntity()
     Transform.create(bomberModel, {
         parent: djAvatar,
         position: Vector3.create(0, 0, 0),
-        scale: Vector3.create(1.05, 1.05, 1.05)
+        rotation: Quaternion.fromEulerDegrees(0, 0, 0),
+        scale: Vector3.create(1, 1, 1)
     })
     GltfContainer.create(bomberModel, { src: 'assets/Models/crazy8_crest_bomber.glb' })
 

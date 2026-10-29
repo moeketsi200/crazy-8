@@ -19,13 +19,13 @@ export interface StreakDayReward {
 }
 
 export const STREAK_SCHEDULE: StreakDayReward[] = [
-  { day: 1, chips: 100, trophies: 10 },
-  { day: 2, chips: 150, trophies: 20 },
-  { day: 3, chips: 250, trophies: 35, specialTitle: 'Apprentice' },
-  { day: 4, chips: 350, trophies: 50 },
-  { day: 5, chips: 500, trophies: 75 },
-  { day: 6, chips: 750, trophies: 100 },
-  { day: 7, chips: 1500, trophies: 200, specialTitle: 'Crazy 8 Master' }
+  { day: 1, chips: 10, trophies: 1 },
+  { day: 2, chips: 15, trophies: 2 },
+  { day: 3, chips: 25, trophies: 3, specialTitle: 'Apprentice' },
+  { day: 4, chips: 35, trophies: 5 },
+  { day: 5, chips: 50, trophies: 7 },
+  { day: 6, chips: 75, trophies: 10 },
+  { day: 7, chips: 150, trophies: 20, specialTitle: 'Crazy 8 Master' }
 ]
 
 const ALL_QUEST_TEMPLATES = [
@@ -34,48 +34,48 @@ const ALL_QUEST_TEMPLATES = [
     title: 'Warm Up',
     description: 'Play 2 rounds of Crazy 8s',
     target: 2,
-    rewardChips: 150,
-    rewardTrophies: 15
+    rewardChips: 15,
+    rewardTrophies: 1
   },
   {
     id: 'play_eights',
     title: 'Crazy Eights',
     description: 'Play 2 Wild 8s or +4 cards',
     target: 2,
-    rewardChips: 200,
-    rewardTrophies: 20
+    rewardChips: 20,
+    rewardTrophies: 2
   },
   {
     id: 'inflict_draws',
     title: 'Draw Attack',
     description: 'Play +2 or +4 attack cards',
     target: 2,
-    rewardChips: 200,
-    rewardTrophies: 20
+    rewardChips: 20,
+    rewardTrophies: 2
   },
   {
     id: 'play_cards',
     title: 'Card Slinger',
     description: 'Play 6 cards at the table',
     target: 6,
-    rewardChips: 150,
-    rewardTrophies: 15
+    rewardChips: 15,
+    rewardTrophies: 1
   },
   {
     id: 'win_round',
     title: 'Winner Winner',
     description: 'Win 1 round of Crazy 8s',
     target: 1,
-    rewardChips: 350,
-    rewardTrophies: 35
+    rewardChips: 35,
+    rewardTrophies: 3
   },
   {
     id: 'declare_safe',
     title: 'Safe Call',
     description: 'Declare low cards before opponents catch you',
     target: 1,
-    rewardChips: 150,
-    rewardTrophies: 15
+    rewardChips: 15,
+    rewardTrophies: 1
   }
 ]
 
