@@ -1012,7 +1012,7 @@
         "513": {
           "json": {
             "position": {
-              "x": -4.3,
+              "x": -5.1,
               "y": 0.02,
               "z": 4.2
             },
@@ -1076,7 +1076,7 @@
           "json": {
             "position": {
               "x": 0,
-              "y": 0.15,
+              "y": -0.03,
               "z": 0
             },
             "rotation": {
@@ -1086,7 +1086,7 @@
               "w": 1
             },
             "scale": {
-              "x": 1.0,
+              "x": 0.9,
               "y": 1.0,
               "z": 1.0
             },
@@ -1138,7 +1138,7 @@
         "519": {
           "json": {
             "position": {
-              "x": 0.0,
+              "x": -1.7,
               "y": 0.02,
               "z": 4.2
             },
@@ -1202,7 +1202,7 @@
           "json": {
             "position": {
               "x": 0,
-              "y": 0.15,
+              "y": -0.03,
               "z": 0
             },
             "rotation": {
@@ -1212,7 +1212,7 @@
               "w": 1
             },
             "scale": {
-              "x": 1.0,
+              "x": 0.9,
               "y": 1.0,
               "z": 1.0
             },
@@ -1264,7 +1264,7 @@
         "525": {
           "json": {
             "position": {
-              "x": 4.3,
+              "x": 1.7,
               "y": 0.02,
               "z": 4.2
             },
@@ -1328,7 +1328,7 @@
           "json": {
             "position": {
               "x": 0,
-              "y": 0.15,
+              "y": -0.02,
               "z": 0
             },
             "rotation": {
@@ -1390,9 +1390,9 @@
         "537": {
           "json": {
             "position": {
-              "x": 0.0,
+              "x": 5.1,
               "y": 0.02,
-              "z": 1.1
+              "z": 4.2
             },
             "rotation": {
               "x": 0,
@@ -1454,7 +1454,7 @@
           "json": {
             "position": {
               "x": 0,
-              "y": 0.15,
+              "y": -0.02,
               "z": 0
             },
             "rotation": {
@@ -2159,14 +2159,14 @@
       "data": {
         "516": {
           "json": {
-            "src": "assets/Models/crazy8_holo_card_tee.glb",
+            "src": "assets/Models/crazy8_holo_card_tee_female_display_long_sleeve.glb",
             "visibleMeshesCollisionMask": 0,
             "invisibleMeshesCollisionMask": 0
           }
         },
         "522": {
           "json": {
-            "src": "assets/Models/crazy8_high_roller_tee.glb",
+            "src": "assets/Models/crazy8_high_roller_tee_female_display_long_sleeve.glb",
             "visibleMeshesCollisionMask": 0,
             "invisibleMeshesCollisionMask": 0
           }
@@ -2183,91 +2183,6 @@
             "src": "assets/Models/crazy8_vip_club_bomber_display.glb",
             "visibleMeshesCollisionMask": 0,
             "invisibleMeshesCollisionMask": 0
-          }
-        }
-      }
-    },
-    {
-      "name": "core::TextShape",
-      "data": {
-        "518": {
-          "json": {
-            "text": "👕 HOLO CARD TEE\n🪙 1,500 CHIPS • 40 🏆",
-            "fontSize": 0.55,
-            "textColor": {
-              "r": 0.0,
-              "g": 0.952941,
-              "b": 1.0,
-              "a": 1
-            },
-            "outlineColor": {
-              "r": 0.0,
-              "g": 0.0,
-              "b": 0.0,
-              "a": 1
-            },
-            "outlineWidth": 0.15,
-            "textAlign": 4
-          }
-        },
-        "524": {
-          "json": {
-            "text": "👕 HIGH ROLLER TEE\n🪙 2,800 CHIPS • 100 🏆",
-            "fontSize": 0.55,
-            "textColor": {
-              "r": 1.0,
-              "g": 0.843137,
-              "b": 0.0,
-              "a": 1
-            },
-            "outlineColor": {
-              "r": 0.0,
-              "g": 0.0,
-              "b": 0.0,
-              "a": 1
-            },
-            "outlineWidth": 0.15,
-            "textAlign": 4
-          }
-        },
-        "530": {
-          "json": {
-            "text": "🧥 C8 CREST BOMBER\n⚡ 5,500 CHIPS • 250 🏆",
-            "fontSize": 0.55,
-            "textColor": {
-              "r": 0.0,
-              "g": 0.952941,
-              "b": 1.0,
-              "a": 1
-            },
-            "outlineColor": {
-              "r": 0.0,
-              "g": 0.0,
-              "b": 0.0,
-              "a": 1
-            },
-            "outlineWidth": 0.15,
-            "textAlign": 4
-          }
-        },
-        "542": {
-          "json": {
-            "text": "🧥 VIP CLUB BOMBER\n👑 10,000 CHIPS • 500 🏆",
-            "fontSize": 0.55,
-            "textColor": {
-              "r": 1.0,
-              "g": 0.0,
-              "b": 0.333333,
-              "a": 1
-            },
-            "outlineColor": {
-              "r": 0.0,
-              "g": 0.0,
-              "b": 0.0,
-              "a": 1
-            },
-            "outlineWidth": 0.15,
-            "textAlign": 4
           }
         }
       }

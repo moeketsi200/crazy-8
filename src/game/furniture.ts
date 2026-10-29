@@ -7,8 +7,7 @@ import {
     Entity,
     TextShape,
     TextAlignMode,
-    AvatarShape,
-    GltfContainer
+    AvatarShape
 } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion, Color4, Color3 } from '@dcl/sdk/math'
 
@@ -441,14 +440,15 @@ export function buildDJAvatar(houseEntity: Entity) {
 
     const baseAvatar = 'urn:decentraland:off-chain:base-avatars:'
     AvatarShape.create(djAvatar, {
-        id: 'crazy8-dj-avatar',
-        name: 'DJ Crazy 8',
+        id: 'dj-crazy8-0008',
+        name: '🎧 DJ Crazy 8',
         bodyShape: `${baseAvatar}BaseMale`,
         emotes: [],
         wearables: [
             `${baseAvatar}eyebrows_00`,
             `${baseAvatar}mouth_00`,
             `${baseAvatar}eyes_00`,
+            `${baseAvatar}black_jacket`,
             `${baseAvatar}blue_jeans`,
             `${baseAvatar}sneakers`,
             `${baseAvatar}short_hair`
@@ -457,17 +457,6 @@ export function buildDJAvatar(houseEntity: Entity) {
         skinColor: { r: 0.45, g: 0.28, b: 0.2 },
         eyeColor: { r: 0.12, g: 0.07, b: 0.04 }
     })
-
-    // The bomber GLB is already authored in avatar-space dimensions (about 1.37m wide
-    // and 0.53m tall), so keep it at native scale over the torso.
-    const bomberModel = engine.addEntity()
-    Transform.create(bomberModel, {
-        parent: djAvatar,
-        position: Vector3.create(0, 0, 0),
-        rotation: Quaternion.fromEulerDegrees(0, 0, 0),
-        scale: Vector3.create(1, 1, 1)
-    })
-    GltfContainer.create(bomberModel, { src: 'assets/Models/crazy8_crest_bomber.glb' })
 
     // Keep a subtle DJ sway without moving the AvatarShape off its platform.
     let time = 0

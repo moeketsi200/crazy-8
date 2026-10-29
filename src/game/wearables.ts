@@ -36,20 +36,20 @@ export const WEARABLE_CONFIGS: Record<string, WearableAttachConfig> = {
     scale: Vector3.create(1.0, 1.0, 1.0)
   },
   wearable_holo_card_tee: {
-    modelPath: 'assets/Models/crazy8_holo_card_tee.glb',
-    femaleModelPath: 'assets/Models/crazy8_holo_card_tee_female.glb',
+    modelPath: 'assets/Models/crazy8_holo_card_tee_long_sleeve.glb',
+    femaleModelPath: 'assets/Models/crazy8_holo_card_tee_female_long_sleeve.glb',
     anchorPoint: AvatarAnchorPointType.AAPT_POSITION,
     position: Vector3.create(0, 0.0, 0.0),
     rotation: Quaternion.fromEulerDegrees(0, 0, 0),
-    scale: Vector3.create(1.03, 1.03, 1.03)
+    scale: Vector3.create(1.0, 1.0, 1.0)
   },
   wearable_high_roller_tee: {
-    modelPath: 'assets/Models/crazy8_high_roller_tee.glb',
-    femaleModelPath: 'assets/Models/crazy8_high_roller_tee_female.glb',
+    modelPath: 'assets/Models/crazy8_high_roller_tee_long_sleeve.glb',
+    femaleModelPath: 'assets/Models/crazy8_high_roller_tee_female_long_sleeve.glb',
     anchorPoint: AvatarAnchorPointType.AAPT_POSITION,
     position: Vector3.create(0, 0.0, 0.0),
     rotation: Quaternion.fromEulerDegrees(0, 0, 0),
-    scale: Vector3.create(1.03, 1.03, 1.03)
+    scale: Vector3.create(1.0, 1.0, 1.0)
   },
   wearable_crest_bomber: {
     modelPath: 'assets/Models/crazy8_crest_bomber.glb',
