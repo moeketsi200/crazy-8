@@ -1,7 +1,7 @@
 import ReactEcs, { ReactEcsRenderer, UiEntity } from '@dcl/sdk/react-ecs'
 import { Color4, Vector3 } from '@dcl/sdk/math'
 import { engine, Transform } from '@dcl/sdk/ecs'
-import { CrazyEightsGame, GameMode, isBotPlayer } from './logic'
+import { CrazyEightsGame, GameMode, TURN_TIME_LIMIT_MS, isBotPlayer } from './logic'
 import { update3DTable, resolvePlayerId, getPlayerSeated, setPlayerSeated, getPlayerDisplayName, getTimeSeated, standUpPlayer, exitGame, getLocalSeatedChair, sitPlayerAtOpenChair } from './table'
 import { getPlayer } from '@dcl/sdk/src/players'
 import { Card, Suit } from './deck'
@@ -514,6 +514,12 @@ function GameInfoBar() {
   const activePlayerId = activeGame.getCurrentPlayerId() || ''
   const turnLabel = isMyTurn ? 'YOUR TURN!' : `${getPlayerDisplayName(activePlayerId).toUpperCase()}'S TURN`
   const penaltyLabel = activeGame.pendingDraws > 0 ? ` • 🔥 PENALTY: +${activeGame.pendingDraws}` : ''
+  const secondsRemaining = activeGame.turnDeadlineAt > 0
+    ? Math.max(0, Math.ceil((activeGame.turnDeadlineAt - Date.now()) / 1000))
+    : TURN_TIME_LIMIT_MS / 1000
+  const timerLabel = !isBotPlayer(activePlayerId)
+    ? ` • ⏱ ${secondsRemaining}s`
+    : ''
 
   return (
     <UiEntity
@@ -522,7 +528,7 @@ function GameInfoBar() {
     >
       <UiEntity
         uiText={{
-          value: `${turnLabel}${penaltyLabel} (Suit: ${activeSuit})`,
+          value: `${turnLabel}${penaltyLabel}${timerLabel} (Suit: ${activeSuit})`,
           fontSize: 18, color: Color4.White(), textAlign: 'middle-center'
         }}
       />

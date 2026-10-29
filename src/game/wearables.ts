@@ -2,15 +2,18 @@ import {
   engine,
   Entity,
   AvatarAttach,
+  AvatarBase,
   AvatarAnchorPointType,
   Transform,
   GltfContainer
 } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion } from '@dcl/sdk/math'
+import { getPlayer } from '@dcl/sdk/src/players'
 import { onCosmeticEquipped, getProfile } from './economy'
 
 interface WearableAttachConfig {
   modelPath: string
+  femaleModelPath?: string
   anchorPoint: AvatarAnchorPointType
   position: Vector3
   rotation: Quaternion
@@ -34,6 +37,7 @@ export const WEARABLE_CONFIGS: Record<string, WearableAttachConfig> = {
   },
   wearable_holo_card_tee: {
     modelPath: 'assets/Models/crazy8_holo_card_tee.glb',
+    femaleModelPath: 'assets/Models/crazy8_holo_card_tee_female.glb',
     anchorPoint: AvatarAnchorPointType.AAPT_POSITION,
     position: Vector3.create(0, 0.0, 0.0),
     rotation: Quaternion.fromEulerDegrees(0, 0, 0),
@@ -41,6 +45,7 @@ export const WEARABLE_CONFIGS: Record<string, WearableAttachConfig> = {
   },
   wearable_high_roller_tee: {
     modelPath: 'assets/Models/crazy8_high_roller_tee.glb',
+    femaleModelPath: 'assets/Models/crazy8_high_roller_tee_female.glb',
     anchorPoint: AvatarAnchorPointType.AAPT_POSITION,
     position: Vector3.create(0, 0.0, 0.0),
     rotation: Quaternion.fromEulerDegrees(0, 0, 0),
@@ -48,6 +53,7 @@ export const WEARABLE_CONFIGS: Record<string, WearableAttachConfig> = {
   },
   wearable_crest_bomber: {
     modelPath: 'assets/Models/crazy8_crest_bomber.glb',
+    femaleModelPath: 'assets/Models/crazy8_crest_bomber_female.glb',
     anchorPoint: AvatarAnchorPointType.AAPT_POSITION,
     position: Vector3.create(0, 0.0, 0.0),
     rotation: Quaternion.fromEulerDegrees(0, 0, 0),
@@ -55,6 +61,7 @@ export const WEARABLE_CONFIGS: Record<string, WearableAttachConfig> = {
   },
   wearable_vip_club_bomber: {
     modelPath: 'assets/Models/crazy8_vip_club_bomber.glb',
+    femaleModelPath: 'assets/Models/crazy8_vip_club_bomber_female.glb',
     anchorPoint: AvatarAnchorPointType.AAPT_POSITION,
     position: Vector3.create(0, 0.0, 0.0),
     rotation: Quaternion.fromEulerDegrees(0, 0, 0),
@@ -87,6 +94,10 @@ export function equipAvatarWearable(itemId: string) {
 
   const config = WEARABLE_CONFIGS[itemId]
   if (!config) return
+  const bodyShape = getPlayer()?.avatar?.bodyShapeUrn?.toLowerCase() || ''
+  const isFemaleShape = bodyShape.includes('femal') || bodyShape.includes('shape_b')
+  const modelPath = (isFemaleShape && config.femaleModelPath) || config.modelPath
+  const useFemaleModel = !!config.femaleModelPath && modelPath === config.femaleModelPath
 
   // 1. Create anchor entity attached to the avatar bone
   anchorEntity = engine.addEntity()
@@ -103,14 +114,20 @@ export function equipAvatarWearable(itemId: string) {
     scale: config.scale
   })
   GltfContainer.create(modelEntity, {
-    src: config.modelPath
+    src: modelPath
   })
 
   currentEquippedId = itemId
-  console.log(`[Wearable] Equipped ${itemId} onto avatar anchor ${config.anchorPoint}`)
+  console.log(`[Wearable] Equipped ${itemId} (${useFemaleModel ? 'female' : 'male'} model) onto avatar anchor ${config.anchorPoint}`)
 }
 
 export function setupWearablesSystem() {
+  AvatarBase.onChange(engine.PlayerEntity, () => {
+    if (currentEquippedId && WEARABLE_CONFIGS[currentEquippedId]) {
+      equipAvatarWearable(currentEquippedId)
+    }
+  })
+
   // Listen for cosmetic changes from economy / UI
   onCosmeticEquipped((category, itemId) => {
     if (category === 'wearable') {

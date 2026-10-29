@@ -2173,14 +2173,14 @@
         },
         "528": {
           "json": {
-            "src": "assets/Models/crazy8_crest_bomber.glb",
+            "src": "assets/Models/crazy8_crest_bomber_display.glb",
             "visibleMeshesCollisionMask": 0,
             "invisibleMeshesCollisionMask": 0
           }
         },
         "540": {
           "json": {
-            "src": "assets/Models/crazy8_vip_club_bomber.glb",
+            "src": "assets/Models/crazy8_vip_club_bomber_display.glb",
             "visibleMeshesCollisionMask": 0,
             "invisibleMeshesCollisionMask": 0
           }

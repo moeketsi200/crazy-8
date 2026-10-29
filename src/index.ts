@@ -1,6 +1,6 @@
 import { engine, Transform, Entity } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion } from '@dcl/sdk/math'
-import { CrazyEightsGame } from './game/logic'
+import { CrazyEightsGame, RoundResult } from './game/logic'
 import { setup3DTable, getPlayerDisplayName, update3DTable, resolvePlayerId } from './game/table'
 import { setupDoors } from './game/doors'
 import { buildHouse } from './game/house'
@@ -11,7 +11,7 @@ import { buildRooftop } from './game/rooftop'
 import { setupWaterEffects } from './game/water_effects'
 import { setupUI } from './game/ui'
 import { buildInfoBoard, showGameButton } from './game/info_board'
-import { buildScoreBoard, updateScoreBoardText, updateHighWinningsText, renderOutdoorHallOfFame } from './game/score_board'
+import { buildScoreBoard, updateScoreBoardText, renderOutdoorHallOfFame } from './game/score_board'
 import { setupMultiplayer, pushGameState } from './game/multiplayer'
 import { reportGameplayAction, addChips, addTrophies } from './game/economy'
 import { showRewardToast } from './game/rewards_ui'
@@ -54,6 +54,9 @@ export function main() {
 
     // 4. Start the Crazy 8 Game Backend
     const gameEngine = new CrazyEightsGame()
+    let lastHandledRoundResultId = 0
+    let autoContinueAt = 0
+    renderOutdoorHallOfFame(gameEngine)
 
     // 5. Setup the Draw Pile, Discard Pile, and clickable Chairs (registers players & bot)!
     setup3DTable(gameEngine, houseEntity)
@@ -65,7 +68,95 @@ export function main() {
     }
     gameEngine.onStateSync = () => {
       update3DTable(gameEngine)
+      const result = gameEngine.lastRoundResult
+      if (result && result.id > lastHandledRoundResultId) {
+        lastHandledRoundResultId = result.id
+        showRoundResult(result, true)
+      }
     }
+
+    const showRoundResult = (result: RoundResult, grantLocalRewards: boolean) => {
+      const myId = resolvePlayerId(gameEngine)
+      const winnerName = result.winner ? getPlayerDisplayName(result.winner) : ''
+      const eliminatedName = result.eliminated ? getPlayerDisplayName(result.eliminated) : 'Unknown'
+      const roundWinnerName = result.roundWinner ? getPlayerDisplayName(result.roundWinner) : 'No round winner'
+      const isSolo = result.gameMode === 'solo'
+      const isWatchingSolo = isSolo && !result.winner && gameEngine.eliminatedPlayers.has(myId)
+
+      if (result.winner || result.roundWinner) triggerVictoryCelebration()
+
+      if (grantLocalRewards && gameEngine.playerOrder.includes(myId)) {
+        reportGameplayAction('match_finished')
+        if (result.roundWinner === myId) reportGameplayAction('round_won')
+        if (result.winner === myId) {
+          reportGameplayAction('match_won')
+          if (isSolo) reportGameplayAction('solo_won')
+          const chips = isSolo ? 30 : 150
+          const trophies = isSolo ? 5 : 20
+          addChips(chips)
+          addTrophies(trophies)
+          showRewardToast(isSolo
+            ? `🏆 YOU BEAT THE BOTS! +${chips} Chips & +${trophies} Trophies!`
+            : `🏆 MATCH WON! +${chips} Chips & +${trophies} Trophies!`)
+        } else {
+          addChips(30)
+          addTrophies(5)
+          showRewardToast(result.roundWinner === myId
+            ? 'Round won! +30 Chips & +5 Trophies.'
+            : 'Good game! +30 Chips & +5 Trophies.')
+        }
+      }
+
+      const scoreLines = result.scoreBreakdown ? `\n\nROUND SCORES\n${result.scoreBreakdown}` : ''
+      if (result.winner) {
+        const headline = isSolo && result.winner === myId
+          ? '🏆 YOU BEAT THE BOTS!'
+          : `🏆 OVERALL WINNER: ${winnerName.toUpperCase()}`
+        updateScoreBoardText(`MATCH COMPLETE\n\n${headline}\n\nRound ${result.roundNumber} finished.\nLast eliminated: ${eliminatedName}${scoreLines}`)
+        showGameButton('START NEW GAME', 'START')
+        autoContinueAt = 0
+      } else if (isWatchingSolo) {
+        updateScoreBoardText(`YOU ARE OUT — MATCH STILL IN PROGRESS\n\nRound ${result.roundNumber} complete.\nRound winner: ${roundWinnerName}\nYou were eliminated. The bots will finish the remaining rounds; the overall winner will appear here.${scoreLines}`)
+        showGameButton('BOTS FINISHING THE MATCH', 'WAITING')
+        if (gameEngine.gameMasterId === myId) autoContinueAt = Date.now() + 2500
+      } else {
+        updateScoreBoardText(`ROUND ${result.roundNumber} COMPLETE\n\nRound winner: ${roundWinnerName}\nEliminated: ${eliminatedName}\nThe match continues. Choose Continue for the next round.${scoreLines}`)
+        showGameButton('CONTINUE\n(NEXT ROUND)', 'CONTINUE')
+      }
+
+      renderOutdoorHallOfFame(gameEngine)
+    }
+
+    gameEngine.onRoundEnd = (eliminated, winner, scoreBreakdown, roundWinner) => {
+      // The result is recorded in the synchronized game state before this callback.
+      const result = gameEngine.lastRoundResult || {
+        id: lastHandledRoundResultId + 1,
+        roundNumber: gameEngine.roundNumber,
+        eliminated,
+        winner,
+        roundWinner,
+        scoreBreakdown: scoreBreakdown || '',
+        gameMode: gameEngine.gameMode
+      }
+      lastHandledRoundResultId = result.id
+      showRoundResult(result, true)
+    }
+
+    engine.addSystem(() => {
+      const myId = resolvePlayerId(gameEngine)
+      if (gameEngine.gameMasterId === myId && gameEngine.applyTurnTimeout()) {
+        update3DTable(gameEngine)
+      }
+
+      if (!autoContinueAt || Date.now() < autoContinueAt) return
+      autoContinueAt = 0
+      if (gameEngine.gameMasterId !== myId || gameEngine.gameMode !== 'solo' ||
+          !gameEngine.gameOver || gameEngine.matchOver || !gameEngine.eliminatedPlayers.has(myId)) return
+      gameEngine.startNextRound()
+      if (!gameEngine.isStarted) return
+      update3DTable(gameEngine)
+      updateScoreBoardText(`SOLO MATCH — ROUND ${gameEngine.roundNumber}\n\nYou are eliminated and watching. The bots are playing the remaining rounds.\nThe overall winner will appear here.`)
+    })
 
     // Connect gameplay events to the retention & economy quest system
     gameEngine.onCardPlayed = (playerId, card) => {
@@ -85,40 +176,6 @@ export function main() {
       const myId = resolvePlayerId(gameEngine)
       if (playerId === myId || playerId === 'player1') {
         reportGameplayAction('declare_safe')
-      }
-    }
-
-    gameEngine.onRoundEnd = (eliminated, winner, scoreBreakdown, roundWinner) => {
-      const myId = resolvePlayerId(gameEngine)
-      reportGameplayAction('match_finished')
-
-      const winnerName = winner ? getPlayerDisplayName(winner) : ''
-      const eliminatedName = eliminated ? getPlayerDisplayName(eliminated) : 'None'
-      const roundWinnerName = roundWinner ? getPlayerDisplayName(roundWinner) : ''
-
-      if (winner || roundWinner) {
-        triggerVictoryCelebration()
-      }
-
-      if (roundWinner === myId || winner === myId) {
-        reportGameplayAction('match_won')
-        addChips(150)
-        addTrophies(20)
-        showRewardToast('🏆 VICTORY! +150 Chips & +20 Trophies!')
-      } else {
-        addChips(30)
-        addTrophies(5)
-        showRewardToast('Good game! +30 Chips & +5 Trophies!')
-      }
-
-      if (winner) {
-        updateScoreBoardText(`SCOREBOARD\n\n🏆 WINNER: ${winnerName} 🏆\n\nRound ${gameEngine.roundNumber} Over!\n\nLast Eliminated: ${eliminatedName}\n\nScores:\n${scoreBreakdown || ''}`)
-        renderOutdoorHallOfFame(winnerName, gameEngine.roundNumber)
-        showGameButton('START NEW GAME', 'START')
-      } else {
-        updateScoreBoardText(`SCOREBOARD\n\n🎉 ${roundWinnerName} WENT OUT! 🎉\n\nRound ${gameEngine.roundNumber} Over!\n\nEliminated: ${eliminatedName}\n\nScores:\n${scoreBreakdown || ''}\n\nWaiting for next round...`)
-        renderOutdoorHallOfFame(roundWinnerName, gameEngine.roundNumber)
-        showGameButton('CONTINUE\n(Next Round)', 'CONTINUE')
       }
     }
 

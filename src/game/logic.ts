@@ -4,6 +4,35 @@ export type PlayerId = string
 export type GameMode = 'solo' | 'multiplayer'
 
 export const MAX_GAME_PLAYERS = 8
+export const TURN_TIME_LIMIT_MS = 60_000
+
+export interface PlayerLeaderboardStats {
+  playerId: PlayerId
+  name: string
+  gamesWon: number
+  weeklyWins: number
+  roundsWon: number
+  weekKey: string
+}
+
+export interface RoundResult {
+  id: number
+  roundNumber: number
+  eliminated: PlayerId
+  winner?: PlayerId
+  roundWinner?: PlayerId
+  scoreBreakdown: string
+  gameMode: GameMode | 'idle'
+}
+
+function getLeaderboardWeekKey(date: Date = new Date()): string {
+  const utcDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
+  const day = utcDate.getUTCDay() || 7
+  utcDate.setUTCDate(utcDate.getUTCDate() + 4 - day)
+  const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1))
+  const week = Math.ceil((((utcDate.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+  return `${utcDate.getUTCFullYear()}-${String(week).padStart(2, '0')}`
+}
 
 export function isBotPlayer(playerId: PlayerId): boolean {
   return playerId === 'bot' || playerId.startsWith('bot_')
@@ -26,8 +55,14 @@ export class CrazyEightsGame {
 
   public turnDirection: number = 1
   public pendingDraws: number = 0
+  public turnDeadlineAt: number = 0
   public eliminatedPlayers: Set<PlayerId> = new Set()
   public scores: Map<PlayerId, number> = new Map()
+  // Competitive leaderboard stats are synchronized with the game state.
+  // Solo games and bot identities are intentionally excluded from these rankings.
+  public leaderboardStats: Map<PlayerId, PlayerLeaderboardStats> = new Map()
+  public lastRoundResult?: RoundResult
+  private roundResultSequence = 0
   public onRoundEnd?: (eliminated: PlayerId, winner?: PlayerId, scoreBreakdown?: string, roundWinner?: PlayerId) => void
   public onCardPlayed?: (playerId: PlayerId, card: Card) => void
   public onDeclareSafe?: (playerId: PlayerId) => void
@@ -59,10 +94,12 @@ export class CrazyEightsGame {
     this.discardPile = []
     this.activeSuit = null
     this.pendingDraws = 0
+    this.turnDeadlineAt = 0
     this.currentTurnIndex = 0
     this.isStarted = false
     this.gameOver = false
     this.matchOver = false
+    this.lastRoundResult = undefined
     this.gameMode = 'multiplayer'
     this.lobbyHostId = resolvedHostId
     this.gameMasterId = resolvedHostId
@@ -130,8 +167,12 @@ export class CrazyEightsGame {
       gameMasterId: this.gameMasterId,
       turnDirection: this.turnDirection,
       pendingDraws: this.pendingDraws,
+      turnDeadlineAt: this.turnDeadlineAt,
       eliminatedPlayers: Array.from(this.eliminatedPlayers),
       scores: Array.from(this.scores.entries()),
+      leaderboardStats: Array.from(this.leaderboardStats.entries()),
+      lastRoundResult: this.lastRoundResult,
+      roundResultSequence: this.roundResultSequence,
       safeDeclared: Array.from(this.safeDeclared),
       lastNotification: this.lastNotification,
       lobbyEndTime: this.lobbyEndTime
@@ -160,8 +201,12 @@ export class CrazyEightsGame {
       this.gameMasterId = state.gameMasterId || this.lobbyHostId
       this.turnDirection = state.turnDirection
       this.pendingDraws = state.pendingDraws
+      this.turnDeadlineAt = state.turnDeadlineAt || 0
       this.eliminatedPlayers = new Set(state.eliminatedPlayers)
       this.scores = new Map(state.scores)
+      this.leaderboardStats = new Map(state.leaderboardStats || [])
+      this.lastRoundResult = state.lastRoundResult
+      this.roundResultSequence = state.roundResultSequence || state.lastRoundResult?.id || 0
       this.safeDeclared = new Set(state.safeDeclared)
       this.lobbyEndTime = state.lobbyEndTime || 0
 
@@ -221,11 +266,13 @@ export class CrazyEightsGame {
       this.scores.set(playerId, 0)
     }
 
-    for (let botNumber = 1; this.playerOrder.length < MAX_GAME_PLAYERS; botNumber++) {
-      const botId = `bot_${botNumber}`
-      this.playerOrder.push(botId)
-      this.players.set(botId, [])
-      this.scores.set(botId, 0)
+    if (mode === 'solo') {
+      for (let botNumber = 1; this.playerOrder.length < MAX_GAME_PLAYERS; botNumber++) {
+        const botId = `bot_${botNumber}`
+        this.playerOrder.push(botId)
+        this.players.set(botId, [])
+        this.scores.set(botId, 0)
+      }
     }
 
     this.queuedPlayers = []
@@ -238,6 +285,7 @@ export class CrazyEightsGame {
     this.turnDirection = 1
     this.gameOver = false
     this.matchOver = false
+    this.lastRoundResult = undefined
     this.eliminatedPlayers.clear()
     this.safeDeclared.clear()
     
@@ -246,6 +294,7 @@ export class CrazyEightsGame {
     
     this.isStarted = true
     this.currentTurnIndex = 0
+    this.turnDeadlineAt = Date.now() + TURN_TIME_LIMIT_MS
     this.roundNumber = 1
     this.onStateChanged?.()
   }
@@ -300,10 +349,23 @@ export class CrazyEightsGame {
         this.matchOver = true
         this.isStarted = false
         const winnerName = this.getDisplayName(winner)
+        if (this.gameMode === 'multiplayer' && !isBotPlayer(winner)) {
+          this.recordMatchWin(winner)
+        }
+        this.lastRoundResult = {
+          id: ++this.roundResultSequence,
+          roundNumber: this.roundNumber,
+          eliminated: playerId,
+          winner,
+          roundWinner: winner,
+          scoreBreakdown: `${winnerName} wins!`,
+          gameMode: this.gameMode
+        }
         this.onRoundEnd?.(playerId, winner, `${winnerName} wins!`, winner)
       } else if (this.isStarted && activePlayers.length > 0) {
         this.currentTurnIndex = this.currentTurnIndex % activePlayers.length
         const current = activePlayers[this.currentTurnIndex]
+        this.turnDeadlineAt = current && !isBotPlayer(current) ? Date.now() + TURN_TIME_LIMIT_MS : 0
         if (isBotPlayer(current)) {
           if (this.onBotTurnStart) {
             this.onBotTurnStart(current)
@@ -348,6 +410,7 @@ export class CrazyEightsGame {
     
     this.isStarted = true
     this.currentTurnIndex = 0
+    this.turnDeadlineAt = Date.now() + TURN_TIME_LIMIT_MS
     this.roundNumber++
     this.onStateChanged?.()
     this.scheduleBotTurnIfNeeded()
@@ -538,6 +601,21 @@ export class CrazyEightsGame {
     return true
   }
 
+  /** Apply the turn timeout on the synchronized game master only. */
+  public applyTurnTimeout(now: number = Date.now()): boolean {
+    if (!this.isStarted || this.gameOver || this.turnDeadlineAt <= 0 || now < this.turnDeadlineAt) return false
+    const playerId = this.getCurrentPlayerId()
+    if (!playerId || isBotPlayer(playerId)) return false
+
+    this.drawOne(playerId)
+    this.drawOne(playerId)
+    this.safeDeclared.delete(playerId)
+    this.notify(`⏱️ ${this.getDisplayName(playerId).toUpperCase()} ran out of time and drew 2 penalty cards.`, playerId)
+    this.nextTurn(1)
+    this.onStateChanged?.()
+    return true
+  }
+
   private drawOne(playerId: PlayerId) {
     if (this.drawPile.length === 0) {
       this.reshuffleDiscardIntoDraw()
@@ -559,6 +637,9 @@ export class CrazyEightsGame {
     if (this.currentTurnIndex < 0) {
       this.currentTurnIndex += numPlayers
     }
+
+    const nextPlayer = activePlayers[this.currentTurnIndex]
+    this.turnDeadlineAt = nextPlayer && !isBotPlayer(nextPlayer) ? Date.now() + TURN_TIME_LIMIT_MS : 0
 
     this.scheduleBotTurnIfNeeded()
   }
@@ -645,6 +726,20 @@ export class CrazyEightsGame {
     const remaining = this.playerOrder.filter(p => !this.eliminatedPlayers.has(p))
     let winner = remaining.length === 1 ? remaining[0] : undefined
     this.matchOver = !!winner
+
+    if (this.gameMode === 'multiplayer') {
+      const recordRoundWin = (playerId: PlayerId) => {
+        if (isBotPlayer(playerId)) return
+        const record = this.getOrCreateLeaderboardRecord(playerId)
+        record.roundsWon += 1
+        this.leaderboardStats.set(playerId, record)
+      }
+
+      if (roundWinnerId) recordRoundWin(roundWinnerId)
+      if (winner && !isBotPlayer(winner)) {
+        this.recordMatchWin(winner)
+      }
+    }
     
     const roundWinnerName = this.getDisplayName(roundWinnerId).toUpperCase()
     const eliminatedName = this.getDisplayName(eliminatedPlayer).toUpperCase()
@@ -655,8 +750,42 @@ export class CrazyEightsGame {
       this.notify(`🎉 ${roundWinnerName} WENT OUT! 🚨 ${eliminatedName} ELIMINATED!`, roundWinnerId)
     }
 
+    this.lastRoundResult = {
+      id: ++this.roundResultSequence,
+      roundNumber: this.roundNumber,
+      eliminated: eliminatedPlayer,
+      winner,
+      roundWinner: roundWinnerId,
+      scoreBreakdown,
+      gameMode: this.gameMode
+    }
     if (this.onRoundEnd) {
       this.onRoundEnd(eliminatedPlayer, winner, scoreBreakdown, roundWinnerId)
     }
+  }
+
+  private getOrCreateLeaderboardRecord(playerId: PlayerId): PlayerLeaderboardStats {
+    const weekKey = getLeaderboardWeekKey()
+    const record = this.leaderboardStats.get(playerId) || {
+      playerId,
+      name: this.getDisplayName(playerId),
+      gamesWon: 0,
+      weeklyWins: 0,
+      roundsWon: 0,
+      weekKey
+    }
+    record.name = this.getDisplayName(playerId)
+    if (record.weekKey !== weekKey) {
+      record.weekKey = weekKey
+      record.weeklyWins = 0
+    }
+    return record
+  }
+
+  private recordMatchWin(playerId: PlayerId) {
+    const record = this.getOrCreateLeaderboardRecord(playerId)
+    record.gamesWon += 1
+    record.weeklyWins += 1
+    this.leaderboardStats.set(playerId, record)
   }
 }

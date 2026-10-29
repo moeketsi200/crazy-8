@@ -83,6 +83,8 @@ export interface PlayerProfile {
   chips: number
   trophies: number
   totalWins: number
+  soloWins: number
+  roundsWon: number
   loginStreak: number
   lastClaimDateStr: string // 'YYYY-MM-DD'
   equippedTitle: string
@@ -123,6 +125,8 @@ const profile: PlayerProfile = {
   chips: 0,
   trophies: 0,
   totalWins: 0,
+  soloWins: 0,
+  roundsWon: 0,
   loginStreak: 1,
   lastClaimDateStr: '', // Not claimed yet today
   equippedTitle: 'Card Rookie',
@@ -192,12 +196,16 @@ export function claimQuest(questId: string): boolean {
   return true
 }
 
-export type GameplayAction = 'card_played' | 'wild_eight' | 'inflict_draw' | 'declare_safe' | 'match_finished' | 'match_won'
+export type GameplayAction = 'card_played' | 'wild_eight' | 'inflict_draw' | 'declare_safe' | 'match_finished' | 'match_won' | 'round_won' | 'solo_won'
 
 export function reportGameplayAction(action: GameplayAction, count: number = 1) {
   let updated = false
   if (action === 'match_won') {
     profile.totalWins += count
+  } else if (action === 'round_won') {
+    profile.roundsWon += count
+  } else if (action === 'solo_won') {
+    profile.soloWins += count
   }
   for (const quest of profile.quests) {
     if (quest.claimed) continue
@@ -217,7 +225,7 @@ export function reportGameplayAction(action: GameplayAction, count: number = 1) 
     } else if (action === 'match_finished' && quest.id === 'play_matches') {
       quest.progress = Math.min(quest.target, quest.progress + count)
       updated = true
-    } else if (action === 'match_won' && quest.id === 'win_round') {
+    } else if (action === 'round_won' && quest.id === 'win_round') {
       quest.progress = Math.min(quest.target, quest.progress + count)
       updated = true
     }

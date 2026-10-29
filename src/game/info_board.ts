@@ -10,7 +10,7 @@ export let buttonEntity: Entity
 export let buttonTextEntity: Entity
 let cachedGameEngine: CrazyEightsGame | null = null
 
-export type GameButtonAction = 'START' | 'COUNTDOWN' | 'JOIN' | 'CONTINUE'
+export type GameButtonAction = 'START' | 'COUNTDOWN' | 'JOIN' | 'CONTINUE' | 'WAITING'
 let currentButtonAction: GameButtonAction = 'START'
 
 export function buildInfoBoard(parentHouse: Entity, gameEngine: CrazyEightsGame) {
@@ -82,7 +82,7 @@ function startSelectedGameMode(gameMode: GameMode) {
   if (gameMode === 'solo') {
     gameEngine.startGame([myId], 'solo', myId)
     update3DTable(gameEngine)
-    updateScoreBoardText('SCOREBOARD\n\nRound 1\n\nSOLO GAME\n1 Player • 7 Bots')
+    updateScoreBoardText('SOLO MATCH\nROUND 1\n\nYou are playing 7 bots.\nBe the last player remaining to win.\nIf you are eliminated, stay to watch the bots finish; the overall winner will appear here.')
     showRewardToast('Solo game started! You are playing against 7 bots.')
     return
   }
@@ -119,6 +119,10 @@ function setButtonState(action: GameButtonAction, text?: string) {
       label = text || 'CONTINUE\n(Next Round)'
       colorHex = '#10B981' // Emerald Green
       break
+    case 'WAITING':
+      label = text || 'WAIT FOR FINAL RESULT'
+      colorHex = '#596579'
+      break
   }
 
   TextShape.getMutable(buttonTextEntity).text = label
@@ -128,6 +132,8 @@ function setButtonState(action: GameButtonAction, text?: string) {
 function handleButtonClick() {
   const gameEngine = cachedGameEngine
   if (!gameEngine) return
+
+  if (currentButtonAction === 'WAITING') return
 
   if (currentButtonAction === 'START') {
     openGameModePrompt((gameMode) => startSelectedGameMode(gameMode))
@@ -197,24 +203,33 @@ function setupLobbyCountdownSystem() {
 
       gameEngine.startGame(humanPlayers, 'multiplayer', gameEngine.lobbyHostId)
       update3DTable(gameEngine)
-      updateScoreBoardText(`SCOREBOARD\n\nRound 1\n\nMULTIPLAYER GAME\n${humanPlayers.length} Player${humanPlayers.length === 1 ? '' : 's'} • ${8 - humanPlayers.length} Bots`)
-      showRewardToast(`Round 1 started with ${humanPlayers.length} player${humanPlayers.length === 1 ? '' : 's'} and ${8 - humanPlayers.length} bots.`)
+      updateScoreBoardText(`MULTIPLAYER MATCH\nROUND 1\n\n${humanPlayers.length} human player${humanPlayers.length === 1 ? '' : 's'}. No bots.\nBe the last player remaining to win.`)
+      showRewardToast(`Round 1 started with ${humanPlayers.length} human player${humanPlayers.length === 1 ? '' : 's'}. No bots.`)
       return
     }
 
     // 3. The match roster is locked once dealing begins.
     if (gameEngine.isStarted && !gameEngine.gameOver) {
-      if (currentButtonAction !== 'JOIN') {
-        setButtonState('JOIN', 'MATCH IN PROGRESS')
+      const localPlayerId = resolvePlayerId(gameEngine)
+      const watchingSoloFinish = gameEngine.gameMode === 'solo' && gameEngine.eliminatedPlayers.has(localPlayerId)
+      const action = watchingSoloFinish ? 'WAITING' : 'JOIN'
+      if (currentButtonAction !== action) {
+        setButtonState(action, watchingSoloFinish ? 'BOTS FINISHING THE MATCH' : 'MATCH IN PROGRESS')
       }
       return
     }
 
     // 4. Continue elimination rounds, or offer a fresh game after a match winner.
     if (gameEngine.gameOver) {
-      const nextAction = gameEngine.matchOver ? 'START' : 'CONTINUE'
+      const localPlayerId = resolvePlayerId(gameEngine)
+      const watchingSoloFinish = gameEngine.gameMode === 'solo' &&
+        gameEngine.eliminatedPlayers.has(localPlayerId) && !gameEngine.matchOver
+      const nextAction = watchingSoloFinish ? 'WAITING' : (gameEngine.matchOver ? 'START' : 'CONTINUE')
+      const nextLabel = watchingSoloFinish
+        ? 'BOTS FINISHING THE MATCH'
+        : (gameEngine.matchOver ? 'START NEW GAME' : 'CONTINUE\n(Next Round)')
       if (currentButtonAction !== nextAction) {
-        setButtonState(nextAction, gameEngine.matchOver ? 'START NEW GAME' : 'CONTINUE\n(Next Round)')
+        setButtonState(nextAction, nextLabel)
       }
       return
     }
