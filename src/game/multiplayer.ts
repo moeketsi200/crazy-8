@@ -17,6 +17,7 @@ enum SyncIds {
 
 export let syncEntityInstance: any
 let localUpdateId = Date.now()
+let hasPendingLocalUpdate = false
 
 export function setupMultiplayer(gameEngine: CrazyEightsGame) {
   // Create a singleton entity for syncing the game state
@@ -37,6 +38,11 @@ export function setupMultiplayer(gameEngine: CrazyEightsGame) {
   // System to detect remote changes to the SyncGameState component
   engine.addSystem(() => {
     if (!isStateSyncronized()) return
+
+    if (hasPendingLocalUpdate) {
+      hasPendingLocalUpdate = false
+      pushGameState(gameEngine)
+    }
 
     const currentState = SyncGameState.getOrNull(syncEntityInstance)
     if (currentState && currentState.stateJson) {
@@ -65,10 +71,14 @@ export function setupMultiplayer(gameEngine: CrazyEightsGame) {
 
 // Helper to push our local state to the network
 export function pushGameState(gameEngine: CrazyEightsGame) {
-  if (!syncEntityInstance || !isStateSyncronized()) return
+  if (!syncEntityInstance) return
+  if (!isStateSyncronized()) {
+    hasPendingLocalUpdate = true
+    return
+  }
   
   const mutableState = SyncGameState.getMutable(syncEntityInstance)
-  const now = Date.now()
+  const now = Math.max(Date.now(), localUpdateId + 1)
   mutableState.stateJson = gameEngine.serialize()
   mutableState.updateId = now
   localUpdateId = now

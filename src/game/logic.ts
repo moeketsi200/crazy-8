@@ -1,6 +1,13 @@
 import { Card, Suit, generateDeck, shuffleDeck } from './deck'
 
 export type PlayerId = string
+export type GameMode = 'solo' | 'multiplayer'
+
+export const MAX_GAME_PLAYERS = 8
+
+export function isBotPlayer(playerId: PlayerId): boolean {
+  return playerId === 'bot' || playerId.startsWith('bot_')
+}
 
 export class CrazyEightsGame {
   public players: Map<PlayerId, Card[]> = new Map()
@@ -12,6 +19,10 @@ export class CrazyEightsGame {
   public isStarted: boolean = false
   public roundNumber: number = 1
   public gameOver: boolean = false
+  public matchOver: boolean = false
+  public gameMode: GameMode | 'idle' = 'idle'
+  public lobbyHostId: PlayerId = ''
+  public gameMasterId: PlayerId = ''
 
   public turnDirection: number = 1
   public pendingDraws: number = 0
@@ -36,9 +47,42 @@ export class CrazyEightsGame {
     }
   }
 
-  public startLobby(seconds: number = 15) {
+  public startLobby(seconds: number = 30, hostId: PlayerId = '') {
+    const resolvedHostId = hostId || this.playerOrder.find((id) => !isBotPlayer(id)) || ''
+    this.players.clear()
+    this.playerOrder = []
+    this.scores.clear()
+    this.eliminatedPlayers.clear()
+    this.safeDeclared.clear()
+    this.queuedPlayers = []
+    this.drawPile = []
+    this.discardPile = []
+    this.activeSuit = null
+    this.pendingDraws = 0
+    this.currentTurnIndex = 0
+    this.isStarted = false
+    this.gameOver = false
+    this.matchOver = false
+    this.gameMode = 'multiplayer'
+    this.lobbyHostId = resolvedHostId
+    this.gameMasterId = resolvedHostId
     this.lobbyEndTime = Date.now() + (seconds * 1000)
-    this.onStateChanged?.()
+    if (this.lobbyHostId) {
+      this.registerPlayer(this.lobbyHostId)
+    } else {
+      this.onStateChanged?.()
+    }
+  }
+
+  public tryJoinLobby(playerId: PlayerId): boolean {
+    if (!playerId || this.isStarted || this.gameOver || this.lobbyEndTime <= Date.now()) return false
+    if (this.playerOrder.includes(playerId)) return true
+
+    const humanCount = this.playerOrder.filter((id) => !isBotPlayer(id)).length
+    if (humanCount >= MAX_GAME_PLAYERS) return false
+
+    this.registerPlayer(playerId)
+    return true
   }
 
   public playerNameResolver?: (playerId: PlayerId) => string
@@ -49,7 +93,23 @@ export class CrazyEightsGame {
     }
     return playerId
   }
-  public onBotTurnStart?: () => void
+
+  public getCurrentPlayerId(): PlayerId | undefined {
+    const activePlayers = this.playerOrder.filter((playerId) => !this.eliminatedPlayers.has(playerId))
+    return activePlayers[this.currentTurnIndex]
+  }
+
+  private scheduleBotTurnIfNeeded() {
+    const currentPlayer = this.getCurrentPlayerId()
+    if (!currentPlayer || !isBotPlayer(currentPlayer) || this.gameOver) return
+    if (this.onBotTurnStart) {
+      this.onBotTurnStart(currentPlayer)
+    } else {
+      this.runBotTurn(currentPlayer)
+    }
+  }
+
+  public onBotTurnStart?: (botId: PlayerId) => void
   public onStateSync?: () => void
   public onStateChanged?: () => void
 
@@ -64,6 +124,10 @@ export class CrazyEightsGame {
       isStarted: this.isStarted,
       roundNumber: this.roundNumber,
       gameOver: this.gameOver,
+      matchOver: this.matchOver,
+      gameMode: this.gameMode,
+      lobbyHostId: this.lobbyHostId,
+      gameMasterId: this.gameMasterId,
       turnDirection: this.turnDirection,
       pendingDraws: this.pendingDraws,
       eliminatedPlayers: Array.from(this.eliminatedPlayers),
@@ -90,6 +154,10 @@ export class CrazyEightsGame {
       this.isStarted = state.isStarted
       this.roundNumber = state.roundNumber
       this.gameOver = state.gameOver
+      this.matchOver = !!state.matchOver
+      this.gameMode = state.gameMode || 'idle'
+      this.lobbyHostId = state.lobbyHostId || ''
+      this.gameMasterId = state.gameMasterId || this.lobbyHostId
       this.turnDirection = state.turnDirection
       this.pendingDraws = state.pendingDraws
       this.eliminatedPlayers = new Set(state.eliminatedPlayers)
@@ -135,51 +203,43 @@ export class CrazyEightsGame {
     this.onStateChanged?.()
   }
 
-  public startGame(seatedPlayers?: PlayerId[], withBot: boolean = true) {
+  public startGame(humanPlayers: PlayerId[], mode: GameMode, hostId: PlayerId = '') {
     this.lobbyEndTime = 0
-    
-    // Merge any passed seatedPlayers with existing registered human players in playerOrder
-    const candidatePlayers = [
-      ...(seatedPlayers || []),
-      ...this.playerOrder
-    ].filter(p => !!p && p !== 'bot' && p.trim().length > 0)
-
-    const uniquePlayers = Array.from(new Set(candidatePlayers))
+    const uniquePlayers = Array.from(new Set(humanPlayers.filter((id) => !!id && !isBotPlayer(id) && id.trim().length > 0)))
+      .slice(0, MAX_GAME_PLAYERS)
 
     this.players.clear()
-    this.playerOrder = []
+    this.playerOrder = [...uniquePlayers]
     this.scores.clear()
 
-    if (uniquePlayers.length > 0) {
-      for (const p of uniquePlayers) {
-        this.addPlayer(p)
-      }
+    if (this.playerOrder.length === 0) {
+      this.playerOrder = ['player1']
+    }
 
-      // If only 1 human is seated, add bot for head-to-head match
-      if (uniquePlayers.length === 1 && withBot) {
-        this.addPlayer('bot')
-      }
-    } else {
-      this.addPlayer('player1')
-      if (withBot) {
-        this.addPlayer('bot')
-      }
+    for (const playerId of this.playerOrder) {
+      this.players.set(playerId, [])
+      this.scores.set(playerId, 0)
+    }
+
+    for (let botNumber = 1; this.playerOrder.length < MAX_GAME_PLAYERS; botNumber++) {
+      const botId = `bot_${botNumber}`
+      this.playerOrder.push(botId)
+      this.players.set(botId, [])
+      this.scores.set(botId, 0)
     }
 
     this.queuedPlayers = []
+    this.gameMode = mode
+    this.lobbyHostId = hostId || this.lobbyHostId || this.playerOrder.find((id) => !isBotPlayer(id)) || ''
+    this.gameMasterId = this.lobbyHostId
     this.drawPile = shuffleDeck(generateDeck())
     this.discardPile = []
     this.pendingDraws = 0
     this.turnDirection = 1
     this.gameOver = false
+    this.matchOver = false
     this.eliminatedPlayers.clear()
     this.safeDeclared.clear()
-    
-    // Clear hands and reset scores
-    for (const playerId of this.playerOrder) {
-      this.players.set(playerId, [])
-      this.scores.set(playerId, 0)
-    }
     
     this.dealInitialCards()
     this.setupInitialDiscard()
@@ -199,52 +259,9 @@ export class CrazyEightsGame {
 
   public joinActiveGame(playerId: PlayerId) {
     if (!playerId) return
-    
-    // If game has not started or is over, register player for upcoming match
-    if (!this.isStarted || this.gameOver) {
-      this.registerPlayer(playerId)
-      return
-    }
-
-    // If player already has cards and is active, ensure not eliminated
-    if (this.players.has(playerId) && (this.players.get(playerId)?.length || 0) > 0) {
-      this.eliminatedPlayers.delete(playerId)
-      if (!this.playerOrder.includes(playerId)) {
-        this.playerOrder.push(playerId)
-      }
-      this.onStateChanged?.()
-      return
-    }
-
-    // Un-eliminate
-    this.eliminatedPlayers.delete(playerId)
-
-    // Add to playerOrder if not present
-    if (!this.playerOrder.includes(playerId)) {
-      this.playerOrder.push(playerId)
-    }
-
-    // Deal 8 cards from the draw pile
-    const newHand: Card[] = []
-    for (let i = 0; i < 8; i++) {
-      if (this.drawPile.length === 0) {
-        this.reshuffleDiscardIntoDraw()
-      }
-      if (this.drawPile.length > 0) {
-        newHand.push(this.drawPile.pop()!)
-      }
-    }
-
-    this.players.set(playerId, newHand)
-    if (!this.scores.has(playerId)) {
-      this.scores.set(playerId, 0)
-    }
-    this.safeDeclared.delete(playerId)
-
-    const displayName = this.getDisplayName(playerId).toUpperCase()
-    this.notify(`🎮 ${displayName} joined the game! Cards dealt.`, playerId)
-
-    this.onStateChanged?.()
+    // Joining is only allowed before the match starts; the lobby owns roster changes.
+    if (this.isStarted && !this.gameOver) return
+    this.registerPlayer(playerId)
   }
 
   public joinGame(playerId: PlayerId) {
@@ -255,6 +272,7 @@ export class CrazyEightsGame {
     if (!playerId) return
     this.queuedPlayers = this.queuedPlayers.filter(p => p !== playerId)
 
+    const wasLobbyHost = !this.isStarted && this.lobbyEndTime > 0 && this.lobbyHostId === playerId
     if (this.players.has(playerId)) {
       this.eliminatedPlayers.add(playerId)
       this.players.delete(playerId)
@@ -263,21 +281,34 @@ export class CrazyEightsGame {
         this.playerOrder.splice(orderIdx, 1)
       }
 
+      if (wasLobbyHost) {
+        this.lobbyHostId = this.playerOrder.find((id) => !isBotPlayer(id)) || ''
+        if (!this.lobbyHostId) {
+          this.lobbyEndTime = 0
+          this.gameMode = 'idle'
+        }
+      }
+
+      if (this.gameMasterId === playerId) {
+        this.gameMasterId = this.playerOrder.find((id) => !isBotPlayer(id)) || ''
+      }
+
       const activePlayers = this.playerOrder.filter(p => !this.eliminatedPlayers.has(p))
       if (activePlayers.length <= 1 && this.isStarted && !this.gameOver) {
         const winner = activePlayers[0] || 'bot'
         this.gameOver = true
+        this.matchOver = true
         this.isStarted = false
         const winnerName = this.getDisplayName(winner)
         this.onRoundEnd?.(playerId, winner, `${winnerName} wins!`, winner)
       } else if (this.isStarted && activePlayers.length > 0) {
         this.currentTurnIndex = this.currentTurnIndex % activePlayers.length
         const current = activePlayers[this.currentTurnIndex]
-        if (current === 'bot') {
+        if (isBotPlayer(current)) {
           if (this.onBotTurnStart) {
-            this.onBotTurnStart()
+            this.onBotTurnStart(current)
           } else {
-            this.runBotTurn()
+            this.runBotTurn(current)
           }
         }
       }
@@ -286,6 +317,7 @@ export class CrazyEightsGame {
   }
 
   public startNextRound() {
+    if (this.matchOver) return
     // Add any queued players who joined mid-game into the active player roster!
     if (this.queuedPlayers.length > 0) {
       for (const qp of this.queuedPlayers) {
@@ -318,11 +350,14 @@ export class CrazyEightsGame {
     this.currentTurnIndex = 0
     this.roundNumber++
     this.onStateChanged?.()
+    this.scheduleBotTurnIfNeeded()
   }
 
   private dealInitialCards() {
-    for (let i = 0; i < 8; i++) {
-      const activePlayers = this.playerOrder.filter(p => !this.eliminatedPlayers.has(p))
+    const activePlayers = this.playerOrder.filter(p => !this.eliminatedPlayers.has(p))
+    if (activePlayers.length === 0) return
+    const cardsPerPlayer = Math.min(8, Math.floor((this.drawPile.length - 1) / activePlayers.length))
+    for (let cardNumber = 0; cardNumber < cardsPerPlayer; cardNumber++) {
       for (const playerId of activePlayers) {
         const hand = this.players.get(playerId)!
         hand.push(this.drawPile.pop()!)
@@ -331,11 +366,10 @@ export class CrazyEightsGame {
   }
 
   private setupInitialDiscard() {
-    let startingCard = this.drawPile.pop()!
-    while (startingCard.action !== 'Normal') {
-      this.drawPile.unshift(startingCard)
-      startingCard = this.drawPile.pop()!
-    }
+    const normalCardIndex = this.drawPile.findIndex((card) => card.action === 'Normal')
+    const startingCard = normalCardIndex === -1
+      ? this.drawPile.pop()!
+      : this.drawPile.splice(normalCardIndex, 1)[0]
     this.discardPile.push(startingCard)
     this.activeSuit = startingCard.suit
   }
@@ -384,7 +418,9 @@ export class CrazyEightsGame {
     }
   }
 
-  public isValidPlay(card: Card): boolean {
+  public isValidPlay(card: Card, playerId?: PlayerId): boolean {
+    const hand = playerId ? this.players.get(playerId) : undefined
+    if (hand && hand.length === 1 && card.action !== 'Normal') return false
     const topCard = this.getTopDiscard()
     if (this.pendingDraws > 0) {
       return this.isValidPlayDuringDrawPenalty(card, topCard)
@@ -409,15 +445,16 @@ export class CrazyEightsGame {
   }
 
   private canPlayCard(playerId: PlayerId, cardToPlay?: Card): boolean {
-    if (this.playerOrder[this.currentTurnIndex] !== playerId) return false
+    if (this.getCurrentPlayerId() !== playerId) return false
     if (this.gameOver) return false
     if (!cardToPlay) return false
-    if (!this.isValidPlay(cardToPlay)) return false
+    if (!this.isValidPlay(cardToPlay, playerId)) return false
     return true
   }
 
   public playCard(playerId: PlayerId, cardIndex: number, newSuitForWild?: Suit): boolean {
-    const hand = this.players.get(playerId)!
+    const hand = this.players.get(playerId)
+    if (!hand) return false
     const cardToPlay = hand[cardIndex]
 
     if (!this.canPlayCard(playerId, cardToPlay)) return false
@@ -478,7 +515,7 @@ export class CrazyEightsGame {
   }
 
   public drawCard(playerId: PlayerId): boolean {
-    if (this.playerOrder[this.currentTurnIndex] !== playerId || this.gameOver) return false
+    if (this.getCurrentPlayerId() !== playerId || this.gameOver) return false
 
     this.safeDeclared.delete(playerId)
 
@@ -523,23 +560,16 @@ export class CrazyEightsGame {
       this.currentTurnIndex += numPlayers
     }
 
-    const currentPlayer = activePlayers[this.currentTurnIndex]
-    if (currentPlayer === 'bot' && !this.gameOver) {
-      if (this.onBotTurnStart) {
-        this.onBotTurnStart()
-      } else {
-        this.runBotTurn()
-      }
-    }
+    this.scheduleBotTurnIfNeeded()
   }
 
-  private botTryChallenge() {
+  private botTryChallenge(botId: PlayerId) {
     for (const pId of this.playerOrder) {
-      if (pId !== 'bot' && !this.eliminatedPlayers.has(pId)) {
+      if (!isBotPlayer(pId) && !this.eliminatedPlayers.has(pId)) {
         const pHand = this.players.get(pId)
         if (this.isHandVulnerable(pHand) && !this.safeDeclared.has(pId)) {
           if (Math.random() <= 0.6) {
-            this.challengePlayer('bot', pId)
+            this.challengePlayer(botId, pId)
             break
           }
         }
@@ -547,8 +577,8 @@ export class CrazyEightsGame {
     }
   }
 
-  private botPlayOrDraw(hand: Card[]) {
-    const playableIndex = hand.findIndex(c => this.isValidPlay(c))
+  private botPlayOrDraw(botId: PlayerId, hand: Card[]) {
+    const playableIndex = hand.findIndex(c => this.isValidPlay(c, botId))
 
     if (playableIndex !== -1) {
       const playedCard = hand[playableIndex]
@@ -559,26 +589,27 @@ export class CrazyEightsGame {
           chosenSuit = suitsInHand[0]
         }
       }
-      this.playCard('bot', playableIndex, chosenSuit)
+      this.playCard(botId, playableIndex, chosenSuit)
     } else {
-      this.drawCard('bot')
+      this.drawCard(botId)
     }
   }
 
-  private botTryDeclare() {
-    const newHand = this.players.get('bot')!
-    if (this.isHandVulnerable(newHand) && !this.safeDeclared.has('bot')) {
+  private botTryDeclare(botId: PlayerId) {
+    const newHand = this.players.get(botId)
+    if (this.isHandVulnerable(newHand) && !this.safeDeclared.has(botId)) {
       if (Math.random() <= 0.7) {
-        this.declareLowCards('bot')
+        this.declareLowCards(botId)
       }
     }
   }
 
-  public runBotTurn() {
-    const hand = this.players.get('bot')!
-    this.botTryChallenge()
-    this.botPlayOrDraw(hand)
-    this.botTryDeclare()
+  public runBotTurn(botId: PlayerId = 'bot') {
+    const hand = this.players.get(botId)
+    if (!hand || !isBotPlayer(botId) || this.getCurrentPlayerId() !== botId || this.gameOver) return
+    this.botTryChallenge(botId)
+    this.botPlayOrDraw(botId, hand)
+    this.botTryDeclare(botId)
   }
 
   private calculateScores(): { highestScore: number, eliminatedPlayer: PlayerId, scoreBreakdown: string } {
@@ -613,6 +644,7 @@ export class CrazyEightsGame {
     
     const remaining = this.playerOrder.filter(p => !this.eliminatedPlayers.has(p))
     let winner = remaining.length === 1 ? remaining[0] : undefined
+    this.matchOver = !!winner
     
     const roundWinnerName = this.getDisplayName(roundWinnerId).toUpperCase()
     const eliminatedName = this.getDisplayName(eliminatedPlayer).toUpperCase()

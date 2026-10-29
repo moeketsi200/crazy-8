@@ -1,11 +1,11 @@
 import ReactEcs, { ReactEcsRenderer, UiEntity } from '@dcl/sdk/react-ecs'
 import { Color4, Vector3 } from '@dcl/sdk/math'
 import { engine, Transform } from '@dcl/sdk/ecs'
-import { CrazyEightsGame } from './logic'
+import { CrazyEightsGame, GameMode, isBotPlayer } from './logic'
 import { update3DTable, resolvePlayerId, getPlayerSeated, setPlayerSeated, getPlayerDisplayName, getTimeSeated, standUpPlayer, getLocalSeatedChair, sitPlayerAtOpenChair } from './table'
 import { getPlayer } from '@dcl/sdk/src/players'
 import { Card, Suit } from './deck'
-import { TopHudWidget, DailyRewardsModal, RewardToastBanner, updateRewardToast } from './rewards_ui'
+import { TopHudWidget, DailyRewardsModal, RewardToastBanner, updateRewardToast, showRewardToast } from './rewards_ui'
 
 let activeGame: CrazyEightsGame | null = null
 let isPlayerInHouse = false
@@ -212,6 +212,20 @@ function DrawDeckCard(props: { onClick?: () => void }) {
 // UI STATE
 // ----------------------------------------------------
 let pendingWildCardIndex: number | null = null
+let isGameModePromptOpen = false
+let gameModePromptHandler: ((mode: GameMode) => void) | null = null
+
+export function openGameModePrompt(onSelect: (mode: GameMode) => void) {
+  gameModePromptHandler = onSelect
+  isGameModePromptOpen = true
+}
+
+function chooseGameMode(mode: GameMode) {
+  const onSelect = gameModePromptHandler
+  gameModePromptHandler = null
+  isGameModePromptOpen = false
+  onSelect?.(mode)
+}
 
 // ----------------------------------------------------
 // MAIN LAYOUT
@@ -220,12 +234,11 @@ let pendingWildCardIndex: number | null = null
 // Helper to reliably check if it is the local player's turn
 function isLocalPlayerTurn(game: CrazyEightsGame): boolean {
   if (!game || !game.isStarted || game.gameOver) return false
-  const currentTurnPlayer = game.playerOrder[game.currentTurnIndex]
-  if (currentTurnPlayer === 'bot') return false
+  const currentTurnPlayer = game.getCurrentPlayerId()
+  if (!currentTurnPlayer) return false
+  if (isBotPlayer(currentTurnPlayer)) return false
   const myId = resolvePlayerId(game)
   if (currentTurnPlayer === myId) return true
-  // In single player vs bot, if current turn is not bot, it is always the local human player
-  if (game.playerOrder.length <= 2 && game.playerOrder.includes('bot') && currentTurnPlayer !== 'bot') return true
   if (currentTurnPlayer === 'player1' && myId === 'player1') return true
   return false
 }
@@ -498,7 +511,7 @@ function GameInfoBar() {
 
   const isMyTurn = isLocalPlayerTurn(activeGame)
   const activeSuit = activeGame.activeSuit
-  const activePlayerId = activeGame.playerOrder[activeGame.currentTurnIndex]
+  const activePlayerId = activeGame.getCurrentPlayerId() || ''
   const turnLabel = isMyTurn ? 'YOUR TURN!' : `${getPlayerDisplayName(activePlayerId).toUpperCase()}'S TURN`
   const penaltyLabel = activeGame.pendingDraws > 0 ? ` • 🔥 PENALTY: +${activeGame.pendingDraws}` : ''
 
@@ -547,7 +560,7 @@ function PlayerHandArea({ myHand }: { myHand: Card[] }) {
       uiTransform={{ width: '100%', height: 140, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', margin: { bottom: 20 } }}
     >
       {myHand.map((card, index) => {
-        const canPlay = isMyTurn && !isChoosingSuit && activeGame?.isValidPlay(card)
+        const canPlay = isMyTurn && !isChoosingSuit && activeGame?.isValidPlay(card, myId)
 
         return (
           <PlayingCard
@@ -642,6 +655,84 @@ function SuitPickerModal() {
   )
 }
 
+function GameModeModal() {
+  if (!isGameModePromptOpen) return null
+
+  return (
+    <UiEntity
+      uiTransform={{
+        positionType: 'absolute',
+        position: { top: 0, left: 0 },
+        width: '100%',
+        height: '100%',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+      uiBackground={{ color: Color4.fromHexString('#000000dd') }}
+    >
+      <UiEntity
+        uiTransform={{
+          width: 540,
+          height: 330,
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 28,
+          borderWidth: 2,
+          borderColor: Color4.fromHexString('#00f3ff')
+        }}
+        uiBackground={{ color: Color4.fromHexString('#101725ff') }}
+      >
+        <UiEntity
+          uiTransform={{ width: '100%', height: 42, margin: { bottom: 8 }, alignItems: 'center', justifyContent: 'center' }}
+          uiText={{ value: 'START A CRAZY 8s GAME', fontSize: 26, color: Color4.White(), textAlign: 'middle-center' }}
+        />
+        <UiEntity
+          uiTransform={{ width: '100%', height: 44, margin: { bottom: 24 }, alignItems: 'center', justifyContent: 'center' }}
+          uiText={{ value: 'Choose how you want to play', fontSize: 17, color: Color4.fromHexString('#b9c8dd'), textAlign: 'middle-center' }}
+        />
+        <UiEntity uiTransform={{ width: '100%', flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+          <UiEntity
+            uiTransform={{ width: 210, height: 82, margin: { right: 12 }, alignItems: 'center', justifyContent: 'center' }}
+            uiBackground={{ color: Color4.fromHexString('#10B981') }}
+            onMouseDown={() => chooseGameMode('solo')}
+          >
+            <UiEntity
+              uiTransform={{ width: '100%', height: '100%', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
+              uiText={{ value: 'SOLO\nYOU + 7 BOTS', fontSize: 17, color: Color4.White(), textAlign: 'middle-center' }}
+            />
+          </UiEntity>
+          <UiEntity
+            uiTransform={{ width: 210, height: 82, margin: { left: 12 }, alignItems: 'center', justifyContent: 'center' }}
+            uiBackground={{ color: Color4.fromHexString('#0099FF') }}
+            onMouseDown={() => chooseGameMode('multiplayer')}
+          >
+            <UiEntity
+              uiTransform={{ width: '100%', height: '100%', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
+              uiText={{ value: 'MULTIPLAYER\n30 SECOND LOBBY', fontSize: 17, color: Color4.White(), textAlign: 'middle-center' }}
+            />
+          </UiEntity>
+        </UiEntity>
+        <UiEntity
+          uiTransform={{ width: 150, height: 34, margin: { top: 16 }, alignItems: 'center', justifyContent: 'center' }}
+          onMouseDown={() => chooseGameModePromptCancel()}
+        >
+          <UiEntity uiText={{ value: 'CANCEL', fontSize: 14, color: Color4.fromHexString('#b9c8dd'), textAlign: 'middle-center' }} />
+        </UiEntity>
+        <UiEntity
+          uiTransform={{ width: '100%', height: 24, margin: { top: 8 }, alignItems: 'center', justifyContent: 'center' }}
+          uiText={{ value: 'Special action cards cannot be your final card.', fontSize: 13, color: Color4.fromHexString('#ffd166'), textAlign: 'middle-center' }}
+        />
+      </UiEntity>
+    </UiEntity>
+  )
+}
+
+function chooseGameModePromptCancel() {
+  isGameModePromptOpen = false
+  gameModePromptHandler = null
+}
+
 function uiComponent() {
   // Proximity & Seated Check:
   // Strict rule: Hand cards are ONLY shown if the avatar is actually SEATED in a chair!
@@ -729,7 +820,7 @@ function uiComponent() {
       )}
 
       {/* Spectator Indicator (when standing near table unseated) */}
-      {!isSeated && isNearTable && activeGame && activeGame.isStarted && (
+      {!isSeated && isNearTable && activeGame && activeGame.lobbyEndTime > Date.now() && (
         <UiEntity
           uiTransform={{
             positionType: 'absolute',
@@ -741,17 +832,24 @@ function uiComponent() {
           }}
           uiBackground={{ color: Color4.create(0.08, 0.10, 0.16, 0.95) }}
           onMouseDown={() => {
-            sitPlayerAtOpenChair()
-            if (activeGame) {
-              const myId = resolvePlayerId(activeGame)
-              activeGame.joinActiveGame(myId)
-              update3DTable(activeGame)
+            if (!activeGame) return
+            if (!getPlayerSeated() && !sitPlayerAtOpenChair()) {
+              showRewardToast('No chair is available at this table.')
+              return
             }
+            const myId = resolvePlayerId(activeGame)
+            const alreadyJoined = activeGame.playerOrder.includes(myId)
+            if (!alreadyJoined && !activeGame.tryJoinLobby(myId)) {
+              showRewardToast('This lobby is full or the 30-second join window has closed.')
+              return
+            }
+            update3DTable(activeGame)
+            showRewardToast(alreadyJoined ? 'You are already in this lobby.' : 'You joined the lobby. The game starts when the timer ends.')
           }}
         >
           <UiEntity
             uiTransform={{ width: '100%', height: '100%' }}
-            uiText={{ value: '👉 Click Here to Sit & Join Game!', fontSize: 13, color: Color4.fromHexString('#00f3ff'), textAlign: 'middle-center' }}
+            uiText={{ value: '👉 Click Here to Join Lobby!', fontSize: 13, color: Color4.fromHexString('#00f3ff'), textAlign: 'middle-center' }}
           />
         </UiEntity>
       )}
@@ -782,6 +880,8 @@ function uiComponent() {
           <SuitPickerModal />
         </UiEntity>
       )}
+
+      <GameModeModal />
     </UiEntity>
   )
 }

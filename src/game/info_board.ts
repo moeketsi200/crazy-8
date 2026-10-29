@@ -1,9 +1,10 @@
 import { engine, Transform, MeshRenderer, MeshCollider, TextShape, Material, Entity, pointerEventsSystem, InputAction, TextAlignMode } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion, Color4 } from '@dcl/sdk/math'
-import { CrazyEightsGame } from './logic'
-import { update3DTable, resolvePlayerId, getSeatedPlayerIds, sitPlayerAtOpenChair, getPlayerSeated } from './table'
+import { CrazyEightsGame, GameMode, isBotPlayer } from './logic'
+import { update3DTable, resolvePlayerId, sitPlayerAtOpenChair, getPlayerSeated } from './table'
 import { updateScoreBoardText } from './score_board'
 import { showRewardToast } from './rewards_ui'
+import { openGameModePrompt } from './ui'
 
 export let buttonEntity: Entity
 export let buttonTextEntity: Entity
@@ -11,8 +12,6 @@ let cachedGameEngine: CrazyEightsGame | null = null
 
 export type GameButtonAction = 'START' | 'COUNTDOWN' | 'JOIN' | 'CONTINUE'
 let currentButtonAction: GameButtonAction = 'START'
-let lobbyCountdown = 0
-let isLobbyActive = false
 
 export function buildInfoBoard(parentHouse: Entity, gameEngine: CrazyEightsGame) {
   cachedGameEngine = gameEngine
@@ -54,6 +53,7 @@ function createRulesText(parentHouse: Entity) {
           `• J = Reverse turn order.\n` +
           `• 7 = Skip next player.\n` +
           `• Joker = Next player draws 4 cards.\n\n` +
+          `Play a normal card to finish.\n` +
           `Highest score is eliminated!`,
     fontSize: 1.1,
     textColor: Color4.White(),
@@ -67,6 +67,29 @@ function createRulesText(parentHouse: Entity) {
 
 export function showGameButton(text: string, actionType: GameButtonAction) {
   setButtonState(actionType, text)
+}
+
+function startSelectedGameMode(gameMode: GameMode) {
+  const gameEngine = cachedGameEngine
+  if (!gameEngine) return
+
+  if (!getPlayerSeated() && !sitPlayerAtOpenChair()) {
+    showRewardToast('No chair is available at this table.')
+    return
+  }
+
+  const myId = resolvePlayerId(gameEngine)
+  if (gameMode === 'solo') {
+    gameEngine.startGame([myId], 'solo', myId)
+    update3DTable(gameEngine)
+    updateScoreBoardText('SCOREBOARD\n\nRound 1\n\nSOLO GAME\n1 Player • 7 Bots')
+    showRewardToast('Solo game started! You are playing against 7 bots.')
+    return
+  }
+
+  gameEngine.startLobby(30, myId)
+  setButtonState('COUNTDOWN', 'JOIN LOBBY • 30s')
+  showRewardToast('Multiplayer lobby open for 30 seconds. Players must press JOIN to play.')
 }
 
 function setButtonState(action: GameButtonAction, text?: string) {
@@ -85,7 +108,7 @@ function setButtonState(action: GameButtonAction, text?: string) {
       colorHex = '#C91D1D' // Red
       break
     case 'COUNTDOWN':
-      label = text || `STARTING IN ${Math.ceil(lobbyCountdown)}s\nTAKE A SEAT`
+      label = text || 'JOIN THE LOBBY'
       colorHex = '#FF8800' // Gold/Orange
       break
     case 'JOIN':
@@ -107,44 +130,38 @@ function handleButtonClick() {
   if (!gameEngine) return
 
   if (currentButtonAction === 'START') {
-    // 1. Player presses Start: If not seated, sit them down at first open chair!
-    if (!getPlayerSeated()) {
-      sitPlayerAtOpenChair()
-    }
-    const myId = resolvePlayerId(gameEngine)
-    gameEngine.registerPlayer(myId)
-    // 2. Begin 15-second network-synced lobby countdown
-    gameEngine.startLobby(15)
-    showRewardToast('⏱️ Game starting in 15s! Grab a seat at the table to play!')
+    openGameModePrompt((gameMode) => startSelectedGameMode(gameMode))
     return
   }
 
   if (currentButtonAction === 'COUNTDOWN') {
-    // If clicked during countdown, take a seat and register for match!
-    if (!getPlayerSeated()) {
-      sitPlayerAtOpenChair()
-    }
     const myId = resolvePlayerId(gameEngine)
-    gameEngine.registerPlayer(myId)
-    showRewardToast('🪑 You took a seat! Registered for the upcoming match.')
+    if (gameEngine.playerOrder.includes(myId)) {
+      showRewardToast('You are already in this lobby. Wait for the 30-second timer.')
+      return
+    }
+    if (!getPlayerSeated() && !sitPlayerAtOpenChair()) {
+      showRewardToast('No chair is available at this table.')
+      return
+    }
+    if (!gameEngine.tryJoinLobby(myId)) {
+      showRewardToast('This lobby is full or the 30-second join window has closed.')
+      return
+    }
+    showRewardToast('You joined the multiplayer lobby. The match starts when the timer ends.')
     return
   }
 
   if (currentButtonAction === 'JOIN') {
-    // Game already started: Player joins the table immediately!
-    if (!getPlayerSeated()) {
-      sitPlayerAtOpenChair()
-    }
-    const myId = resolvePlayerId(gameEngine)
-    gameEngine.joinActiveGame(myId)
-    update3DTable(gameEngine)
-    updateScoreBoardText(`SCOREBOARD\n\nRound ${gameEngine.roundNumber}\n\nGame is running!\n${gameEngine.playerOrder.length} Players`)
-    showRewardToast('🎮 You joined the game! Cards have been dealt to your hand.')
+    showRewardToast('This match is already in progress. Join the next lobby to play.')
     return
   }
 
   if (currentButtonAction === 'CONTINUE') {
-    // Start the next round with all currently seated players
+    if (resolvePlayerId(gameEngine) !== gameEngine.gameMasterId) {
+      showRewardToast('The game host will start the next round.')
+      return
+    }
     gameEngine.startNextRound()
     update3DTable(gameEngine)
     updateScoreBoardText(`SCOREBOARD\n\nRound ${gameEngine.roundNumber}\n\nGame in progress!`)
@@ -160,45 +177,44 @@ function setupLobbyCountdownSystem() {
 
     const now = Date.now()
 
-    // 1. Network-synced lobby countdown active
+    // 1. Network-synced multiplayer join window
     if (gameEngine.lobbyEndTime > now) {
       const secondLeft = Math.ceil((gameEngine.lobbyEndTime - now) / 1000)
       if (secondLeft !== lastSecondAnnounced) {
         lastSecondAnnounced = secondLeft
-        setButtonState('COUNTDOWN', `STARTING IN ${secondLeft}s\nTAKE A SEAT`)
+        const joined = gameEngine.playerOrder.includes(resolvePlayerId(gameEngine))
+        setButtonState('COUNTDOWN', `${joined ? 'WAITING' : 'JOIN LOBBY'} • ${secondLeft}s`)
       }
       return
     }
 
-    // 2. Countdown just expired and game hasn't started yet: Start the game!
+    // The host deals the shared game once the 30-second join window expires.
     if (gameEngine.lobbyEndTime > 0 && !gameEngine.isStarted) {
-      gameEngine.lobbyEndTime = 0
-      const seatedPlayers = getSeatedPlayerIds()
-      const allPlayers = Array.from(new Set([...seatedPlayers, ...gameEngine.playerOrder]))
-      if (allPlayers.length > 0) {
-        const needBot = allPlayers.length === 1
-        gameEngine.startGame(allPlayers, needBot)
-        update3DTable(gameEngine)
-        updateScoreBoardText(`SCOREBOARD\n\nRound 1\n\nGame is running!\n${gameEngine.playerOrder.length} Player${gameEngine.playerOrder.length > 1 ? 's' : ''}`)
-        showRewardToast('🃏 Round 1 Started! Cards dealt to all seated players.')
-      } else {
-        showRewardToast('⚠️ No players were seated! Sit at the table to play.')
-      }
+      if (Date.now() < gameEngine.lobbyEndTime || resolvePlayerId(gameEngine) !== gameEngine.lobbyHostId) return
+
+      const humanPlayers = gameEngine.playerOrder.filter((playerId) => !isBotPlayer(playerId))
+      if (humanPlayers.length === 0) return
+
+      gameEngine.startGame(humanPlayers, 'multiplayer', gameEngine.lobbyHostId)
+      update3DTable(gameEngine)
+      updateScoreBoardText(`SCOREBOARD\n\nRound 1\n\nMULTIPLAYER GAME\n${humanPlayers.length} Player${humanPlayers.length === 1 ? '' : 's'} • ${8 - humanPlayers.length} Bots`)
+      showRewardToast(`Round 1 started with ${humanPlayers.length} player${humanPlayers.length === 1 ? '' : 's'} and ${8 - humanPlayers.length} bots.`)
       return
     }
 
-    // 3. Game in progress: Button shows "JOIN THE GAME" (Electric Cyan) so anyone can join
+    // 3. The match roster is locked once dealing begins.
     if (gameEngine.isStarted && !gameEngine.gameOver) {
       if (currentButtonAction !== 'JOIN') {
-        setButtonState('JOIN', 'JOIN THE GAME')
+        setButtonState('JOIN', 'MATCH IN PROGRESS')
       }
       return
     }
 
-    // 4. Game is over: Button shows "CONTINUE (Next Round)"
+    // 4. Continue elimination rounds, or offer a fresh game after a match winner.
     if (gameEngine.gameOver) {
-      if (currentButtonAction !== 'CONTINUE') {
-        setButtonState('CONTINUE', 'CONTINUE\n(Next Round)')
+      const nextAction = gameEngine.matchOver ? 'START' : 'CONTINUE'
+      if (currentButtonAction !== nextAction) {
+        setButtonState(nextAction, gameEngine.matchOver ? 'START NEW GAME' : 'CONTINUE\n(Next Round)')
       }
       return
     }

@@ -2,7 +2,7 @@ import { engine, Transform, MeshRenderer, MeshCollider, ColliderLayer, TextShape
 import { Vector3, Quaternion, Color4, Color3 } from '@dcl/sdk/math'
 import { movePlayerTo, triggerEmote, stopEmote } from '~system/RestrictedActions'
 import { getPlayer } from '@dcl/sdk/src/players'
-import { CrazyEightsGame } from './logic'
+import { CrazyEightsGame, isBotPlayer } from './logic'
 import { buildPrimitiveChair } from './chairs'
 import { buildPrimitiveTable } from './table_visuals'
 import { setupTableChips, setupChairAuras, updateChairAuraVisibility } from './models_integration'
@@ -70,22 +70,19 @@ export function resolvePlayerId(game?: CrazyEightsGame | null): string {
       }
       targetGame.onStateChanged?.()
     }
-    if (!targetGame.players.has(actualId)) {
-      targetGame.addPlayer(actualId)
-    }
     return actualId
   }
 
-  // Fallback: if actualId not available, ensure 'player1' exists in game
-  if (!targetGame.players.has('player1') && targetGame.playerOrder.length === 0) {
-    targetGame.addPlayer('player1')
-  }
+  // Player identity lookups must not silently enroll anyone in a match.
   return 'player1'
 }
 
 export function getPlayerDisplayName(userId: string): string {
   if (!userId) return 'Player'
-  if (userId.toLowerCase() === 'bot') return 'Cyber Bot'
+  if (isBotPlayer(userId)) {
+    const botNumber = userId.match(/_(\d+)$/)?.[1]
+    return botNumber ? `Cyber Bot ${botNumber}` : 'Cyber Bot'
+  }
   if (userId === 'player1') {
     const local = getPlayer()
     return local?.name || 'Player 1'
@@ -200,11 +197,13 @@ export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
   // 4. PREPARE GAME STATE
   resolvePlayerId(game)
   
-  // 5. BOT THINKING DELAY
-  // This gives the human 5 seconds to press their DECLARE button before the bot strikes!
-  game.onBotTurnStart = () => {
-    setGameTimer(5.0, () => {
-      game.runBotTurn()
+  // Only the lobby host drives the shared bots, so they do not take duplicate turns.
+  game.onBotTurnStart = (botId) => {
+    if (resolvePlayerId(game) !== game.gameMasterId) return
+    setGameTimer(2.0, () => {
+      if (resolvePlayerId(game) === game.gameMasterId) {
+        game.runBotTurn(botId)
+      }
     })
   }
 
@@ -277,6 +276,10 @@ export class CasinoChair {
   }
 
   public occupy() {
+    if (globalGame?.isStarted && !globalGame.gameOver) {
+      showRewardToast('This match has started. Join the next lobby to play.')
+      return
+    }
     setPlayerSeated(true)
     _localSeatedChairIndex = this.chairIndex
     const myId = resolvePlayerId(globalGame)
@@ -299,14 +302,7 @@ export class CasinoChair {
       }
     })
 
-    if (globalGame) {
-      if (globalGame.isStarted && !globalGame.gameOver) {
-        globalGame.joinActiveGame(myId)
-      } else {
-        globalGame.registerPlayer(myId)
-      }
-      update3DTable(globalGame)
-    }
+    if (globalGame) update3DTable(globalGame)
   }
 }
 
@@ -387,7 +383,7 @@ export function getSeatedPlayerIds(): string[] {
   }
   if (globalGame && globalGame.playerOrder) {
     for (const p of globalGame.playerOrder) {
-      if (p !== 'bot' && !ids.includes(p)) {
+      if (!isBotPlayer(p) && !ids.includes(p)) {
         ids.push(p)
       }
     }
