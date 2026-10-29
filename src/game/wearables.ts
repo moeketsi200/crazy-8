@@ -14,7 +14,7 @@ import { onCosmeticEquipped, getProfile } from './economy'
 interface WearableAttachConfig {
   modelPath: string
   femaleModelPath?: string
-  anchorPoint: AvatarAnchorPointType
+  anchorPoint: AvatarAnchorPointType | 'playerRoot'
   position: Vector3
   rotation: Quaternion
   scale: Vector3
@@ -38,7 +38,7 @@ export const WEARABLE_CONFIGS: Record<string, WearableAttachConfig> = {
   wearable_holo_card_tee: {
     modelPath: 'assets/Models/crazy8_holo_card_tee_long_sleeve.glb',
     femaleModelPath: 'assets/Models/crazy8_holo_card_tee_female_long_sleeve.glb',
-    anchorPoint: AvatarAnchorPointType.AAPT_POSITION,
+    anchorPoint: 'playerRoot',
     position: Vector3.create(0, 0.0, 0.0),
     rotation: Quaternion.fromEulerDegrees(0, 0, 0),
     scale: Vector3.create(1.0, 1.0, 1.0)
@@ -46,7 +46,7 @@ export const WEARABLE_CONFIGS: Record<string, WearableAttachConfig> = {
   wearable_high_roller_tee: {
     modelPath: 'assets/Models/crazy8_high_roller_tee_long_sleeve.glb',
     femaleModelPath: 'assets/Models/crazy8_high_roller_tee_female_long_sleeve.glb',
-    anchorPoint: AvatarAnchorPointType.AAPT_POSITION,
+    anchorPoint: 'playerRoot',
     position: Vector3.create(0, 0.0, 0.0),
     rotation: Quaternion.fromEulerDegrees(0, 0, 0),
     scale: Vector3.create(1.0, 1.0, 1.0)
@@ -54,7 +54,7 @@ export const WEARABLE_CONFIGS: Record<string, WearableAttachConfig> = {
   wearable_crest_bomber: {
     modelPath: 'assets/Models/crazy8_crest_bomber.glb',
     femaleModelPath: 'assets/Models/crazy8_crest_bomber_female.glb',
-    anchorPoint: AvatarAnchorPointType.AAPT_POSITION,
+    anchorPoint: 'playerRoot',
     position: Vector3.create(0, 0.0, 0.0),
     rotation: Quaternion.fromEulerDegrees(0, 0, 0),
     scale: Vector3.create(1.05, 1.05, 1.05)
@@ -62,7 +62,7 @@ export const WEARABLE_CONFIGS: Record<string, WearableAttachConfig> = {
   wearable_vip_club_bomber: {
     modelPath: 'assets/Models/crazy8_vip_club_bomber.glb',
     femaleModelPath: 'assets/Models/crazy8_vip_club_bomber_female.glb',
-    anchorPoint: AvatarAnchorPointType.AAPT_POSITION,
+    anchorPoint: 'playerRoot',
     position: Vector3.create(0, 0.0, 0.0),
     rotation: Quaternion.fromEulerDegrees(0, 0, 0),
     scale: Vector3.create(1.05, 1.05, 1.05)
@@ -99,16 +99,21 @@ export function equipAvatarWearable(itemId: string) {
   const modelPath = (isFemaleShape && config.femaleModelPath) || config.modelPath
   const useFemaleModel = !!config.femaleModelPath && modelPath === config.femaleModelPath
 
-  // 1. Create anchor entity attached to the avatar bone
-  anchorEntity = engine.addEntity()
-  AvatarAttach.create(anchorEntity, {
-    anchorPointId: config.anchorPoint
-  })
+  // Full-body garments are authored in avatar-root space, so parent them to the player root.
+  // Bone anchors are reserved for accessories such as hats and glasses.
+  let parentEntity = engine.PlayerEntity
+  if (config.anchorPoint !== 'playerRoot') {
+    anchorEntity = engine.addEntity()
+    AvatarAttach.create(anchorEntity, {
+      anchorPointId: config.anchorPoint
+    })
+    parentEntity = anchorEntity
+  }
 
-  // 2. Create child entity with local offset and GLTF model
+  // Create the visible model under the selected player or bone parent.
   modelEntity = engine.addEntity()
   Transform.create(modelEntity, {
-    parent: anchorEntity,
+    parent: parentEntity,
     position: config.position,
     rotation: config.rotation,
     scale: config.scale
@@ -118,7 +123,11 @@ export function equipAvatarWearable(itemId: string) {
   })
 
   currentEquippedId = itemId
-  console.log(`[Wearable] Equipped ${itemId} (${useFemaleModel ? 'female' : 'male'} model) onto avatar anchor ${config.anchorPoint}`)
+  console.log(
+    `[Wearable] Equipped ${itemId} (${useFemaleModel ? 'female' : 'male'} model) onto ${
+      config.anchorPoint === 'playerRoot' ? 'player root' : `avatar anchor ${config.anchorPoint}`
+    }`
+  )
 }
 
 export function setupWearablesSystem() {

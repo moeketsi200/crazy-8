@@ -13,7 +13,6 @@ import {
   getActiveShopCategory,
   setActiveShopCategory,
   SHOP_CATALOG,
-  ShopItem,
   isItemUnlocked,
   isItemEquipped,
   buyShopItem,
@@ -21,6 +20,90 @@ import {
   getStreakReminderMessage,
   STREAK_SCHEDULE
 } from './economy'
+import type { ShopIconName } from './economy'
+
+const ICON_ATLAS = 'assets/images/crazy8_ui_icon_atlas.png'
+const ICON_INDEX: Record<ShopIconName, number> = {
+  coin: 0,
+  trophy: 1,
+  flame: 2,
+  gift: 3,
+  star: 4,
+  target: 5,
+  shop: 6,
+  cards: 7,
+  aura: 8,
+  crown: 9,
+  hanger: 10,
+  bolt: 11,
+  ring: 12,
+  diamond: 13,
+  orb: 14,
+  shirt: 15,
+  cap: 16,
+  glasses: 17,
+  jacket: 18,
+  shark: 19
+}
+
+function iconUvs(name: ShopIconName): number[] {
+  const index = ICON_INDEX[name]
+  const column = index % 4
+  const row = Math.floor(index / 4)
+  const left = column / 4
+  const right = (column + 1) / 4
+  const top = 1 - row / 5
+  const bottom = 1 - (row + 1) / 5
+  return [left, bottom, left, top, right, top, right, bottom]
+}
+
+function RewardsIcon({
+  name,
+  size,
+  tint,
+  marginRight = 5
+}: {
+  name: ShopIconName
+  size: number
+  tint: string
+  marginRight?: number
+}) {
+  return (
+    <UiEntity
+      uiTransform={{ width: size, height: size, margin: { right: marginRight } }}
+      uiBackground={{
+        color: Color4.fromHexString(tint),
+        textureMode: 'stretch',
+        texture: { src: ICON_ATLAS },
+        uvs: iconUvs(name)
+      }}
+    />
+  )
+}
+
+function IconMetric({
+  icon,
+  value,
+  tint,
+  width = 48,
+  fontSize = 13
+}: {
+  icon: ShopIconName
+  value: string
+  tint: string
+  width?: number
+  fontSize?: number
+}) {
+  return (
+    <UiEntity uiTransform={{ height: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+      <RewardsIcon name={icon} size={13} tint={tint} marginRight={3} />
+      <UiEntity
+        uiTransform={{ width, height: 18 }}
+        uiText={{ value, fontSize, color: Color4.fromHexString(tint), textAlign: 'middle-left', font: 'sans-serif' }}
+      />
+    </UiEntity>
+  )
+}
 
 // Notification trigger for UI
 let rewardToastMsg = ''
@@ -73,9 +156,11 @@ export function TopHudWidget() {
           setRewardsModalOpen(true)
         }}
       >
+        <RewardsIcon name="coin" size={15} tint="#ffd700" />
         <UiEntity
+          uiTransform={{ width: 104, height: 18 }}
           uiText={{
-            value: `🟡 ${profile.chips.toLocaleString()} CHIPS`,
+            value: `${profile.chips.toLocaleString()} CHIPS`,
             fontSize: 13,
             color: Color4.fromHexString('#ffd700'),
             textAlign: 'middle-center',
@@ -102,9 +187,11 @@ export function TopHudWidget() {
           setRewardsModalOpen(true)
         }}
       >
+        <RewardsIcon name="trophy" size={15} tint="#00f3ff" />
         <UiEntity
+          uiTransform={{ width: 108, height: 18 }}
           uiText={{
-            value: `🏆 ${profile.trophies} TROPHIES`,
+            value: `${profile.trophies} TROPHIES`,
             fontSize: 13,
             color: Color4.fromHexString('#00f3ff'),
             textAlign: 'middle-center',
@@ -131,9 +218,11 @@ export function TopHudWidget() {
           setRewardsModalOpen(true)
         }}
       >
+        <RewardsIcon name="flame" size={15} tint="#ff7700" />
         <UiEntity
+          uiTransform={{ width: 70, height: 18 }}
           uiText={{
-            value: `🔥 DAY ${profile.loginStreak}`,
+            value: `DAY ${profile.loginStreak}`,
             fontSize: 13,
             color: Color4.fromHexString('#ff7700'),
             textAlign: 'middle-center',
@@ -160,9 +249,11 @@ export function TopHudWidget() {
           setRewardsModalOpen(!getIsRewardsModalOpen())
         }}
       >
+        <RewardsIcon name="gift" size={15} tint={hasPending ? '#0b1422' : '#ffffff'} />
         <UiEntity
+          uiTransform={{ width: hasPending ? 70 : 62, height: 18 }}
           uiText={{
-            value: hasPending ? `🎁 REWARDS (!)` : `🎁 REWARDS`,
+            value: hasPending ? 'REWARDS (!)' : 'REWARDS',
             fontSize: 13,
             color: hasPending ? Color4.Black() : Color4.White(),
             textAlign: 'middle-center',
@@ -200,7 +291,7 @@ export function DailyRewardsModal() {
       <UiEntity
         uiTransform={{
           width: 760,
-          height: 500,
+          height: 520,
           flexDirection: 'column',
           alignItems: 'center',
           padding: 18,
@@ -221,15 +312,20 @@ export function DailyRewardsModal() {
             margin: { bottom: 12 }
           }}
         >
-          <UiEntity
-            uiText={{
-              value: `⭐ CRAZY 8 VIP REWARDS ⭐`,
-              fontSize: 22,
-              color: Color4.fromHexString('#ffd700'),
-              textAlign: 'middle-left',
-              font: 'sans-serif'
-            }}
-          />
+          <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center' }}>
+            <RewardsIcon name="star" size={17} tint="#ffd700" />
+            <UiEntity
+              uiTransform={{ width: 360, height: 30 }}
+              uiText={{
+                value: 'CRAZY 8 VIP REWARDS',
+                fontSize: 22,
+                color: Color4.fromHexString('#ffd700'),
+                textAlign: 'middle-left',
+                font: 'sans-serif'
+              }}
+            />
+            <RewardsIcon name="star" size={17} tint="#ffd700" marginRight={0} />
+          </UiEntity>
 
           {/* Close Hazard Button */}
           <UiEntity
@@ -265,6 +361,7 @@ export function DailyRewardsModal() {
             uiTransform={{
               width: '32.5%',
               height: '100%',
+              flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: 4,
@@ -278,9 +375,11 @@ export function DailyRewardsModal() {
             }}
             onMouseDown={() => setActiveRewardsTab('streak')}
           >
+            <RewardsIcon name="flame" size={16} tint={activeTab === 'streak' ? '#0b1422' : '#ffd700'} />
             <UiEntity
+              uiTransform={{ width: 112, height: 18 }}
               uiText={{
-                value: `🔥 7-DAY STREAK`,
+                value: '7-DAY STREAK',
                 fontSize: 14,
                 color: activeTab === 'streak' ? Color4.Black() : Color4.fromHexString('#ffd700'),
                 textAlign: 'middle-center',
@@ -294,6 +393,7 @@ export function DailyRewardsModal() {
             uiTransform={{
               width: '32.5%',
               height: '100%',
+              flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: 4,
@@ -307,9 +407,11 @@ export function DailyRewardsModal() {
             }}
             onMouseDown={() => setActiveRewardsTab('bounties')}
           >
+            <RewardsIcon name="target" size={16} tint={activeTab === 'bounties' ? '#0b1422' : '#00f3ff'} />
             <UiEntity
+              uiTransform={{ width: 88, height: 18 }}
               uiText={{
-                value: `🎯 BOUNTIES`,
+                value: 'BOUNTIES',
                 fontSize: 14,
                 color: activeTab === 'bounties' ? Color4.Black() : Color4.fromHexString('#00f3ff'),
                 textAlign: 'middle-center',
@@ -323,6 +425,7 @@ export function DailyRewardsModal() {
             uiTransform={{
               width: '32.5%',
               height: '100%',
+              flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: 4,
@@ -336,9 +439,11 @@ export function DailyRewardsModal() {
             }}
             onMouseDown={() => setActiveRewardsTab('shop')}
           >
+            <RewardsIcon name="shop" size={16} tint={activeTab === 'shop' ? '#ffffff' : '#ff5588'} />
             <UiEntity
+              uiTransform={{ width: 92, height: 18 }}
               uiText={{
-                value: `🛍️ PRO SHOP`,
+                value: 'PRO SHOP',
                 fontSize: 14,
                 color: activeTab === 'shop' ? Color4.White() : Color4.fromHexString('#ff5588'),
                 textAlign: 'middle-center',
@@ -435,26 +540,27 @@ export function DailyRewardsModal() {
                       {isDay7 ? (
                         <UiEntity
                           uiTransform={{
-                            width: 44,
-                            height: 30,
+                            width: 32,
+                            height: 34,
+                            alignItems: 'center',
+                            justifyContent: 'center',
                             margin: { top: 4, bottom: 6 }
                           }}
-                          uiBackground={{
-                            textureMode: 'stretch',
-                            texture: { src: 'assets/images/icon_crown.png' }
-                          }}
-                        />
+                        >
+                          <RewardsIcon name="crown" size={28} tint="#ffd700" marginRight={0} />
+                        </UiEntity>
                       ) : (isPast || isClaimedToday || (isCurrent && canClaim)) ? (
                         <UiEntity
                           uiTransform={{
+                            width: 32,
+                            height: 34,
+                            alignItems: 'center',
+                            justifyContent: 'center',
                             margin: { top: 8, bottom: 4 }
                           }}
-                          uiText={{
-                            value: `🪙`,
-                            fontSize: 24,
-                            textAlign: 'middle-center'
-                          }}
-                        />
+                        >
+                          <RewardsIcon name="coin" size={24} tint="#ffd700" marginRight={0} />
+                        </UiEntity>
                       ) : (
                         <UiEntity
                           uiTransform={{
@@ -469,24 +575,8 @@ export function DailyRewardsModal() {
                         />
                       )}
 
-                      <UiEntity
-                        uiText={{
-                          value: `+${s.chips}`,
-                          fontSize: 15,
-                          color: Color4.fromHexString('#ffd700'),
-                          textAlign: 'middle-center',
-                          font: 'sans-serif'
-                        }}
-                      />
-                      <UiEntity
-                        uiText={{
-                          value: `+${s.trophies}`,
-                          fontSize: 13,
-                          color: Color4.fromHexString('#00f3ff'),
-                          textAlign: 'middle-center',
-                          font: 'sans-serif'
-                        }}
-                      />
+                      <IconMetric icon="coin" value={`+${s.chips}`} tint="#ffd700" width={42} fontSize={15} />
+                      <IconMetric icon="trophy" value={`+${s.trophies}`} tint="#00f3ff" width={42} fontSize={13} />
                       {s.specialTitle && (
                         <UiEntity
                           uiTransform={{ margin: { top: 4 } }}
@@ -532,7 +622,7 @@ export function DailyRewardsModal() {
                 if (canClaim) {
                   const res = claimDailyStreak()
                   if (res.success && res.reward) {
-                    showRewardToast(`🎉 Claimed Day ${res.reward.day}: +${res.reward.chips} Chips, +${res.reward.trophies} Trophies!`)
+                    showRewardToast(`Claimed Day ${res.reward.day}: +${res.reward.chips} Chips, +${res.reward.trophies} Trophies!`)
                   }
                 }
               }}
@@ -643,24 +733,8 @@ export function DailyRewardsModal() {
                       width: 110
                     }}
                   >
-                    <UiEntity
-                      uiText={{
-                        value: `+${q.rewardChips} 🪙`,
-                        fontSize: 15,
-                        color: Color4.fromHexString('#ffd700'),
-                        textAlign: 'middle-center',
-                        font: 'sans-serif'
-                      }}
-                    />
-                    <UiEntity
-                      uiText={{
-                        value: `+${q.rewardTrophies} 🏆`,
-                        fontSize: 13,
-                        color: Color4.fromHexString('#00f3ff'),
-                        textAlign: 'middle-center',
-                        font: 'sans-serif'
-                      }}
-                    />
+                    <IconMetric icon="coin" value={`+${q.rewardChips}`} tint="#ffd700" width={58} fontSize={15} />
+                    <IconMetric icon="trophy" value={`+${q.rewardTrophies}`} tint="#00f3ff" width={58} fontSize={13} />
                   </UiEntity>
 
                   {/* Action Button or Circular Gauge (Right) */}
@@ -700,7 +774,7 @@ export function DailyRewardsModal() {
                       onMouseDown={() => {
                         const success = claimQuest(q.id)
                         if (success) {
-                          showRewardToast(`🎉 Bounty Complete: +${q.rewardChips} Chips, +${q.rewardTrophies} Trophies!`)
+                          showRewardToast(`Bounty Complete: +${q.rewardChips} Chips, +${q.rewardTrophies} Trophies!`)
                         }
                       }}
                     >
@@ -766,11 +840,11 @@ export function DailyRewardsModal() {
             >
               {(
                 [
-                  { id: 'all', label: '🌟 ALL' },
-                  { id: 'deck', label: '🃏 CARDS' },
-                  { id: 'aura', label: '💫 AURAS' },
-                  { id: 'title', label: '👑 TITLES' },
-                  { id: 'wearable', label: '👗 GEAR' }
+                  { id: 'all', icon: 'star', label: 'ALL' },
+                  { id: 'deck', icon: 'cards', label: 'CARDS' },
+                  { id: 'aura', icon: 'aura', label: 'AURAS' },
+                  { id: 'title', icon: 'crown', label: 'TITLES' },
+                  { id: 'wearable', icon: 'hanger', label: 'GEAR' }
                 ] as const
               ).map(cat => {
                 const isSelected = getActiveShopCategory() === cat.id
@@ -780,6 +854,7 @@ export function DailyRewardsModal() {
                     uiTransform={{
                       padding: { left: 12, right: 12, top: 4, bottom: 4 },
                       margin: { left: 4, right: 4 },
+                      flexDirection: 'row',
                       borderRadius: 4,
                       borderWidth: isSelected ? 1.5 : 1,
                       borderColor: isSelected
@@ -795,12 +870,14 @@ export function DailyRewardsModal() {
                     }}
                     onMouseDown={() => setActiveShopCategory(cat.id)}
                   >
+                    <RewardsIcon name={cat.icon} size={13} tint={isSelected ? '#ff5588' : '#a0aec0'} />
                     <UiEntity
+                      uiTransform={{ width: cat.id === 'all' ? 32 : cat.id === 'wearable' ? 44 : 48, height: 18 }}
                       uiText={{
                         value: cat.label,
                         fontSize: 12,
                         color: isSelected ? Color4.fromHexString('#ff5588') : Color4.fromHexString('#a0aec0'),
-                        textAlign: 'middle-center',
+                        textAlign: 'middle-left',
                         font: 'sans-serif'
                       }}
                     />
@@ -832,12 +909,12 @@ export function DailyRewardsModal() {
                       key={item.id}
                       uiTransform={{
                         width: 350,
-                        height: 74,
+                        height: 96,
                         flexDirection: 'row',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: 8,
-                        margin: { bottom: 8 },
+                        margin: { bottom: 6 },
                         borderRadius: 6,
                         borderWidth: 1.5,
                         borderColor: equipped
@@ -863,25 +940,21 @@ export function DailyRewardsModal() {
                         }}
                         uiBackground={{ color: Color4.fromHexString('#06111f') }}
                       >
-                        <UiEntity
-                          uiText={{
-                            value: item.iconLabel || '⭐',
-                            fontSize: 20,
-                            textAlign: 'middle-center'
-                          }}
-                        />
+                        <RewardsIcon name={item.icon} size={25} tint={item.badgeColor} marginRight={0} />
                       </UiEntity>
 
                       {/* Center Info */}
                       <UiEntity
                         uiTransform={{
                           width: 190,
+                          height: 74,
                           flexDirection: 'column',
                           justifyContent: 'center',
                           margin: { left: 8 }
                         }}
                       >
                         <UiEntity
+                          uiTransform={{ width: 190, height: 18 }}
                           uiText={{
                             value: item.name,
                             fontSize: 13,
@@ -891,6 +964,7 @@ export function DailyRewardsModal() {
                           }}
                         />
                         <UiEntity
+                          uiTransform={{ width: 190, height: 38 }}
                           uiText={{
                             value: item.description,
                             fontSize: 10,
@@ -899,19 +973,43 @@ export function DailyRewardsModal() {
                             font: 'sans-serif'
                           }}
                         />
-                        <UiEntity
-                          uiText={{
-                            value: item.reqWins !== undefined
-                              ? `🏆 Milestone: ${profile.totalWins}/${item.reqWins} Wins`
-                              : item.priceChips === 0
-                              ? 'FREE'
-                              : `🟡 ${item.priceChips.toLocaleString()} Chips | 🏆 ${item.reqTrophies} req`,
-                            fontSize: 10,
-                            color: unlocked ? Color4.fromHexString('#00f3ff') : Color4.fromHexString('#ffd700'),
-                            textAlign: 'middle-left',
-                            font: 'sans-serif'
-                          }}
-                        />
+                        {item.reqWins !== undefined ? (
+                          <IconMetric
+                            icon="trophy"
+                            value={`${profile.totalWins}/${item.reqWins} WINS`}
+                            tint={unlocked ? '#00f3ff' : '#ffd700'}
+                            width={132}
+                            fontSize={10}
+                          />
+                        ) : item.priceChips === 0 ? (
+                          <UiEntity
+                            uiTransform={{ width: 64, height: 18 }}
+                            uiText={{
+                              value: 'FREE',
+                              fontSize: 10,
+                              color: unlocked ? Color4.fromHexString('#00f3ff') : Color4.fromHexString('#ffd700'),
+                              textAlign: 'middle-left',
+                              font: 'sans-serif'
+                            }}
+                          />
+                        ) : (
+                          <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', height: 18 }}>
+                            <IconMetric
+                              icon="coin"
+                              value={`${item.priceChips.toLocaleString()}`}
+                              tint={unlocked ? '#00f3ff' : '#ffd700'}
+                              width={48}
+                              fontSize={10}
+                            />
+                            <IconMetric
+                              icon="trophy"
+                              value={`${item.reqTrophies}`}
+                              tint={unlocked ? '#00f3ff' : '#ffd700'}
+                              width={36}
+                              fontSize={10}
+                            />
+                          </UiEntity>
+                        )}
                       </UiEntity>
 
                       {/* Right: Action Button */}
@@ -962,7 +1060,7 @@ export function DailyRewardsModal() {
                             const res = buyShopItem(item.id)
                             showRewardToast(res.message)
                           } else {
-                            showRewardToast(`Need ${item.priceChips.toLocaleString()} Chips & ${item.reqTrophies} 🏆!`)
+                            showRewardToast(`Need ${item.priceChips.toLocaleString()} Chips & ${item.reqTrophies} trophies!`)
                           }
                         }}
                       >
@@ -976,7 +1074,7 @@ export function DailyRewardsModal() {
                               ? `${profile.totalWins}/${item.reqWins} WINS`
                               : canAfford
                               ? 'BUY'
-                              : '🔒 LOCKED',
+                              : 'LOCKED',
                             fontSize: 11,
                             color: equipped
                               ? Color4.fromHexString('#10b981')

@@ -5,6 +5,7 @@ import {
   GltfContainer,
   VisibilityComponent,
   Animator,
+  GltfNodeModifiers,
   pointerEventsSystem,
   InputAction,
   ColliderLayer,
@@ -31,13 +32,30 @@ export function setupVipKiosk(houseEntity: Entity): Entity {
     parent: houseEntity,
     position: Vector3.create(3.6, 0.0, -4.2),
     rotation: Quaternion.fromEulerDegrees(0, -45, 0),
-    scale: Vector3.create(1.0, 1.0, 1.0)
+    scale: Vector3.create(1.25, 1.25, 1.25)
   })
 
   GltfContainer.create(kiosk, {
     src: 'assets/Models/vip_kiosk.glb',
     visibleMeshesCollisionMask: ColliderLayer.CL_POINTER | ColliderLayer.CL_PHYSICS,
     invisibleMeshesCollisionMask: 0
+  })
+
+  GltfNodeModifiers.create(kiosk, {
+    modifiers: [
+      {
+        path: 'Screen_Glass_Face',
+        material: {
+          material: {
+            $case: 'unlit',
+            unlit: {
+              texture: Material.Texture.Common({ src: 'assets/images/crazy8_kiosk_display.png' }),
+              diffuseColor: Color4.White()
+            }
+          }
+        }
+      }
+    ]
   })
 
   // Pointer event to open the VIP Rewards & Bounties menu

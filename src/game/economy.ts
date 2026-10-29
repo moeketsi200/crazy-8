@@ -262,8 +262,30 @@ export interface ShopItem {
   description: string
   badgeColor: string
   auraHex?: string
-  iconLabel?: string
+  icon: ShopIconName
 }
+
+export type ShopIconName =
+  | 'coin'
+  | 'trophy'
+  | 'flame'
+  | 'gift'
+  | 'star'
+  | 'target'
+  | 'shop'
+  | 'cards'
+  | 'aura'
+  | 'crown'
+  | 'hanger'
+  | 'bolt'
+  | 'ring'
+  | 'diamond'
+  | 'orb'
+  | 'shirt'
+  | 'cap'
+  | 'glasses'
+  | 'jacket'
+  | 'shark'
 
 export const SHOP_CATALOG: ShopItem[] = [
   // 1. Hardcore Custom Card Decks
@@ -275,7 +297,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     reqTrophies: 0,
     description: 'Standard casino midnight blue deck',
     badgeColor: '#00f3ff',
-    iconLabel: '🃏'
+    icon: 'cards'
   },
   {
     id: 'deck_cyberpunk',
@@ -285,7 +307,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     reqTrophies: 40,
     description: 'Requires daily dedication. Glowing laser cyan & magenta circuit lines',
     badgeColor: '#00f3ff',
-    iconLabel: '⚡'
+    icon: 'bolt'
   },
   {
     id: 'deck_gold_vip',
@@ -295,7 +317,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     reqTrophies: 150,
     description: 'Requires serious match-winning dedication. Black obsidian with 24K gold filigree',
     badgeColor: '#ffd700',
-    iconLabel: '👑'
+    icon: 'crown'
   },
   {
     id: 'deck_dcl_holo',
@@ -305,7 +327,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     reqTrophies: 350,
     description: 'An elite endgame deck for true card sharks with shifting Mana crystals',
     badgeColor: '#b026ff',
-    iconLabel: '✨'
+    icon: 'star'
   },
 
   // 2. Hardcore Chair Underglow Auras (chair_aura_ring.glb)
@@ -318,7 +340,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     description: 'Default ambient table underglow',
     badgeColor: '#888888',
     auraHex: '#00000000',
-    iconLabel: '🔘'
+    icon: 'ring'
   },
   {
     id: 'aura_cyan',
@@ -329,7 +351,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     description: 'Electric blue floor glow underneath your chair',
     badgeColor: '#00f3ff',
     auraHex: '#00f3ff',
-    iconLabel: '💠'
+    icon: 'diamond'
   },
   {
     id: 'aura_purple',
@@ -340,7 +362,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     description: 'Deep, ambient purple aura signaling veteran status',
     badgeColor: '#b026ff',
     auraHex: '#b026ff',
-    iconLabel: '🔮'
+    icon: 'orb'
   },
   {
     id: 'aura_gold',
@@ -351,7 +373,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     description: 'Only the top veterans on the server will ever sit on this 24K halo',
     badgeColor: '#ffd700',
     auraHex: '#ffd700',
-    iconLabel: '🌟'
+    icon: 'star'
   },
 
   // 3. Player Titles
@@ -363,7 +385,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     reqTrophies: 0,
     description: 'Fresh face in the Crazy 8 VIP Lounge',
     badgeColor: '#888888',
-    iconLabel: '🌱'
+    icon: 'star'
   },
   {
     id: 'title_shark',
@@ -373,7 +395,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     reqTrophies: 30,
     description: 'Calculating player with razor instincts',
     badgeColor: '#00f3ff',
-    iconLabel: '🦈'
+    icon: 'shark'
   },
   {
     id: 'title_high_roller',
@@ -383,7 +405,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     reqTrophies: 150,
     description: 'Plays big stakes and never backs down',
     badgeColor: '#ffd700',
-    iconLabel: '💰'
+    icon: 'coin'
   },
   {
     id: 'title_legend',
@@ -393,7 +415,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     reqTrophies: 500,
     description: 'Master of the table with Parcel-wide renown',
     badgeColor: '#ff0055',
-    iconLabel: '👑'
+    icon: 'crown'
   },
 
   // 4. Milestone Head & Face Accessories (Retained)
@@ -406,7 +428,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     reqWins: 30,
     description: 'Unlocked at 30 Match Wins. Features glowing neon piping and lightning 8 emblem',
     badgeColor: '#00f3ff',
-    iconLabel: '🧢'
+    icon: 'cap'
   },
   {
     id: 'wearable_shades_chain',
@@ -417,7 +439,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     reqWins: 60,
     description: 'Unlocked at 60 Match Wins. 24K gold geometric shades, Cuban chain & custom card medallion',
     badgeColor: '#ffd700',
-    iconLabel: '🕶️'
+    icon: 'glasses'
   },
 
   // 5. Fitted Streetwear & Club Clothing (Purchasable with Crazy Chips)
@@ -429,7 +451,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     reqTrophies: 40,
     description: 'Deep navy tee with iridescent holographic playing card graphic and glowing cyan 8s',
     badgeColor: '#00f3ff',
-    iconLabel: '👕'
+    icon: 'shirt'
   },
   {
     id: 'wearable_high_roller_tee',
@@ -439,7 +461,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     reqTrophies: 100,
     description: 'Vintage off-white cream tee with 4 luxury casino suit emblems and High Roller typography',
     badgeColor: '#ffd700',
-    iconLabel: '👕'
+    icon: 'shirt'
   },
   {
     id: 'wearable_crest_bomber',
@@ -449,7 +471,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     reqTrophies: 250,
     description: 'Sleek obsidian satin bomber with gold zipper and glowing cyan C8 neon chest crest',
     badgeColor: '#00f3ff',
-    iconLabel: '🧥'
+    icon: 'jacket'
   },
   {
     id: 'wearable_vip_club_bomber',
@@ -459,7 +481,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     reqTrophies: 500,
     description: 'Grand champion jacket: obsidian satin with gold ribbing, glowing seam piping & illuminated King crown',
     badgeColor: '#ff0055',
-    iconLabel: '🧥'
+    icon: 'jacket'
   }
 ]
 
@@ -578,7 +600,7 @@ export function equipShopItem(itemId: string): { success: boolean; message: stri
 export function getStreakReminderMessage(): string {
   const nextDay = (profile.loginStreak % 7) + 1
   const nextReward = STREAK_SCHEDULE[nextDay - 1]
-  return `🔥 Day ${profile.loginStreak} Streak Active! Return tomorrow to claim Day ${nextDay} (+${nextReward.chips} 🪙)!`
+  return `Day ${profile.loginStreak} streak active! Return tomorrow to claim Day ${nextDay} (+${nextReward.chips} chips).`
 }
 
 // Modal open/close state

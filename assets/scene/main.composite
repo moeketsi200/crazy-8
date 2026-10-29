@@ -2,6 +2,1286 @@
   "version": 1,
   "components": [
     {
+      "name": "core::Transform",
+      "jsonSchema": {
+        "type": "object",
+        "properties": {
+          "position": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            }
+          },
+          "scale": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            }
+          },
+          "rotation": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              },
+              "w": {
+                "type": "number"
+              }
+            }
+          },
+          "parent": {
+            "type": "integer"
+          }
+        },
+        "serializationType": "transform"
+      },
+      "data": {
+        "512": {
+          "json": {
+            "position": {
+              "x": 16,
+              "y": 7.457,
+              "z": 25
+            },
+            "scale": {
+              "x": 0.9,
+              "y": 0.9,
+              "z": 0.9
+            },
+            "rotation": {
+              "x": 0,
+              "y": 1,
+              "z": 0,
+              "w": 0
+            },
+            "parent": 0
+          }
+        },
+        "513": {
+          "json": {
+            "position": {
+              "x": -5.1,
+              "y": 0.02,
+              "z": 4.2
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "parent": 512
+          }
+        },
+        "514": {
+          "json": {
+            "position": {
+              "x": 0,
+              "y": 0.45,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.85,
+              "y": 0.9,
+              "z": 0.85
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "parent": 513
+          }
+        },
+        "515": {
+          "json": {
+            "position": {
+              "x": 0,
+              "y": 0.91,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.88,
+              "y": 0.03,
+              "z": 0.88
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "parent": 513
+          }
+        },
+        "516": {
+          "json": {
+            "position": {
+              "x": 0,
+              "y": -0.03,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.9,
+              "y": 1,
+              "z": 1
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "parent": 513
+          }
+        },
+        "517": {
+          "json": {
+            "position": {
+              "x": 0,
+              "y": 1.45,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.78,
+              "y": 1.05,
+              "z": 0.78
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "parent": 513
+          }
+        },
+        "518": {
+          "json": {
+            "position": {
+              "x": 0,
+              "y": 2.15,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "rotation": {
+              "x": 0,
+              "y": 1,
+              "z": 0,
+              "w": 0
+            },
+            "parent": 513
+          }
+        },
+        "519": {
+          "json": {
+            "position": {
+              "x": -1.7,
+              "y": 0.02,
+              "z": 4.2
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "parent": 512
+          }
+        },
+        "520": {
+          "json": {
+            "position": {
+              "x": 0,
+              "y": 0.45,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.85,
+              "y": 0.9,
+              "z": 0.85
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "parent": 519
+          }
+        },
+        "521": {
+          "json": {
+            "position": {
+              "x": 0,
+              "y": 0.91,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.88,
+              "y": 0.03,
+              "z": 0.88
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "parent": 519
+          }
+        },
+        "522": {
+          "json": {
+            "position": {
+              "x": 0,
+              "y": -0.03,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.9,
+              "y": 1,
+              "z": 1
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "parent": 519
+          }
+        },
+        "523": {
+          "json": {
+            "position": {
+              "x": 0,
+              "y": 1.45,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.78,
+              "y": 1.05,
+              "z": 0.78
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "parent": 519
+          }
+        },
+        "524": {
+          "json": {
+            "position": {
+              "x": 0,
+              "y": 2.15,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "rotation": {
+              "x": 0,
+              "y": 1,
+              "z": 0,
+              "w": 0
+            },
+            "parent": 519
+          }
+        },
+        "525": {
+          "json": {
+            "position": {
+              "x": 1.7,
+              "y": 0.02,
+              "z": 4.2
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "parent": 512
+          }
+        },
+        "526": {
+          "json": {
+            "position": {
+              "x": 0,
+              "y": 0.45,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.85,
+              "y": 0.9,
+              "z": 0.85
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "parent": 525
+          }
+        },
+        "527": {
+          "json": {
+            "position": {
+              "x": 0,
+              "y": 0.91,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.88,
+              "y": 0.03,
+              "z": 0.88
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "parent": 525
+          }
+        },
+        "528": {
+          "json": {
+            "position": {
+              "x": 0,
+              "y": -0.02,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "parent": 525
+          }
+        },
+        "529": {
+          "json": {
+            "position": {
+              "x": 0,
+              "y": 1.45,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.78,
+              "y": 1.05,
+              "z": 0.78
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "parent": 525
+          }
+        },
+        "530": {
+          "json": {
+            "position": {
+              "x": 0,
+              "y": 2.15,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "rotation": {
+              "x": 0,
+              "y": 1,
+              "z": 0,
+              "w": 0
+            },
+            "parent": 525
+          }
+        },
+        "537": {
+          "json": {
+            "position": {
+              "x": 5.1,
+              "y": 0.02,
+              "z": 4.2
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "parent": 512
+          }
+        },
+        "538": {
+          "json": {
+            "position": {
+              "x": 0,
+              "y": 0.45,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.85,
+              "y": 0.9,
+              "z": 0.85
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "parent": 537
+          }
+        },
+        "539": {
+          "json": {
+            "position": {
+              "x": 0,
+              "y": 0.91,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.88,
+              "y": 0.03,
+              "z": 0.88
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "parent": 537
+          }
+        },
+        "540": {
+          "json": {
+            "position": {
+              "x": 0,
+              "y": -0.02,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "parent": 537
+          }
+        },
+        "541": {
+          "json": {
+            "position": {
+              "x": 0,
+              "y": 1.45,
+              "z": 0
+            },
+            "scale": {
+              "x": 0.78,
+              "y": 1.05,
+              "z": 0.78
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "parent": 537
+          }
+        },
+        "542": {
+          "json": {
+            "position": {
+              "x": 0,
+              "y": 2.15,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "rotation": {
+              "x": 0,
+              "y": 1,
+              "z": 0,
+              "w": 0
+            },
+            "parent": 537
+          }
+        }
+      }
+    },
+    {
+      "name": "core::GltfContainer",
+      "jsonSchema": {
+        "type": "object",
+        "properties": {},
+        "serializationType": "protocol-buffer",
+        "protocolBuffer": "PBGltfContainer"
+      },
+      "data": {
+        "516": {
+          "json": {
+            "src": "assets/Models/crazy8_holo_card_tee_female_display_long_sleeve.glb",
+            "visibleMeshesCollisionMask": 0,
+            "invisibleMeshesCollisionMask": 0
+          }
+        },
+        "522": {
+          "json": {
+            "src": "assets/Models/crazy8_high_roller_tee_female_display_long_sleeve.glb",
+            "visibleMeshesCollisionMask": 0,
+            "invisibleMeshesCollisionMask": 0
+          }
+        },
+        "528": {
+          "json": {
+            "src": "assets/Models/crazy8_crest_bomber_display.glb",
+            "visibleMeshesCollisionMask": 0,
+            "invisibleMeshesCollisionMask": 0
+          }
+        },
+        "540": {
+          "json": {
+            "src": "assets/Models/crazy8_vip_club_bomber_display.glb",
+            "visibleMeshesCollisionMask": 0,
+            "invisibleMeshesCollisionMask": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "core::Material",
+      "jsonSchema": {
+        "type": "object",
+        "properties": {},
+        "serializationType": "protocol-buffer",
+        "protocolBuffer": "PBMaterial"
+      },
+      "data": {
+        "514": {
+          "json": {
+            "material": {
+              "$case": "pbr",
+              "pbr": {
+                "albedoColor": {
+                  "r": 0.043137,
+                  "g": 0.078431,
+                  "b": 0.141176,
+                  "a": 1
+                },
+                "emissiveColor": {
+                  "r": 0,
+                  "g": 0.952941,
+                  "b": 1
+                },
+                "emissiveIntensity": 0.6,
+                "metallic": 0.85,
+                "roughness": 0.2
+              }
+            }
+          }
+        },
+        "515": {
+          "json": {
+            "material": {
+              "$case": "pbr",
+              "pbr": {
+                "albedoColor": {
+                  "r": 0,
+                  "g": 0.952941,
+                  "b": 1,
+                  "a": 1
+                },
+                "emissiveColor": {
+                  "r": 0,
+                  "g": 0.952941,
+                  "b": 1
+                },
+                "emissiveIntensity": 3.2,
+                "metallic": 0.1,
+                "roughness": 0.2
+              }
+            }
+          }
+        },
+        "517": {
+          "json": {
+            "material": {
+              "$case": "pbr",
+              "pbr": {
+                "albedoColor": {
+                  "r": 0,
+                  "g": 0.952941,
+                  "b": 1,
+                  "a": 0.082353
+                },
+                "metallic": 0.9,
+                "roughness": 0.1,
+                "transparencyMode": 2
+              }
+            }
+          }
+        },
+        "520": {
+          "json": {
+            "material": {
+              "$case": "pbr",
+              "pbr": {
+                "albedoColor": {
+                  "r": 0.043137,
+                  "g": 0.078431,
+                  "b": 0.141176,
+                  "a": 1
+                },
+                "emissiveColor": {
+                  "r": 1,
+                  "g": 0.843137,
+                  "b": 0
+                },
+                "emissiveIntensity": 0.6,
+                "metallic": 0.85,
+                "roughness": 0.2
+              }
+            }
+          }
+        },
+        "521": {
+          "json": {
+            "material": {
+              "$case": "pbr",
+              "pbr": {
+                "albedoColor": {
+                  "r": 1,
+                  "g": 0.843137,
+                  "b": 0,
+                  "a": 1
+                },
+                "emissiveColor": {
+                  "r": 1,
+                  "g": 0.843137,
+                  "b": 0
+                },
+                "emissiveIntensity": 3.2,
+                "metallic": 0.1,
+                "roughness": 0.2
+              }
+            }
+          }
+        },
+        "523": {
+          "json": {
+            "material": {
+              "$case": "pbr",
+              "pbr": {
+                "albedoColor": {
+                  "r": 1,
+                  "g": 0.843137,
+                  "b": 0,
+                  "a": 0.082353
+                },
+                "metallic": 0.9,
+                "roughness": 0.1,
+                "transparencyMode": 2
+              }
+            }
+          }
+        },
+        "526": {
+          "json": {
+            "material": {
+              "$case": "pbr",
+              "pbr": {
+                "albedoColor": {
+                  "r": 0.043137,
+                  "g": 0.078431,
+                  "b": 0.141176,
+                  "a": 1
+                },
+                "emissiveColor": {
+                  "r": 0,
+                  "g": 0.952941,
+                  "b": 1
+                },
+                "emissiveIntensity": 0.6,
+                "metallic": 0.85,
+                "roughness": 0.2
+              }
+            }
+          }
+        },
+        "527": {
+          "json": {
+            "material": {
+              "$case": "pbr",
+              "pbr": {
+                "albedoColor": {
+                  "r": 0,
+                  "g": 0.952941,
+                  "b": 1,
+                  "a": 1
+                },
+                "emissiveColor": {
+                  "r": 0,
+                  "g": 0.952941,
+                  "b": 1
+                },
+                "emissiveIntensity": 3.2,
+                "metallic": 0.1,
+                "roughness": 0.2
+              }
+            }
+          }
+        },
+        "529": {
+          "json": {
+            "material": {
+              "$case": "pbr",
+              "pbr": {
+                "albedoColor": {
+                  "r": 0,
+                  "g": 0.952941,
+                  "b": 1,
+                  "a": 0.082353
+                },
+                "metallic": 0.9,
+                "roughness": 0.1,
+                "transparencyMode": 2
+              }
+            }
+          }
+        },
+        "538": {
+          "json": {
+            "material": {
+              "$case": "pbr",
+              "pbr": {
+                "albedoColor": {
+                  "r": 0.043137,
+                  "g": 0.078431,
+                  "b": 0.141176,
+                  "a": 1
+                },
+                "emissiveColor": {
+                  "r": 1,
+                  "g": 0,
+                  "b": 0.333333
+                },
+                "emissiveIntensity": 0.6,
+                "metallic": 0.85,
+                "roughness": 0.2
+              }
+            }
+          }
+        },
+        "539": {
+          "json": {
+            "material": {
+              "$case": "pbr",
+              "pbr": {
+                "albedoColor": {
+                  "r": 1,
+                  "g": 0,
+                  "b": 0.333333,
+                  "a": 1
+                },
+                "emissiveColor": {
+                  "r": 1,
+                  "g": 0,
+                  "b": 0.333333
+                },
+                "emissiveIntensity": 3.2,
+                "metallic": 0.1,
+                "roughness": 0.2
+              }
+            }
+          }
+        },
+        "541": {
+          "json": {
+            "material": {
+              "$case": "pbr",
+              "pbr": {
+                "albedoColor": {
+                  "r": 1,
+                  "g": 0,
+                  "b": 0.333333,
+                  "a": 0.082353
+                },
+                "metallic": 0.9,
+                "roughness": 0.1,
+                "transparencyMode": 2
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "core::MeshCollider",
+      "jsonSchema": {
+        "type": "object",
+        "properties": {},
+        "serializationType": "protocol-buffer",
+        "protocolBuffer": "PBMeshCollider"
+      },
+      "data": {
+        "514": {
+          "json": {
+            "collisionMask": 1,
+            "mesh": {
+              "$case": "cylinder",
+              "cylinder": {
+                "radiusTop": 0.5,
+                "radiusBottom": 0.5
+              }
+            }
+          }
+        },
+        "517": {
+          "json": {
+            "collisionMask": 1,
+            "mesh": {
+              "$case": "cylinder",
+              "cylinder": {
+                "radiusTop": 0.5,
+                "radiusBottom": 0.5
+              }
+            }
+          }
+        },
+        "520": {
+          "json": {
+            "collisionMask": 1,
+            "mesh": {
+              "$case": "cylinder",
+              "cylinder": {
+                "radiusTop": 0.5,
+                "radiusBottom": 0.5
+              }
+            }
+          }
+        },
+        "523": {
+          "json": {
+            "collisionMask": 1,
+            "mesh": {
+              "$case": "cylinder",
+              "cylinder": {
+                "radiusTop": 0.5,
+                "radiusBottom": 0.5
+              }
+            }
+          }
+        },
+        "526": {
+          "json": {
+            "collisionMask": 1,
+            "mesh": {
+              "$case": "cylinder",
+              "cylinder": {
+                "radiusTop": 0.5,
+                "radiusBottom": 0.5
+              }
+            }
+          }
+        },
+        "529": {
+          "json": {
+            "collisionMask": 1,
+            "mesh": {
+              "$case": "cylinder",
+              "cylinder": {
+                "radiusTop": 0.5,
+                "radiusBottom": 0.5
+              }
+            }
+          }
+        },
+        "538": {
+          "json": {
+            "collisionMask": 1,
+            "mesh": {
+              "$case": "cylinder",
+              "cylinder": {
+                "radiusTop": 0.5,
+                "radiusBottom": 0.5
+              }
+            }
+          }
+        },
+        "541": {
+          "json": {
+            "collisionMask": 1,
+            "mesh": {
+              "$case": "cylinder",
+              "cylinder": {
+                "radiusTop": 0.5,
+                "radiusBottom": 0.5
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "core::MeshRenderer",
+      "jsonSchema": {
+        "type": "object",
+        "properties": {},
+        "serializationType": "protocol-buffer",
+        "protocolBuffer": "PBMeshRenderer"
+      },
+      "data": {
+        "514": {
+          "json": {
+            "mesh": {
+              "$case": "cylinder",
+              "cylinder": {
+                "radiusTop": 0.5,
+                "radiusBottom": 0.5
+              }
+            }
+          }
+        },
+        "515": {
+          "json": {
+            "mesh": {
+              "$case": "cylinder",
+              "cylinder": {
+                "radiusTop": 0.5,
+                "radiusBottom": 0.5
+              }
+            }
+          }
+        },
+        "517": {
+          "json": {
+            "mesh": {
+              "$case": "cylinder",
+              "cylinder": {
+                "radiusTop": 0.5,
+                "radiusBottom": 0.5
+              }
+            }
+          }
+        },
+        "520": {
+          "json": {
+            "mesh": {
+              "$case": "cylinder",
+              "cylinder": {
+                "radiusTop": 0.5,
+                "radiusBottom": 0.5
+              }
+            }
+          }
+        },
+        "521": {
+          "json": {
+            "mesh": {
+              "$case": "cylinder",
+              "cylinder": {
+                "radiusTop": 0.5,
+                "radiusBottom": 0.5
+              }
+            }
+          }
+        },
+        "523": {
+          "json": {
+            "mesh": {
+              "$case": "cylinder",
+              "cylinder": {
+                "radiusTop": 0.5,
+                "radiusBottom": 0.5
+              }
+            }
+          }
+        },
+        "526": {
+          "json": {
+            "mesh": {
+              "$case": "cylinder",
+              "cylinder": {
+                "radiusTop": 0.5,
+                "radiusBottom": 0.5
+              }
+            }
+          }
+        },
+        "527": {
+          "json": {
+            "mesh": {
+              "$case": "cylinder",
+              "cylinder": {
+                "radiusTop": 0.5,
+                "radiusBottom": 0.5
+              }
+            }
+          }
+        },
+        "529": {
+          "json": {
+            "mesh": {
+              "$case": "cylinder",
+              "cylinder": {
+                "radiusTop": 0.5,
+                "radiusBottom": 0.5
+              }
+            }
+          }
+        },
+        "538": {
+          "json": {
+            "mesh": {
+              "$case": "cylinder",
+              "cylinder": {
+                "radiusTop": 0.5,
+                "radiusBottom": 0.5
+              }
+            }
+          }
+        },
+        "539": {
+          "json": {
+            "mesh": {
+              "$case": "cylinder",
+              "cylinder": {
+                "radiusTop": 0.5,
+                "radiusBottom": 0.5
+              }
+            }
+          }
+        },
+        "541": {
+          "json": {
+            "mesh": {
+              "$case": "cylinder",
+              "cylinder": {
+                "radiusTop": 0.5,
+                "radiusBottom": 0.5
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "core-schema::Name",
+      "jsonSchema": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "serializationType": "utf8-string"
+          }
+        },
+        "serializationType": "map"
+      },
+      "data": {
+        "512": {
+          "json": {
+            "value": "Rooftop Wearable Displays"
+          }
+        },
+        "513": {
+          "json": {
+            "value": "Holo Card Tee Display Stand"
+          }
+        },
+        "514": {
+          "json": {
+            "value": "Holo Card Tee Pedestal"
+          }
+        },
+        "515": {
+          "json": {
+            "value": "Holo Card Tee Neon Ring"
+          }
+        },
+        "516": {
+          "json": {
+            "value": "Holo Card Tee Model"
+          }
+        },
+        "517": {
+          "json": {
+            "value": "Holo Card Tee Glass"
+          }
+        },
+        "518": {
+          "json": {
+            "value": "Holo Card Tee Label"
+          }
+        },
+        "519": {
+          "json": {
+            "value": "High Roller Tee Display Stand"
+          }
+        },
+        "520": {
+          "json": {
+            "value": "High Roller Tee Pedestal"
+          }
+        },
+        "521": {
+          "json": {
+            "value": "High Roller Tee Neon Ring"
+          }
+        },
+        "522": {
+          "json": {
+            "value": "High Roller Tee Model"
+          }
+        },
+        "523": {
+          "json": {
+            "value": "High Roller Tee Glass"
+          }
+        },
+        "524": {
+          "json": {
+            "value": "High Roller Tee Label"
+          }
+        },
+        "525": {
+          "json": {
+            "value": "C8 Crest Bomber Display Stand"
+          }
+        },
+        "526": {
+          "json": {
+            "value": "C8 Crest Bomber Pedestal"
+          }
+        },
+        "527": {
+          "json": {
+            "value": "C8 Crest Bomber Neon Ring"
+          }
+        },
+        "528": {
+          "json": {
+            "value": "C8 Crest Bomber Model"
+          }
+        },
+        "529": {
+          "json": {
+            "value": "C8 Crest Bomber Glass"
+          }
+        },
+        "530": {
+          "json": {
+            "value": "C8 Crest Bomber Label"
+          }
+        },
+        "537": {
+          "json": {
+            "value": "VIP Club Bomber Display Stand"
+          }
+        },
+        "538": {
+          "json": {
+            "value": "VIP Club Bomber Pedestal"
+          }
+        },
+        "539": {
+          "json": {
+            "value": "VIP Club Bomber Neon Ring"
+          }
+        },
+        "540": {
+          "json": {
+            "value": "VIP Club Bomber Model"
+          }
+        },
+        "541": {
+          "json": {
+            "value": "VIP Club Bomber Glass"
+          }
+        },
+        "542": {
+          "json": {
+            "value": "VIP Club Bomber Label"
+          }
+        }
+      }
+    },
+    {
       "name": "core-schema::Tags",
       "jsonSchema": {
         "type": "object",
@@ -597,14 +1877,7 @@
             ],
             "author": "Rooi",
             "email": "",
-            "tags": [
-              "multiplayer",
-              "cards",
-              "crazy8",
-              "cyberpunk",
-              "lounge",
-              "vip"
-            ],
+            "tags": [],
             "layout": {
               "parcels": [
                 {
@@ -981,1208 +2254,6 @@
           "json": {
             "id": 0,
             "value": 0
-          }
-        }
-      }
-    },
-    {
-      "name": "core::Transform",
-      "data": {
-        "512": {
-          "json": {
-            "position": {
-              "x": 16,
-              "y": 7.457,
-              "z": 25
-            },
-            "rotation": {
-              "x": 0,
-              "y": 1,
-              "z": 0,
-              "w": 0
-            },
-            "scale": {
-              "x": 0.9,
-              "y": 0.9,
-              "z": 0.9
-            },
-            "parent": 0
-          }
-        },
-        "513": {
-          "json": {
-            "position": {
-              "x": -5.1,
-              "y": 0.02,
-              "z": 4.2
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 1
-            },
-            "scale": {
-              "x": 1,
-              "y": 1,
-              "z": 1
-            },
-            "parent": 512
-          }
-        },
-        "514": {
-          "json": {
-            "position": {
-              "x": 0,
-              "y": 0.45,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 1
-            },
-            "scale": {
-              "x": 0.85,
-              "y": 0.9,
-              "z": 0.85
-            },
-            "parent": 513
-          }
-        },
-        "515": {
-          "json": {
-            "position": {
-              "x": 0,
-              "y": 0.91,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 1
-            },
-            "scale": {
-              "x": 0.88,
-              "y": 0.03,
-              "z": 0.88
-            },
-            "parent": 513
-          }
-        },
-        "516": {
-          "json": {
-            "position": {
-              "x": 0,
-              "y": -0.03,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 1
-            },
-            "scale": {
-              "x": 0.9,
-              "y": 1.0,
-              "z": 1.0
-            },
-            "parent": 513
-          }
-        },
-        "517": {
-          "json": {
-            "position": {
-              "x": 0,
-              "y": 1.45,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 1
-            },
-            "scale": {
-              "x": 0.78,
-              "y": 1.05,
-              "z": 0.78
-            },
-            "parent": 513
-          }
-        },
-        "518": {
-          "json": {
-            "position": {
-              "x": 0,
-              "y": 2.15,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 1,
-              "z": 0,
-              "w": 0
-            },
-            "scale": {
-              "x": 1,
-              "y": 1,
-              "z": 1
-            },
-            "parent": 513
-          }
-        },
-        "519": {
-          "json": {
-            "position": {
-              "x": -1.7,
-              "y": 0.02,
-              "z": 4.2
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 1
-            },
-            "scale": {
-              "x": 1,
-              "y": 1,
-              "z": 1
-            },
-            "parent": 512
-          }
-        },
-        "520": {
-          "json": {
-            "position": {
-              "x": 0,
-              "y": 0.45,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 1
-            },
-            "scale": {
-              "x": 0.85,
-              "y": 0.9,
-              "z": 0.85
-            },
-            "parent": 519
-          }
-        },
-        "521": {
-          "json": {
-            "position": {
-              "x": 0,
-              "y": 0.91,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 1
-            },
-            "scale": {
-              "x": 0.88,
-              "y": 0.03,
-              "z": 0.88
-            },
-            "parent": 519
-          }
-        },
-        "522": {
-          "json": {
-            "position": {
-              "x": 0,
-              "y": -0.03,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 1
-            },
-            "scale": {
-              "x": 0.9,
-              "y": 1.0,
-              "z": 1.0
-            },
-            "parent": 519
-          }
-        },
-        "523": {
-          "json": {
-            "position": {
-              "x": 0,
-              "y": 1.45,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 1
-            },
-            "scale": {
-              "x": 0.78,
-              "y": 1.05,
-              "z": 0.78
-            },
-            "parent": 519
-          }
-        },
-        "524": {
-          "json": {
-            "position": {
-              "x": 0,
-              "y": 2.15,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 1,
-              "z": 0,
-              "w": 0
-            },
-            "scale": {
-              "x": 1,
-              "y": 1,
-              "z": 1
-            },
-            "parent": 519
-          }
-        },
-        "525": {
-          "json": {
-            "position": {
-              "x": 1.7,
-              "y": 0.02,
-              "z": 4.2
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 1
-            },
-            "scale": {
-              "x": 1,
-              "y": 1,
-              "z": 1
-            },
-            "parent": 512
-          }
-        },
-        "526": {
-          "json": {
-            "position": {
-              "x": 0,
-              "y": 0.45,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 1
-            },
-            "scale": {
-              "x": 0.85,
-              "y": 0.9,
-              "z": 0.85
-            },
-            "parent": 525
-          }
-        },
-        "527": {
-          "json": {
-            "position": {
-              "x": 0,
-              "y": 0.91,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 1
-            },
-            "scale": {
-              "x": 0.88,
-              "y": 0.03,
-              "z": 0.88
-            },
-            "parent": 525
-          }
-        },
-        "528": {
-          "json": {
-            "position": {
-              "x": 0,
-              "y": -0.02,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 1
-            },
-            "scale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            },
-            "parent": 525
-          }
-        },
-        "529": {
-          "json": {
-            "position": {
-              "x": 0,
-              "y": 1.45,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 1
-            },
-            "scale": {
-              "x": 0.78,
-              "y": 1.05,
-              "z": 0.78
-            },
-            "parent": 525
-          }
-        },
-        "530": {
-          "json": {
-            "position": {
-              "x": 0,
-              "y": 2.15,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 1,
-              "z": 0,
-              "w": 0
-            },
-            "scale": {
-              "x": 1,
-              "y": 1,
-              "z": 1
-            },
-            "parent": 525
-          }
-        },
-        "537": {
-          "json": {
-            "position": {
-              "x": 5.1,
-              "y": 0.02,
-              "z": 4.2
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 1
-            },
-            "scale": {
-              "x": 1,
-              "y": 1,
-              "z": 1
-            },
-            "parent": 512
-          }
-        },
-        "538": {
-          "json": {
-            "position": {
-              "x": 0,
-              "y": 0.45,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 1
-            },
-            "scale": {
-              "x": 0.85,
-              "y": 0.9,
-              "z": 0.85
-            },
-            "parent": 537
-          }
-        },
-        "539": {
-          "json": {
-            "position": {
-              "x": 0,
-              "y": 0.91,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 1
-            },
-            "scale": {
-              "x": 0.88,
-              "y": 0.03,
-              "z": 0.88
-            },
-            "parent": 537
-          }
-        },
-        "540": {
-          "json": {
-            "position": {
-              "x": 0,
-              "y": -0.02,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 1
-            },
-            "scale": {
-              "x": 1.0,
-              "y": 1.0,
-              "z": 1.0
-            },
-            "parent": 537
-          }
-        },
-        "541": {
-          "json": {
-            "position": {
-              "x": 0,
-              "y": 1.45,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 1
-            },
-            "scale": {
-              "x": 0.78,
-              "y": 1.05,
-              "z": 0.78
-            },
-            "parent": 537
-          }
-        },
-        "542": {
-          "json": {
-            "position": {
-              "x": 0,
-              "y": 2.15,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 1,
-              "z": 0,
-              "w": 0
-            },
-            "scale": {
-              "x": 1,
-              "y": 1,
-              "z": 1
-            },
-            "parent": 537
-          }
-        }
-      }
-    },
-    {
-      "name": "core-schema::Name",
-      "data": {
-        "512": {
-          "json": {
-            "value": "Rooftop Wearable Displays"
-          }
-        },
-        "513": {
-          "json": {
-            "value": "Holo Card Tee Display Stand"
-          }
-        },
-        "514": {
-          "json": {
-            "value": "Holo Card Tee Pedestal"
-          }
-        },
-        "515": {
-          "json": {
-            "value": "Holo Card Tee Neon Ring"
-          }
-        },
-        "516": {
-          "json": {
-            "value": "Holo Card Tee Model"
-          }
-        },
-        "517": {
-          "json": {
-            "value": "Holo Card Tee Glass"
-          }
-        },
-        "518": {
-          "json": {
-            "value": "Holo Card Tee Label"
-          }
-        },
-        "519": {
-          "json": {
-            "value": "High Roller Tee Display Stand"
-          }
-        },
-        "520": {
-          "json": {
-            "value": "High Roller Tee Pedestal"
-          }
-        },
-        "521": {
-          "json": {
-            "value": "High Roller Tee Neon Ring"
-          }
-        },
-        "522": {
-          "json": {
-            "value": "High Roller Tee Model"
-          }
-        },
-        "523": {
-          "json": {
-            "value": "High Roller Tee Glass"
-          }
-        },
-        "524": {
-          "json": {
-            "value": "High Roller Tee Label"
-          }
-        },
-        "525": {
-          "json": {
-            "value": "C8 Crest Bomber Display Stand"
-          }
-        },
-        "526": {
-          "json": {
-            "value": "C8 Crest Bomber Pedestal"
-          }
-        },
-        "527": {
-          "json": {
-            "value": "C8 Crest Bomber Neon Ring"
-          }
-        },
-        "528": {
-          "json": {
-            "value": "C8 Crest Bomber Model"
-          }
-        },
-        "529": {
-          "json": {
-            "value": "C8 Crest Bomber Glass"
-          }
-        },
-        "530": {
-          "json": {
-            "value": "C8 Crest Bomber Label"
-          }
-        },
-        "537": {
-          "json": {
-            "value": "VIP Club Bomber Display Stand"
-          }
-        },
-        "538": {
-          "json": {
-            "value": "VIP Club Bomber Pedestal"
-          }
-        },
-        "539": {
-          "json": {
-            "value": "VIP Club Bomber Neon Ring"
-          }
-        },
-        "540": {
-          "json": {
-            "value": "VIP Club Bomber Model"
-          }
-        },
-        "541": {
-          "json": {
-            "value": "VIP Club Bomber Glass"
-          }
-        },
-        "542": {
-          "json": {
-            "value": "VIP Club Bomber Label"
-          }
-        }
-      },
-      "jsonSchema": {
-        "type": "object",
-        "properties": {
-          "value": {
-            "type": "string",
-            "serializationType": "utf8-string"
-          }
-        },
-        "serializationType": "map"
-      }
-    },
-    {
-      "name": "core::MeshRenderer",
-      "data": {
-        "514": {
-          "json": {
-            "mesh": {
-              "$case": "cylinder",
-              "cylinder": {
-                "radiusTop": 0.5,
-                "radiusBottom": 0.5
-              }
-            }
-          }
-        },
-        "515": {
-          "json": {
-            "mesh": {
-              "$case": "cylinder",
-              "cylinder": {
-                "radiusTop": 0.5,
-                "radiusBottom": 0.5
-              }
-            }
-          }
-        },
-        "517": {
-          "json": {
-            "mesh": {
-              "$case": "cylinder",
-              "cylinder": {
-                "radiusTop": 0.5,
-                "radiusBottom": 0.5
-              }
-            }
-          }
-        },
-        "520": {
-          "json": {
-            "mesh": {
-              "$case": "cylinder",
-              "cylinder": {
-                "radiusTop": 0.5,
-                "radiusBottom": 0.5
-              }
-            }
-          }
-        },
-        "521": {
-          "json": {
-            "mesh": {
-              "$case": "cylinder",
-              "cylinder": {
-                "radiusTop": 0.5,
-                "radiusBottom": 0.5
-              }
-            }
-          }
-        },
-        "523": {
-          "json": {
-            "mesh": {
-              "$case": "cylinder",
-              "cylinder": {
-                "radiusTop": 0.5,
-                "radiusBottom": 0.5
-              }
-            }
-          }
-        },
-        "526": {
-          "json": {
-            "mesh": {
-              "$case": "cylinder",
-              "cylinder": {
-                "radiusTop": 0.5,
-                "radiusBottom": 0.5
-              }
-            }
-          }
-        },
-        "527": {
-          "json": {
-            "mesh": {
-              "$case": "cylinder",
-              "cylinder": {
-                "radiusTop": 0.5,
-                "radiusBottom": 0.5
-              }
-            }
-          }
-        },
-        "529": {
-          "json": {
-            "mesh": {
-              "$case": "cylinder",
-              "cylinder": {
-                "radiusTop": 0.5,
-                "radiusBottom": 0.5
-              }
-            }
-          }
-        },
-        "538": {
-          "json": {
-            "mesh": {
-              "$case": "cylinder",
-              "cylinder": {
-                "radiusTop": 0.5,
-                "radiusBottom": 0.5
-              }
-            }
-          }
-        },
-        "539": {
-          "json": {
-            "mesh": {
-              "$case": "cylinder",
-              "cylinder": {
-                "radiusTop": 0.5,
-                "radiusBottom": 0.5
-              }
-            }
-          }
-        },
-        "541": {
-          "json": {
-            "mesh": {
-              "$case": "cylinder",
-              "cylinder": {
-                "radiusTop": 0.5,
-                "radiusBottom": 0.5
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "name": "core::MeshCollider",
-      "data": {
-        "514": {
-          "json": {
-            "collisionMask": 1,
-            "mesh": {
-              "$case": "cylinder",
-              "cylinder": {
-                "radiusTop": 0.5,
-                "radiusBottom": 0.5
-              }
-            }
-          }
-        },
-        "517": {
-          "json": {
-            "collisionMask": 1,
-            "mesh": {
-              "$case": "cylinder",
-              "cylinder": {
-                "radiusTop": 0.5,
-                "radiusBottom": 0.5
-              }
-            }
-          }
-        },
-        "520": {
-          "json": {
-            "collisionMask": 1,
-            "mesh": {
-              "$case": "cylinder",
-              "cylinder": {
-                "radiusTop": 0.5,
-                "radiusBottom": 0.5
-              }
-            }
-          }
-        },
-        "523": {
-          "json": {
-            "collisionMask": 1,
-            "mesh": {
-              "$case": "cylinder",
-              "cylinder": {
-                "radiusTop": 0.5,
-                "radiusBottom": 0.5
-              }
-            }
-          }
-        },
-        "526": {
-          "json": {
-            "collisionMask": 1,
-            "mesh": {
-              "$case": "cylinder",
-              "cylinder": {
-                "radiusTop": 0.5,
-                "radiusBottom": 0.5
-              }
-            }
-          }
-        },
-        "529": {
-          "json": {
-            "collisionMask": 1,
-            "mesh": {
-              "$case": "cylinder",
-              "cylinder": {
-                "radiusTop": 0.5,
-                "radiusBottom": 0.5
-              }
-            }
-          }
-        },
-        "538": {
-          "json": {
-            "collisionMask": 1,
-            "mesh": {
-              "$case": "cylinder",
-              "cylinder": {
-                "radiusTop": 0.5,
-                "radiusBottom": 0.5
-              }
-            }
-          }
-        },
-        "541": {
-          "json": {
-            "collisionMask": 1,
-            "mesh": {
-              "$case": "cylinder",
-              "cylinder": {
-                "radiusTop": 0.5,
-                "radiusBottom": 0.5
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "name": "core::Material",
-      "data": {
-        "514": {
-          "json": {
-            "material": {
-              "$case": "pbr",
-              "pbr": {
-                "albedoColor": {
-                  "r": 0.043137,
-                  "g": 0.078431,
-                  "b": 0.141176,
-                  "a": 1
-                },
-                "emissiveColor": {
-                  "r": 0.0,
-                  "g": 0.952941,
-                  "b": 1.0
-                },
-                "emissiveIntensity": 0.6,
-                "metallic": 0.85,
-                "roughness": 0.2
-              }
-            }
-          }
-        },
-        "515": {
-          "json": {
-            "material": {
-              "$case": "pbr",
-              "pbr": {
-                "albedoColor": {
-                  "r": 0.0,
-                  "g": 0.952941,
-                  "b": 1.0,
-                  "a": 1
-                },
-                "emissiveColor": {
-                  "r": 0.0,
-                  "g": 0.952941,
-                  "b": 1.0
-                },
-                "emissiveIntensity": 3.2,
-                "metallic": 0.1,
-                "roughness": 0.2
-              }
-            }
-          }
-        },
-        "517": {
-          "json": {
-            "material": {
-              "$case": "pbr",
-              "pbr": {
-                "albedoColor": {
-                  "r": 0.0,
-                  "g": 0.952941,
-                  "b": 1.0,
-                  "a": 0.082353
-                },
-                "metallic": 0.9,
-                "roughness": 0.1,
-                "transparencyMode": 2
-              }
-            }
-          }
-        },
-        "520": {
-          "json": {
-            "material": {
-              "$case": "pbr",
-              "pbr": {
-                "albedoColor": {
-                  "r": 0.043137,
-                  "g": 0.078431,
-                  "b": 0.141176,
-                  "a": 1
-                },
-                "emissiveColor": {
-                  "r": 1.0,
-                  "g": 0.843137,
-                  "b": 0.0
-                },
-                "emissiveIntensity": 0.6,
-                "metallic": 0.85,
-                "roughness": 0.2
-              }
-            }
-          }
-        },
-        "521": {
-          "json": {
-            "material": {
-              "$case": "pbr",
-              "pbr": {
-                "albedoColor": {
-                  "r": 1.0,
-                  "g": 0.843137,
-                  "b": 0.0,
-                  "a": 1
-                },
-                "emissiveColor": {
-                  "r": 1.0,
-                  "g": 0.843137,
-                  "b": 0.0
-                },
-                "emissiveIntensity": 3.2,
-                "metallic": 0.1,
-                "roughness": 0.2
-              }
-            }
-          }
-        },
-        "523": {
-          "json": {
-            "material": {
-              "$case": "pbr",
-              "pbr": {
-                "albedoColor": {
-                  "r": 1.0,
-                  "g": 0.843137,
-                  "b": 0.0,
-                  "a": 0.082353
-                },
-                "metallic": 0.9,
-                "roughness": 0.1,
-                "transparencyMode": 2
-              }
-            }
-          }
-        },
-        "526": {
-          "json": {
-            "material": {
-              "$case": "pbr",
-              "pbr": {
-                "albedoColor": {
-                  "r": 0.043137,
-                  "g": 0.078431,
-                  "b": 0.141176,
-                  "a": 1
-                },
-                "emissiveColor": {
-                  "r": 0.0,
-                  "g": 0.952941,
-                  "b": 1.0
-                },
-                "emissiveIntensity": 0.6,
-                "metallic": 0.85,
-                "roughness": 0.2
-              }
-            }
-          }
-        },
-        "527": {
-          "json": {
-            "material": {
-              "$case": "pbr",
-              "pbr": {
-                "albedoColor": {
-                  "r": 0.0,
-                  "g": 0.952941,
-                  "b": 1.0,
-                  "a": 1
-                },
-                "emissiveColor": {
-                  "r": 0.0,
-                  "g": 0.952941,
-                  "b": 1.0
-                },
-                "emissiveIntensity": 3.2,
-                "metallic": 0.1,
-                "roughness": 0.2
-              }
-            }
-          }
-        },
-        "529": {
-          "json": {
-            "material": {
-              "$case": "pbr",
-              "pbr": {
-                "albedoColor": {
-                  "r": 0.0,
-                  "g": 0.952941,
-                  "b": 1.0,
-                  "a": 0.082353
-                },
-                "metallic": 0.9,
-                "roughness": 0.1,
-                "transparencyMode": 2
-              }
-            }
-          }
-        },
-        "538": {
-          "json": {
-            "material": {
-              "$case": "pbr",
-              "pbr": {
-                "albedoColor": {
-                  "r": 0.043137,
-                  "g": 0.078431,
-                  "b": 0.141176,
-                  "a": 1
-                },
-                "emissiveColor": {
-                  "r": 1.0,
-                  "g": 0.0,
-                  "b": 0.333333
-                },
-                "emissiveIntensity": 0.6,
-                "metallic": 0.85,
-                "roughness": 0.2
-              }
-            }
-          }
-        },
-        "539": {
-          "json": {
-            "material": {
-              "$case": "pbr",
-              "pbr": {
-                "albedoColor": {
-                  "r": 1.0,
-                  "g": 0.0,
-                  "b": 0.333333,
-                  "a": 1
-                },
-                "emissiveColor": {
-                  "r": 1.0,
-                  "g": 0.0,
-                  "b": 0.333333
-                },
-                "emissiveIntensity": 3.2,
-                "metallic": 0.1,
-                "roughness": 0.2
-              }
-            }
-          }
-        },
-        "541": {
-          "json": {
-            "material": {
-              "$case": "pbr",
-              "pbr": {
-                "albedoColor": {
-                  "r": 1.0,
-                  "g": 0.0,
-                  "b": 0.333333,
-                  "a": 0.082353
-                },
-                "metallic": 0.9,
-                "roughness": 0.1,
-                "transparencyMode": 2
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "name": "core::GltfContainer",
-      "data": {
-        "516": {
-          "json": {
-            "src": "assets/Models/crazy8_holo_card_tee_female_display_long_sleeve.glb",
-            "visibleMeshesCollisionMask": 0,
-            "invisibleMeshesCollisionMask": 0
-          }
-        },
-        "522": {
-          "json": {
-            "src": "assets/Models/crazy8_high_roller_tee_female_display_long_sleeve.glb",
-            "visibleMeshesCollisionMask": 0,
-            "invisibleMeshesCollisionMask": 0
-          }
-        },
-        "528": {
-          "json": {
-            "src": "assets/Models/crazy8_crest_bomber_display.glb",
-            "visibleMeshesCollisionMask": 0,
-            "invisibleMeshesCollisionMask": 0
-          }
-        },
-        "540": {
-          "json": {
-            "src": "assets/Models/crazy8_vip_club_bomber_display.glb",
-            "visibleMeshesCollisionMask": 0,
-            "invisibleMeshesCollisionMask": 0
           }
         }
       }
