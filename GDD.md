@@ -1,111 +1,122 @@
-# Game Design Document: Crazy 8: Last Call (V0 Vertical Slice)
+# Game Design Document: Crazy 8: Last Call
 
-**Project Name:** Crazy 8: Last Call  
-**Target Submission:** Decentraland Studio Onboarding — V0: The Vertical Slice ($1,000 USD)  
-**Author / Studio:** Rooi (`rooi.dcl.eth`)  
-**Live Build Realm:** `rooi.dcl.eth`  
-**Repository:** [https://github.com/moeketsi200/crazy-8](https://github.com/moeketsi200/crazy-8)  
-**Last Updated:** October 2026  
+## V0 Vertical Slice
 
----
+- **Project:** Crazy 8: Last Call, set in the VIP Cyber Lounge
+- **Creator:** Rooi (`rooi.dcl.eth`)
+- **V0 request:** $1,000
+- **Repository:** https://github.com/moeketsi200/crazy-8
+- **Test world:** `rooi.dcl.eth` (confirm the shared link points to the build being tested)
+- **Document status:** Reapplication draft
+- **Last updated:** October 2026
 
-## 1. Core Concept & The Social Hook
+**Known issue:** The previous reviewer could not get the test experience working. The cause is unknown and must be reproduced before choosing a fix.
 
-### 1.1 High Concept
-*Crazy 8: Last Call* is a social tabletop shedding card game built natively for Decentraland. While the basic matching rules (suit or rank) are instantly familiar to anyone, the game’s defining signature mechanic is **"Last Call"**—a public declaration and challenge system that creates bluffing, psychological tension, and active table talk between live avatars.
+## 1. Core Concept and Social Hook
 
-### 1.2 The Signature Moment: "Last Call"
-In traditional digital card apps, declarations happen automatically in silent menus. In *Crazy 8: Last Call*, this moment is the social heartbeat of the table:
-1. **The Declaration**: When a player holds **3 cards** or **1 card ("Last Call")**, they must publicly declare their status before their turn ends.
-2. **The Window**: If a player forgets or bluffs, a 5-second challenge window opens for opponents.
-3. **The Challenge**: Any alert opponent at the table can hit **"Challenge!"**.
-   - If the player failed to declare: **The bluffer draws a +2 card penalty.**
-   - If the challenge was false/wrong: **The challenger draws a +1 card penalty.**
-4. **Why this matters in Decentraland**: The penalty creates real stakes. Players watch each other's card counts, call bluffs in proximity voice/text chat, and celebrate caught bluffs together. It turns a quiet card game into a lively party table.
+### High concept
 
----
+Crazy 8: Last Call is a social card match played around a shared table in Decentraland. Players use familiar Crazy Eights rules, with the existing declaration-and-challenge mechanic as the moment we want to test.
 
-## 2. V0 Hypothesis & Validation Goals
+### The Last Call moment
 
-### 2.1 The Core Hypothesis
-> **V0 Hypothesis:**  
-> *"Does the public 'Last Call' declaration-and-challenge mechanic create meaningful table interaction between first-time players and motivate them to play a rematch?"*
+The current design asks a player to declare at three cards and again at one card. The one-card announcement is called **Last Call**. If a player passes a turn without declaring, another player may challenge; a successful challenge makes the player draw two cards.
 
-### 2.2 What V0 Funding ($1,000) Tests & Solves
-The $1,000 V0 funding is strictly dedicated to validating the core table loop:
-1. **Frictionless Unassisted Start**: Ensuring a group of first-time players (or a solo reviewer arriving alone with bot fallback) can enter the scene, sit, and start a complete round in under 15 seconds without developer guidance.
-2. **Signature Moment Clarity**: Refining audio-visual feedback when a "Last Call" is declared or challenged so the entire table instantly understands what happened.
-3. **The Rematch Loop**: Testing whether groups naturally choose to start a rematch immediately after round completion.
+The current GDD does not specify a timed challenge window or a penalty for an incorrect challenge. Those behaviors must be checked in the build before they are described as rules. This V0 proposal does not add either rule.
 
----
+The design premise is that players gathered at one table can notice and react to the announcement and challenge. Playtesting will determine whether that creates meaningful interaction.
 
-## 3. Feature Status: What Works vs. What V0 Tests
+## 2. V0 Hypothesis
 
-To provide full transparency to the review committee, the project is structured into three clear stages:
+> For first-time groups playing at a shared Decentraland table, does the existing Last Call declaration-and-challenge moment prompt player interaction and make the group choose a rematch?
 
-| Feature / System | Status Today | V0 Focus (Testing with Funding) | Out of Scope (Future Roadmap) |
-| :--- | :---: | :---: | :---: |
-| **54-Card Turn Engine** | ✅ Working | Verified with 2–6 players | — |
-| **Penalty Stacking (2s & Jokers)** | ✅ Working | Balance check during playtests | — |
-| **Chair Seating & Camera Anchor** | ✅ Working | Verify camera framing during hand play | — |
-| **Solo Fallback (AI Bots)** | ✅ Working | Ensures a solo reviewer can always play a full round | — |
-| **Unassisted Start / Lobby Flow** | 🟡 In Progress | **Primary V0 Priority**: 1-click start, zero confusion | — |
-| **"Last Call" & Challenge FX** | 🟡 In Progress | **Primary V0 Priority**: Obvious audio/visual table cues | — |
-| **Rematch Prompt** | 🟡 In Progress | **Primary V0 Priority**: Seamless post-round restart | — |
-| **Penthouse / Terrace Venue** | 📦 Built (Background) | Ambient backdrop only | Phase 2 Expansion |
-| **Jacuzzi / Pool Water Physics** | 📦 Built (Background) | Ambient backdrop only | Phase 2 Expansion |
-| **Chips / Trophies Daily Economy** | 📦 Built (Background) | Ambient backdrop only | Phase 2 Expansion |
-| **Wearable Pro Shop & Models** | 📦 Built (Background) | Ambient backdrop only | Phase 3 Creator Economy |
+This is the question V0 will investigate. It is not yet a proven result.
 
-> *Note: While architectural models and visual props already exist in the scene, they are treated as ambient staging. The V0 grant evaluation is strictly measured on the table gameplay.*
+## 3. Current Project Status
 
----
+The following systems are described in the project. Their behavior in the submitted test build has not yet been verified end-to-end.
 
-## 4. Playtest Plan: Decentraland `#playtesters`
+| Feature | Current status | Evidence needed |
+| --- | --- | --- |
+| Card deck, turns, and win condition | Implemented locally; shared-build verification pending | Complete a round through to its result |
+| Action cards and penalty stacking | Implemented locally; shared-build verification pending | Demonstrate actions and resolve a penalty |
+| AI bots | Implemented locally; solo-path verification pending | Start alone and finish a round without waiting for other players |
+| Chair seating and match entry | Implemented locally; first-time flow verification pending | New player can find the table and start without coaching |
+| Multiplayer sync | Implemented locally; live multiplayer verification pending | Two or more players complete a round together |
+| Three-card and Last Call declarations | Described in current design; implementation verification pending | Demonstrate a declaration and the result of a successful challenge |
+| Rematch flow | Needs verification | Complete a round and find a clear next step |
 
-Following the Creator Success team's recommendation, V0 validation will be conducted directly through the official Decentraland Discord `#playtesters` channel.
+The reason the previous test did not work is not yet known. Ask the reviewer what happened, then reproduce it with a first-time visitor before deciding what to change.
 
-### 4.1 Playtest Format
-- **Participants**: 2 cohorts of 4–5 players (8–10 total unique first-time players).
-- **Setup**: Players receive a direct jump link to `rooi.dcl.eth` and a 2-line instruction: *"Click a chair to sit. Shed your cards, and remember to declare Last Call when down to 1 card."*
-- **Role of the Developer**: Silent observer. No coaching or intervention.
+## 4. V0 Scope
 
-### 4.2 Measurable Success Signals (Target Thresholds)
-Rather than ungrounded marketing metrics, V0 success will be evaluated against 3 clear player behaviors:
+### Included
 
-1. **Onboarding Autonomy**: **≥ 8 out of 10** players sit, understand whose turn it is, and finish a complete round without host intervention.
-2. **Mechanic Engagement**: **≥ 6 out of 10** players actively declare "Last Call" or challenge an opponent during a match.
-3. **Social Retention / Rematch**: **≥ 6 out of 10** players vote to play a rematch immediately after the first game concludes.
+- Diagnose the test-entry or match-start failure before selecting a fix.
+- Make only the changes needed for a visitor to enter and complete a round.
+- Verify the existing solo bot path, if it works in the shared build, so a reviewer arriving alone can try the game.
+- Verify a complete match with real players.
+- Observe how players respond to the current Last Call mechanic.
+- Provide a clear round result and rematch choice if the current flow needs it.
+- Run small playtest sessions with 8–10 first-time players recruited through Decentraland's `#playtesters` channel.
 
-### 4.3 Deliverables at the End of V0
-- A 2-minute unedited gameplay clip showing a real 4-player playtest match from start to finish.
-- A concise Playtest Findings Report documenting player feedback, observed friction points, and rematch rate.
-- A clean, bug-free build ready for community game nights.
+### Outside V0
 
----
+These systems may remain in the project as setting or existing work. They are not V0 development or evaluation goals:
 
-## 5. How a Match Plays (The Core Loop)
+- Rooftop, elevator, pool, jacuzzi, and additional venue interactions
+- Daily economy, shop, currencies, streaks, bounties, and persistent rewards
+- New action cards or changes to the challenge rules
+- 3D cards attached to avatars
+- Spectator betting and tournament systems
+- Additional wearable releases
 
-```
-[ 1. APPROACH & SIT ]
-   └─ Walk up to table. Click an open chair.
-   └─ Instant prompt: "Play Solo vs Bots" or "Host Group Match".
-   └─ Seated avatar faces the felt with optimized camera framing.
+Decentraland's MVP guidance recommends validating a basic player experience through successive prototypes. This V0 therefore focuses on one playable table loop before expanding the surrounding systems. See [MVP guidelines](https://docs.decentraland.org/creator/scenes-sdk7/designing-the-experience/mvp-guidelines).
 
-[ 2. DEAL & MATCH ]
-   └─ 5 cards dealt per hand. Top discard revealed.
-   └─ Active turn highlighted on table felt and player hand UI.
-   └─ Play valid Suit, Rank, or 8 (Wild).
-   └─ Counter-attack: Stack 2s (+2) or Jokers (+4) to deflect penalties!
+## 5. Core Match Loop
 
-[ 3. THE "LAST CALL" MOMENT ]
-   └─ 3 Cards Left: Click "Declare 3 Cards".
-   └─ 1 Card Left: Click "Last Call!".
-   └─ Missed declaration? Opponents have 5 seconds to CHALLENGE.
-   └─ Caught bluffer draws +2; false challenger draws +1.
+1. A player enters the lounge and finds the table.
+2. The player starts or joins a match.
+3. Players take turns playing or drawing cards under the current rules.
+4. Players declare at low hand counts; the one-card moment is Last Call.
+5. A round ends with a winner and a clear choice to play again.
 
-[ 4. FINISH & REMATCH ]
-   └─ First player to shed all cards wins.
-   └─ Clear table-wide notification: "Winner: [Avatar Name]".
-   └─ 1-Click "Play Again" button appears immediately.
-```
+The exact start instructions will be written after the test-entry flow has been reproduced and confirmed.
+
+## 6. Playtest Plan
+
+### Format
+
+- Recruit 8–10 unique first-time players through `#playtesters`.
+- Run several small sessions so players can play with real opponents.
+- Share a direct link and short instructions that match the verified build.
+- Observe the first attempt without coaching; ask brief follow-up questions after the round.
+
+### Record these three outcomes
+
+1. How many players started and finished a round without help?
+2. Did Last Call lead to conversation, a challenge, or another player reaction?
+3. How many groups chose to play a rematch?
+
+Report the observed counts and comments, such as `7/10 completed a round without help`. These pilot results are for learning; they are not a promise of broad retention or a comparison with other games.
+
+### Evidence to include with a reapplication
+
+- A confirmed playable link and simple entry instructions
+- A short recording showing a real match from entry through the result
+- A concise findings report with participant counts, observed friction, Last Call reactions, rematch choices, and known limitations
+
+A recording supports the playable link; it does not replace it.
+
+## 7. V0 Milestones
+
+1. **Ask and reproduce:** Request details from the reviewer and reproduce the failure with a first-time visitor.
+2. **Stabilize:** Make the smallest fix supported by the reproduction.
+3. **Playtest:** Run sessions with 8–10 first-time players and record the three outcomes above.
+4. **Report:** Summarize what worked, what needs improvement, and the next step.
+
+The V0 is complete when the shared build supports a demonstrated full match and the playtest results have been documented.
+
+## 8. Later Roadmap
+
+The VIP Cyber Lounge, venue interactions, economy, cosmetics, and community events remain part of the longer-term vision. Their next steps will be chosen after the table loop and Last Call hypothesis have been tested.

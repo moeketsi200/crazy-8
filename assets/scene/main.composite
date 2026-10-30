@@ -1502,6 +1502,28 @@
       }
     },
     {
+      "name": "inspector::TransformConfig",
+      "jsonSchema": {
+        "type": "object",
+        "properties": {
+          "porportionalScaling": {
+            "type": "boolean",
+            "serializationType": "optional",
+            "optionalJsonSchema": {
+              "type": "boolean",
+              "serializationType": "boolean"
+            }
+          }
+        },
+        "serializationType": "map"
+      },
+      "data": {
+        "512": {
+          "json": {}
+        }
+      }
+    },
+    {
       "name": "inspector::UIState",
       "jsonSchema": {
         "type": "object",
