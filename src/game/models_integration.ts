@@ -3,6 +3,8 @@ import {
   Entity,
   Transform,
   GltfContainer,
+  AvatarAttach,
+  AvatarAnchorPointType,
   VisibilityComponent,
   Animator,
   GltfNodeModifiers,
@@ -258,15 +260,12 @@ export function updateChairAuraVisibility(seatedIndices: Set<number>) {
 let crownEntity: Entity | null = null
 let confettiEntity: Entity | null = null
 let celebrationTimer = 0
+let crownedPlayerId = ''
 
-export function setupVictoryCelebration(houseEntity: Entity) {
-  // 3D Winner Crown (Hovering above the card table)
+export function setupVictoryCelebration(_houseEntity: Entity) {
+  // Persistent crown attached to the current round winner's head.
   crownEntity = engine.addEntity()
-  Transform.create(crownEntity, {
-    parent: houseEntity,
-    position: Vector3.create(0, 2.1, 0),
-    scale: Vector3.create(1.2, 1.2, 1.2)
-  })
+  Transform.create(crownEntity, { scale: Vector3.create(1.2, 1.2, 1.2) })
   GltfContainer.create(crownEntity, {
     src: 'assets/Models/winner_crown.glb',
     visibleMeshesCollisionMask: 0,
@@ -277,7 +276,7 @@ export function setupVictoryCelebration(houseEntity: Entity) {
   // 3D Confetti Burst
   confettiEntity = engine.addEntity()
   Transform.create(confettiEntity, {
-    parent: houseEntity,
+    parent: _houseEntity,
     position: Vector3.create(0, 1.3, 0),
     scale: Vector3.create(25.0, 25.0, 25.0)
   })
@@ -297,40 +296,36 @@ export function setupVictoryCelebration(houseEntity: Entity) {
   })
   VisibilityComponent.create(confettiEntity, { visible: false })
 
-  // System to animate crown and countdown celebration
-  let crownRotation = 0
+  // Confetti is temporary; the crown remains visible until another player wins.
   engine.addSystem((dt) => {
     if (celebrationTimer > 0) {
       celebrationTimer -= dt
-
-      // Spin crown smoothly
-      crownRotation += dt * 90
-      if (crownRotation >= 360) crownRotation -= 360
-
-      if (crownEntity) {
-        const t = Transform.getMutableOrNull(crownEntity)
-        if (t) {
-          // Bob up and down slightly
-          const bob = Math.sin(celebrationTimer * 3) * 0.08
-          t.position = Vector3.create(0, 2.1 + bob, 0)
-          t.rotation = Quaternion.fromEulerDegrees(0, crownRotation, 0)
-        }
-      }
-
       if (celebrationTimer <= 0) {
-        if (crownEntity) VisibilityComponent.createOrReplace(crownEntity, { visible: false })
         if (confettiEntity) VisibilityComponent.createOrReplace(confettiEntity, { visible: false })
       }
     }
   })
 }
 
-export function triggerVictoryCelebration() {
-  celebrationTimer = 9.0 // Celebrate for 9 seconds!
-
-  if (crownEntity) {
-    VisibilityComponent.createOrReplace(crownEntity, { visible: true })
+export function setRoundWinnerCrown(playerId?: string) {
+  if (!crownEntity || !playerId || playerId.startsWith('bot')) {
+    if (crownEntity) VisibilityComponent.createOrReplace(crownEntity, { visible: false })
+    crownedPlayerId = ''
+    return
   }
+
+  if (playerId !== crownedPlayerId) {
+    AvatarAttach.createOrReplace(crownEntity, {
+      avatarId: playerId,
+      anchorPointId: AvatarAnchorPointType.AAPT_HEAD
+    })
+    crownedPlayerId = playerId
+  }
+  VisibilityComponent.createOrReplace(crownEntity, { visible: true })
+}
+
+export function triggerVictoryCelebration() {
+  celebrationTimer = 4.0
 
   if (confettiEntity) {
     VisibilityComponent.createOrReplace(confettiEntity, { visible: true })

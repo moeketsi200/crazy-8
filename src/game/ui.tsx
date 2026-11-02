@@ -268,6 +268,12 @@ function TableArea() {
 }
 
 function parseNotification(msg: string, senderId?: string | null) {
+  const resolveAvatarUserId = (playerId?: string | null): string | undefined => {
+    if (!playerId || isBotPlayer(playerId)) return undefined
+    if (playerId === 'player1') return getPlayer()?.userId || undefined
+    return playerId
+  }
+
   // Check for declaration: ROOI declares: "I have 3 cards left!"
   const declMatch = msg.match(/(.+?) declares: "I have (\d+)\s*cards?\s*left!"/i) || msg.match(/(.+?) declares: "I have (\d+)\s*card\(s\)\s*left!"/i)
   if (declMatch) {
@@ -276,11 +282,11 @@ function parseNotification(msg: string, senderId?: string | null) {
     const countStr = count === 1 ? '1 card' : `${count} cards`
 
     // Resolve userId for avatar snapshot
-    let resolvedUserId: string | undefined = senderId || undefined
+    let resolvedUserId: string | undefined = resolveAvatarUserId(senderId)
     if (!resolvedUserId && activeGame) {
       for (const pid of activeGame.playerOrder) {
         if (getPlayerDisplayName(pid).toUpperCase() === speaker.toUpperCase() || pid.toUpperCase() === speaker.toUpperCase()) {
-          resolvedUserId = pid
+          resolvedUserId = resolveAvatarUserId(pid)
           break
         }
       }
@@ -292,7 +298,7 @@ function parseNotification(msg: string, senderId?: string | null) {
       }
     }
 
-    const isBot = !resolvedUserId || resolvedUserId.toLowerCase().includes('bot')
+    const isBot = !resolvedUserId
 
     return {
       isDeclaration: true,
@@ -309,6 +315,7 @@ function parseNotification(msg: string, senderId?: string | null) {
   // Check for suit change: PLAYER changed the suit to HEARTS!
   const suitMatch = msg.match(/(.+?) changed the suit to (.+?)!/i)
   if (suitMatch) {
+    const avatarUserId = resolveAvatarUserId(senderId)
     return {
       isDeclaration: false,
       speaker: suitMatch[1],
@@ -316,13 +323,14 @@ function parseNotification(msg: string, senderId?: string | null) {
       highlight: suitMatch[2],
       suffix: '!',
       icon: '✨',
-      userId: undefined,
-      isBot: false
+      userId: avatarUserId,
+      isBot: !avatarUserId
     }
   }
 
   // Check for caught challenge
   if (msg.includes('CAUGHT')) {
+    const avatarUserId = resolveAvatarUserId(senderId)
     return {
       isDeclaration: false,
       speaker: '🚨 CAUGHT',
@@ -330,8 +338,8 @@ function parseNotification(msg: string, senderId?: string | null) {
       highlight: '',
       suffix: '',
       icon: '🚨',
-      userId: undefined,
-      isBot: false
+      userId: avatarUserId,
+      isBot: !avatarUserId
     }
   }
 
@@ -343,22 +351,25 @@ function parseNotification(msg: string, senderId?: string | null) {
     highlight: '',
     suffix: '',
     icon: '⚡',
-    userId: undefined,
-    isBot: false
+    userId: resolveAvatarUserId(senderId),
+    isBot: !resolveAvatarUserId(senderId)
   }
 }
 
 function TopBannerNotification() {
   if (uiNotificationMessage === '') return null
   const parsed = parseNotification(uiNotificationMessage, uiNotificationSenderId)
+  const messageText = parsed.speaker
+    ? `${parsed.speaker} ${parsed.action}${parsed.highlight}${parsed.suffix}`
+    : `${parsed.action}${parsed.highlight}${parsed.suffix}`
 
   return (
     <UiEntity
       uiTransform={{
         positionType: 'absolute',
-        position: { top: 24 },
-        width: 566,
-        height: 68,
+        position: { top: 24, left: 24 },
+        width: 560,
+        height: 72,
         alignItems: 'center',
         justifyContent: 'center',
         flexDirection: 'row'
@@ -430,62 +441,24 @@ function TopBannerNotification() {
           />
         </UiEntity>
 
-        {/* Text Line: SPEAKER (Cyan) + declares: "I have (White) + COUNT (Gold) + left!" (White) */}
+        {/* Keep the whole announcement in one wrapped text box so fragments cannot overlap. */}
         <UiEntity
           uiTransform={{
-            flexDirection: 'row',
+            width: 430,
+            height: 54,
             alignItems: 'center',
-            flexGrow: 1
+            justifyContent: 'flex-start',
+            margin: { right: 8 }
           }}
-        >
-          {parsed.speaker !== '' && (
-            <UiEntity
-              uiTransform={{ margin: { right: 6 } }}
-              uiText={{
-                value: parsed.speaker,
-                fontSize: 18,
-                color: Color4.fromHexString('#00f3ff'),
-                textAlign: 'middle-left',
-                font: 'sans-serif'
-              }}
-            />
-          )}
-
-          <UiEntity
-            uiText={{
-              value: parsed.action,
-              fontSize: 17,
-              color: Color4.fromHexString('#ffffff'),
-              textAlign: 'middle-left',
-              font: 'sans-serif'
-            }}
-          />
-
-          {parsed.highlight !== '' && (
-            <UiEntity
-              uiTransform={{ margin: { left: 4, right: 4 } }}
-              uiText={{
-                value: parsed.highlight,
-                fontSize: 18,
-                color: Color4.fromHexString('#ffd700'),
-                textAlign: 'middle-left',
-                font: 'sans-serif'
-              }}
-            />
-          )}
-
-          {parsed.suffix !== '' && (
-            <UiEntity
-              uiText={{
-                value: parsed.suffix,
-                fontSize: 17,
-                color: Color4.fromHexString('#ffffff'),
-                textAlign: 'middle-left',
-                font: 'sans-serif'
-              }}
-            />
-          )}
-        </UiEntity>
+          uiText={{
+            value: messageText,
+            fontSize: 16,
+            color: parsed.isDeclaration ? Color4.fromHexString('#ffd700') : Color4.fromHexString('#ffffff'),
+            textAlign: 'middle-left',
+            textWrap: 'wrap',
+            font: 'sans-serif'
+          }}
+        />
       </UiEntity>
     </UiEntity>
   )

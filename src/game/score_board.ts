@@ -25,7 +25,7 @@ function formatLeaderboard(title: string, rows: PlayerLeaderboardStats[], value:
 
 export function renderOutdoorHallOfFame(game?: CrazyEightsGame) {
   if (exteriorLeaderboardColumns.length === 0) return
-  // Only real players from multiplayer games are counted. Bots and solo results stay out.
+  // Count human winners from both solo and multiplayer games; bot identities are excluded.
   const records = Array.from(game?.leaderboardStats.values() || []).filter(row => !isBotPlayer(row.playerId))
   const week = currentWeekKey()
   const columns = [

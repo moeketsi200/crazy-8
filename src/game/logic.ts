@@ -349,7 +349,7 @@ export class CrazyEightsGame {
         this.matchOver = true
         this.isStarted = false
         const winnerName = this.getDisplayName(winner)
-        if (this.gameMode === 'multiplayer' && !isBotPlayer(winner)) {
+        if (!isBotPlayer(winner)) {
           this.recordMatchWin(winner)
         }
         this.lastRoundResult = {
@@ -727,18 +727,13 @@ export class CrazyEightsGame {
     let winner = remaining.length === 1 ? remaining[0] : undefined
     this.matchOver = !!winner
 
-    if (this.gameMode === 'multiplayer') {
-      const recordRoundWin = (playerId: PlayerId) => {
-        if (isBotPlayer(playerId)) return
-        const record = this.getOrCreateLeaderboardRecord(playerId)
-        record.roundsWon += 1
-        this.leaderboardStats.set(playerId, record)
-      }
-
-      if (roundWinnerId) recordRoundWin(roundWinnerId)
-      if (winner && !isBotPlayer(winner)) {
-        this.recordMatchWin(winner)
-      }
+    if (roundWinnerId && !isBotPlayer(roundWinnerId)) {
+      const record = this.getOrCreateLeaderboardRecord(roundWinnerId)
+      record.roundsWon += 1
+      this.leaderboardStats.set(roundWinnerId, record)
+    }
+    if (winner && !isBotPlayer(winner)) {
+      this.recordMatchWin(winner)
     }
     
     const roundWinnerName = this.getDisplayName(roundWinnerId).toUpperCase()

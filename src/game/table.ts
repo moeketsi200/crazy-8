@@ -1,4 +1,4 @@
-import { engine, Transform, MeshRenderer, MeshCollider, ColliderLayer, TextShape, Material, pointerEventsSystem, InputAction, Entity, AvatarModifierArea, AvatarModifierType, Billboard } from '@dcl/sdk/ecs'
+import { engine, Transform, MeshRenderer, MeshCollider, ColliderLayer, TextShape, Material, pointerEventsSystem, InputAction, Entity, AvatarModifierArea, AvatarModifierType, Billboard, PlayerIdentityData } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion, Color4, Color3 } from '@dcl/sdk/math'
 import { movePlayerTo, triggerEmote, stopEmote } from '~system/RestrictedActions'
 import { getPlayer } from '@dcl/sdk/src/players'
@@ -276,6 +276,10 @@ export class CasinoChair {
   }
 
   public occupy() {
+    if (this.isOccupiedByAvatar()) {
+      showRewardToast('This chair is occupied. Choose another seat.')
+      return
+    }
     if (globalGame?.isStarted && !globalGame.gameOver) {
       showRewardToast('This match has started. Join the next lobby to play.')
       return
@@ -303,6 +307,23 @@ export class CasinoChair {
     })
 
     if (globalGame) update3DTable(globalGame)
+  }
+
+  public isOccupiedByAvatar(): boolean {
+    const localPlayerId = resolvePlayerId(globalGame)
+    const seatPosition = this.sitPosition
+    for (const [playerEntity, identity] of engine.getEntitiesWith(PlayerIdentityData)) {
+      if (identity.address === localPlayerId) continue
+      const transform = Transform.getOrNull(playerEntity)
+      if (!transform) continue
+
+      // Remote avatar transforms are world coordinates. This scene's base parcel is 0,0,
+      // so they share the same coordinate frame as the chair positions above.
+      const dx = transform.position.x - seatPosition.x
+      const dz = transform.position.z - seatPosition.z
+      if (dx * dx + dz * dz < 0.7 * 0.7) return true
+    }
+    return false
   }
 }
 
@@ -367,12 +388,11 @@ export function exitGame() {
   showRewardToast(getStreakReminderMessage())
 }
 
-export function sitPlayerAtOpenChair(userId?: string): boolean {
-  const targetId = userId || resolvePlayerId(globalGame)
+export function sitPlayerAtOpenChair(_userId?: string): boolean {
   for (let i = 0; i < allChairs.length; i++) {
-    if (!seatedChairs.has(i)) {
+    if (!seatedChairs.has(i) && !allChairs[i].isOccupiedByAvatar()) {
       allChairs[i].occupy()
-      return true
+      return getPlayerSeated()
     }
   }
   return false

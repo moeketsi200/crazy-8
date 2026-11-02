@@ -19,6 +19,7 @@ import {
   setupVipKiosk,
   setupTrophyShowcase,
   setupVictoryCelebration,
+  setRoundWinnerCrown,
   triggerVictoryCelebration,
   setupWearableShowcases
 } from './game/models_integration'
@@ -83,7 +84,11 @@ export function main() {
       const isSolo = result.gameMode === 'solo'
       const isWatchingSolo = isSolo && !result.winner && gameEngine.eliminatedPlayers.has(myId)
 
-      if (result.winner || result.roundWinner) triggerVictoryCelebration()
+      const roundWinnerId = result.roundWinner || result.winner
+      if (roundWinnerId) {
+        setRoundWinnerCrown(roundWinnerId)
+        triggerVictoryCelebration()
+      }
 
       if (grantLocalRewards && gameEngine.playerOrder.includes(myId)) {
         reportGameplayAction('match_finished')
