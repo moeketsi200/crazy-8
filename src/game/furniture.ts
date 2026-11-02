@@ -449,9 +449,10 @@ export function buildDJAvatar(houseEntity: Entity) {
             `${baseAvatar}mouth_00`,
             `${baseAvatar}eyes_00`,
             `${baseAvatar}black_jacket`,
-            `${baseAvatar}blue_jeans`,
+            `${baseAvatar}distressed_black_Jeans`,
             `${baseAvatar}sneakers`,
-            `${baseAvatar}short_hair`
+            `${baseAvatar}short_hair`,
+            `${baseAvatar}black_sun_glasses`
         ],
         hairColor: { r: 0.06, g: 0.04, b: 0.03 },
         skinColor: { r: 0.45, g: 0.28, b: 0.2 },

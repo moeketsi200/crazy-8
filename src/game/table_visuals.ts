@@ -116,6 +116,6 @@ export function buildPrimitiveTable(houseEntity: Entity) {
     metallic: 0.1
   })
 
-  // Spawn the decorative second card of the discard pile
-  createCard(houseEntity, 0.12, 0.791, 0.05, -42, false)
+  // Spawn the decorative second card of the discard pile (centered in the middle of table)
+  createCard(houseEntity, 0.005, 0.791, -0.005, -35, false)
 }

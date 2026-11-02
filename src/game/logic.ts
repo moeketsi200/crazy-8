@@ -77,6 +77,7 @@ export class CrazyEightsGame {
   private roundResultSequence = 0
   public onRoundEnd?: (eliminated: PlayerId, winner?: PlayerId, scoreBreakdown?: string, roundWinner?: PlayerId) => void
   public onCardPlayed?: (playerId: PlayerId, card: Card) => void
+  public onCardDrawn?: (playerId: PlayerId, count: number) => void
   public onDeclareSafe?: (playerId: PlayerId) => void
   public onClientActionRequest?: (request: GameActionRequest) => void
 
@@ -87,9 +88,51 @@ export class CrazyEightsGame {
   public lastNotification?: { id: number, message: string, senderId?: string }
   private lastProcessedNotificationId: number = 0
 
+  public lastPlayerActions: Map<PlayerId, { text: string, timestamp: number }> = new Map()
+  public actionHistory: Array<{ id: number, playerId?: PlayerId, playerName: string, text: string, timestamp: number }> = []
+
+  public recordPlayerAction(playerId: PlayerId, actionText: string) {
+    const playerName = this.getDisplayName(playerId)
+    const entry = {
+      id: Date.now() + Math.random(),
+      playerId,
+      playerName,
+      text: actionText,
+      timestamp: Date.now()
+    }
+    this.lastPlayerActions.set(playerId, { text: actionText, timestamp: Date.now() })
+    this.actionHistory.unshift(entry)
+    if (this.actionHistory.length > 25) {
+      this.actionHistory.pop()
+    }
+  }
+
+  public getSuitSymbol(suit: Suit): string {
+    switch (suit) {
+      case 'Hearts': return '♥'
+      case 'Diamonds': return '♦'
+      case 'Clubs': return '♣'
+      case 'Spades': return '♠'
+      default: return '★'
+    }
+  }
+
   public notify(message: string, senderId?: PlayerId) {
     this.lastNotification = { id: Date.now(), message, senderId }
     this.lastProcessedNotificationId = this.lastNotification.id
+    if (senderId) {
+      this.lastPlayerActions.set(senderId, { text: message, timestamp: Date.now() })
+    }
+    this.actionHistory.unshift({
+      id: Date.now() + Math.random(),
+      playerId: senderId,
+      playerName: senderId ? this.getDisplayName(senderId) : 'Game',
+      text: message,
+      timestamp: Date.now()
+    })
+    if (this.actionHistory.length > 25) {
+      this.actionHistory.pop()
+    }
     if (this.onNotification) {
       this.onNotification(message, senderId)
     }
@@ -487,6 +530,7 @@ export class CrazyEightsGame {
       const cardStr = count === 1 ? '1 card' : `${count} cards`
       const displayName = this.getDisplayName(playerId).toUpperCase()
       this.notify(`${displayName} declares: "I have ${cardStr} left!"`, playerId)
+      this.recordPlayerAction(playerId, `Declared SAFE (${cardStr})`)
       this.onStateChanged?.()
       return true
     }
@@ -513,6 +557,7 @@ export class CrazyEightsGame {
       this.drawOne(targetId)
       this.drawOne(targetId)
       this.notify(`🚨 CAUGHT! ${challengerName} caught ${targetName} failing to declare! 2 Penalty Cards!`, challengerId)
+      this.recordPlayerAction(challengerId, `Caught ${targetName}!`)
       this.onStateChanged?.()
       return true
     } else {
@@ -571,6 +616,13 @@ export class CrazyEightsGame {
     this.discardPile.push(cardToPlay)
     this.safeDeclared.delete(playerId)
 
+    const pName = this.getDisplayName(playerId)
+    if (cardToPlay.action === 'Normal') {
+      const sym = this.getSuitSymbol(cardToPlay.suit)
+      this.notify(`🎴 ${pName} played ${cardToPlay.rank} of ${cardToPlay.suit} (${sym})`, playerId)
+      this.recordPlayerAction(playerId, `Played ${cardToPlay.rank} ${sym}`)
+    }
+
     if (this.onCardPlayed) {
       this.onCardPlayed(playerId, cardToPlay)
     }
@@ -591,8 +643,10 @@ export class CrazyEightsGame {
   private handleSuitChange(cardToPlay: Card, newSuitForWild: Suit | undefined, playerId: PlayerId) {
     if (cardToPlay.action === 'Wild' || cardToPlay.action === 'Draw4') {
       this.activeSuit = newSuitForWild || 'Spades'
-      const name = this.getDisplayName(playerId).toUpperCase()
-      this.notify(`${name} changed the suit to ${this.activeSuit.toUpperCase()}!`, playerId)
+      const name = this.getDisplayName(playerId)
+      const sym = this.getSuitSymbol(this.activeSuit)
+      this.notify(`🌈 ${name} changed suit to ${this.activeSuit} (${sym})!`, playerId)
+      this.recordPlayerAction(playerId, `Wild: ${this.activeSuit} ${sym}`)
     } else {
       this.activeSuit = cardToPlay.suit
     }
@@ -600,6 +654,7 @@ export class CrazyEightsGame {
 
   private handleActionCardEffects(cardToPlay: Card, playerId?: PlayerId): boolean {
     let skipNext = false
+    const pName = this.getDisplayName(playerId || '')
     if (cardToPlay.action === 'Draw2' || cardToPlay.action === 'Draw4') {
       const added = cardToPlay.action === 'Draw4' ? 4 : 2
       const wasPending = this.pendingDraws
@@ -607,17 +662,24 @@ export class CrazyEightsGame {
       if (wasPending > 0) {
         this.notify(`🔥 PENALTY STACKED! Draw pool is now +${this.pendingDraws} cards!`, playerId)
       } else {
-        this.notify(`⚡ ${cardToPlay.rank} played! Counter with a 2 or Joker, or draw +${this.pendingDraws}!`, playerId)
+        this.notify(`⚡ ${pName} played ${cardToPlay.rank}! Counter or draw +${this.pendingDraws}!`, playerId)
       }
+      this.recordPlayerAction(playerId || '', `Stacked +${added} Penalty`)
     } else if (cardToPlay.action === 'Reverse') {
       const activePlayersCount = this.playerOrder.filter(p => !this.eliminatedPlayers.has(p)).length
       if (activePlayersCount === 2) {
         skipNext = true
+        this.notify(`⏭️ ${pName} played Reverse (Acts as Skip in 1v1)!`, playerId)
+        this.recordPlayerAction(playerId || '', 'Skip (1v1 Reverse)')
       } else {
         this.turnDirection *= -1
+        this.notify(`🔄 ${pName} played Reverse (Jack)! Direction reversed!`, playerId)
+        this.recordPlayerAction(playerId || '', 'Reversed Direction (Jack)')
       }
     } else if (cardToPlay.action === 'Skip') {
       skipNext = true
+      this.notify(`⏭️ ${pName} played Skip (7)! Next player skipped!`, playerId)
+      this.recordPlayerAction(playerId || '', 'Skipped Next Player (7)')
     }
     return skipNext
   }
@@ -637,14 +699,24 @@ export class CrazyEightsGame {
         this.drawOne(playerId)
       }
       this.pendingDraws = 0
-      const name = this.getDisplayName(playerId).toUpperCase()
+      const name = this.getDisplayName(playerId)
       this.notify(`💥 ${name} drew ${count} penalty cards!`, playerId)
+      this.recordPlayerAction(playerId, `Drew +${count} Penalty Cards`)
+      if (this.onCardDrawn) {
+        this.onCardDrawn(playerId, count)
+      }
       this.nextTurn(1)
       this.onStateChanged?.()
       return true
     }
 
     this.drawOne(playerId)
+    const pName = this.getDisplayName(playerId)
+    this.notify(`📥 ${pName} drew a card`, playerId)
+    this.recordPlayerAction(playerId, 'Drew a card')
+    if (this.onCardDrawn) {
+      this.onCardDrawn(playerId, 1)
+    }
     this.nextTurn(1)
     this.onStateChanged?.()
     return true

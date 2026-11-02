@@ -1,4 +1,4 @@
-import { engine, Transform, MeshRenderer, MeshCollider, ColliderLayer, TextShape, Material, pointerEventsSystem, InputAction, Entity, AvatarModifierArea, AvatarModifierType, Billboard, PlayerIdentityData } from '@dcl/sdk/ecs'
+import { engine, Transform, MeshRenderer, MeshCollider, ColliderLayer, TextShape, Material, pointerEventsSystem, InputAction, Entity, AvatarModifierArea, AvatarModifierType, Billboard, PlayerIdentityData, AvatarShape } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion, Color4, Color3 } from '@dcl/sdk/math'
 import { movePlayerTo, triggerEmote, stopEmote } from '~system/RestrictedActions'
 import { getPlayer } from '@dcl/sdk/src/players'
@@ -8,6 +8,146 @@ import { buildPrimitiveTable } from './table_visuals'
 import { setupTableChips, setupChairAuras, updateChairAuraVisibility } from './models_integration'
 import { getStreakReminderMessage } from './economy'
 import { showRewardToast } from './rewards_ui'
+
+// ==========================================
+// BOT PERSONAS & WEARABLES
+// ==========================================
+export const BOT_NAMES = ['Neo', 'Trinity', 'Satoshi', 'Roxy', 'Cipher', 'Viper', 'Jax']
+
+export interface BotPersona {
+  name: string
+  title: string
+  bodyShape: string
+  wearables: string[]
+  hairColor: { r: number, g: number, b: number }
+  skinColor: { r: number, g: number, b: number }
+  eyeColor: { r: number, g: number, b: number }
+}
+
+const BASE_URN = 'urn:decentraland:off-chain:base-avatars:'
+
+export const BOT_PERSONAS: BotPersona[] = [
+  {
+    name: 'Neo',
+    title: 'The Hacker',
+    bodyShape: `${BASE_URN}BaseMale`,
+    wearables: [
+      `${BASE_URN}eyebrows_00`,
+      `${BASE_URN}mouth_00`,
+      `${BASE_URN}eyes_00`,
+      `${BASE_URN}black_jacket`,
+      `${BASE_URN}distressed_black_Jeans`,
+      `${BASE_URN}classic_shoes`,
+      `${BASE_URN}short_hair`,
+      `${BASE_URN}matrix_sunglasses`
+    ],
+    hairColor: { r: 0.05, g: 0.05, b: 0.05 },
+    skinColor: { r: 0.90, g: 0.78, b: 0.68 },
+    eyeColor: { r: 0.1, g: 0.2, b: 0.3 }
+  },
+  {
+    name: 'Trinity',
+    title: 'Code Breaker',
+    bodyShape: `${BASE_URN}BaseFemale`,
+    wearables: [
+      `${BASE_URN}eyebrows_00`,
+      `${BASE_URN}mouth_00`,
+      `${BASE_URN}eyes_00`,
+      `${BASE_URN}white_top`,
+      `${BASE_URN}f_jeans`,
+      `${BASE_URN}two_tails`,
+      `${BASE_URN}f_glasses_fashion`
+    ],
+    hairColor: { r: 0.08, g: 0.08, b: 0.1 },
+    skinColor: { r: 0.92, g: 0.80, b: 0.70 },
+    eyeColor: { r: 0.2, g: 0.5, b: 0.6 }
+  },
+  {
+    name: 'Satoshi',
+    title: 'Cypherpunk',
+    bodyShape: `${BASE_URN}BaseMale`,
+    wearables: [
+      `${BASE_URN}eyebrows_00`,
+      `${BASE_URN}mouth_00`,
+      `${BASE_URN}eyes_00`,
+      `${BASE_URN}green_hoodie`,
+      `${BASE_URN}grey_joggers`,
+      `${BASE_URN}sneakers`,
+      `${BASE_URN}short_hair`
+    ],
+    hairColor: { r: 0.15, g: 0.10, b: 0.05 },
+    skinColor: { r: 0.85, g: 0.72, b: 0.60 },
+    eyeColor: { r: 0.3, g: 0.2, b: 0.1 }
+  },
+  {
+    name: 'Roxy',
+    title: 'High Roller',
+    bodyShape: `${BASE_URN}BaseFemale`,
+    wearables: [
+      `${BASE_URN}eyebrows_00`,
+      `${BASE_URN}mouth_00`,
+      `${BASE_URN}eyes_00`,
+      `${BASE_URN}f_blue_jacket`,
+      `${BASE_URN}f_red_modern_pants`,
+      `${BASE_URN}f_hair_cool`
+    ],
+    hairColor: { r: 0.8, g: 0.2, b: 0.3 },
+    skinColor: { r: 0.95, g: 0.82, b: 0.72 },
+    eyeColor: { r: 0.2, g: 0.6, b: 0.7 }
+  },
+  {
+    name: 'Cipher',
+    title: 'Card Shark',
+    bodyShape: `${BASE_URN}BaseMale`,
+    wearables: [
+      `${BASE_URN}eyebrows_00`,
+      `${BASE_URN}mouth_00`,
+      `${BASE_URN}eyes_00`,
+      `${BASE_URN}turtle_neck_sweater`,
+      `${BASE_URN}oxford_pants`,
+      `${BASE_URN}classic_shoes`,
+      `${BASE_URN}black_sun_glasses`,
+      `${BASE_URN}short_hair`
+    ],
+    hairColor: { r: 0.2, g: 0.15, b: 0.1 },
+    skinColor: { r: 0.80, g: 0.65, b: 0.50 },
+    eyeColor: { r: 0.1, g: 0.1, b: 0.1 }
+  },
+  {
+    name: 'Viper',
+    title: 'Speed Dealer',
+    bodyShape: `${BASE_URN}BaseMale`,
+    wearables: [
+      `${BASE_URN}eyebrows_00`,
+      `${BASE_URN}mouth_00`,
+      `${BASE_URN}eyes_00`,
+      `${BASE_URN}blue_tshirt`,
+      `${BASE_URN}hip_hop_joggers`,
+      `${BASE_URN}sneakers`,
+      `${BASE_URN}short_hair`
+    ],
+    hairColor: { r: 0.1, g: 0.1, b: 0.1 },
+    skinColor: { r: 0.90, g: 0.76, b: 0.62 },
+    eyeColor: { r: 0.2, g: 0.4, b: 0.2 }
+  },
+  {
+    name: 'Jax',
+    title: 'The Pit Boss',
+    bodyShape: `${BASE_URN}BaseMale`,
+    wearables: [
+      `${BASE_URN}eyebrows_00`,
+      `${BASE_URN}mouth_00`,
+      `${BASE_URN}eyes_00`,
+      `${BASE_URN}puffer_jacket`,
+      `${BASE_URN}brown_pants`,
+      `${BASE_URN}classic_shoes`,
+      `${BASE_URN}short_hair`
+    ],
+    hairColor: { r: 0.3, g: 0.2, b: 0.1 },
+    skinColor: { r: 0.88, g: 0.75, b: 0.64 },
+    eyeColor: { r: 0.2, g: 0.3, b: 0.4 }
+  }
+]
 
 // ==========================================
 // CUSTOM TIMER SYSTEM
@@ -80,8 +220,10 @@ export function resolvePlayerId(game?: CrazyEightsGame | null): string {
 export function getPlayerDisplayName(userId: string): string {
   if (!userId) return 'Player'
   if (isBotPlayer(userId)) {
-    const botNumber = userId.match(/_(\d+)$/)?.[1]
-    return botNumber ? `Cyber Bot ${botNumber}` : 'Cyber Bot'
+    const botNumber = parseInt(userId.match(/_(\d+)$/)?.[1] || '1', 10)
+    const persona = BOT_PERSONAS[(botNumber - 1) % BOT_PERSONAS.length]
+    const personaName = persona ? persona.name : `Bot ${botNumber}`
+    return `${personaName} (Bot ${botNumber})`
   }
   if (userId === 'player1') {
     const local = getPlayer()
@@ -112,10 +254,10 @@ export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
   // 0. GENERATE THE 3D VISUAL TABLE AND CARDS
   buildPrimitiveTable(furnitureRoot)
 
-  // 1. CREATE THE DRAW PILE
+  // 1. CREATE THE DRAW PILE (Offset to side of center)
   Transform.create(drawPile, {
     parent: furnitureRoot,
-    position: Vector3.create(-0.15, 0.798, 0.0), // Blender coords!
+    position: Vector3.create(-0.25, 0.798, 0.0), // Blender coords! Offset to left of center
     scale: Vector3.create(0.063, 0.015, 0.088),
     rotation: Quaternion.fromEulerDegrees(0, -12, 0)
   })
@@ -147,10 +289,10 @@ export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
     }
   )
 
-  // 2. CREATE THE DISCARD PILE (Interactive Top Card)
+  // 2. CREATE THE DISCARD PILE (Played Card - Centered in EXACT MIDDLE of table)
   Transform.create(discardPile, {
     parent: furnitureRoot,
-    position: Vector3.create(0.15, 0.792, 0.02), // Blender coords!
+    position: Vector3.create(0.0, 0.792, 0.0), // EXACT MIDDLE OF CASINO TABLE!
     scale: Vector3.create(0.063, 0.001, 0.088),
     rotation: Quaternion.fromEulerDegrees(0, 15, 0)
   })
@@ -165,7 +307,7 @@ export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
 
   Transform.create(discardText, {
     parent: discardPile,
-    position: Vector3.create(0, 0.6, 0),
+    position: Vector3.create(0, 0.45, 0),
     rotation: Quaternion.fromEulerDegrees(90, 180, 0)
   })
   TextShape.create(discardText, {
@@ -199,15 +341,28 @@ export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
   
   // Only the lobby host drives the shared bots, so they do not take duplicate turns.
   game.onBotTurnStart = (botId) => {
+    update3DTable(game)
     if (resolvePlayerId(game) !== game.gameMasterId) return
-    setGameTimer(2.0, () => {
+    setGameTimer(1.8, () => {
       if (resolvePlayerId(game) === game.gameMasterId) {
         game.runBotTurn(botId)
+        update3DTable(game)
       }
     })
   }
 
-  // Game will be started via the UI button!
+  game.onCardPlayed = () => {
+    update3DTable(game)
+  }
+  game.onCardDrawn = () => {
+    update3DTable(game)
+  }
+  game.onDeclareSafe = () => {
+    update3DTable(game)
+  }
+
+  // Initial seeding of 3D table, discard pile, and seated bot avatars
+  update3DTable(game)
 }
 
 // ==========================================
@@ -420,12 +575,15 @@ export function getSeatedPlayerIds(): string[] {
 let lastHandHash = ''
 
 export function autoUpdateTableSystem(dt: number) {
-  if (!globalGame || !globalGame.isStarted || globalGame.discardPile.length === 0) return
+  if (!globalGame) return
 
-  const topCard = globalGame.getTopDiscard()
-  const currentTopCardStr = `${topCard.suit}-${topCard.rank}`
+  const topCard = globalGame.discardPile.length > 0 ? globalGame.getTopDiscard() : null
+  const currentTopCardStr = topCard ? `${topCard.suit}-${topCard.rank}` : 'none'
+  const turn = globalGame.currentTurnIndex
+  const actId = globalGame.actionHistory[0]?.id || 0
+  const isStarted = globalGame.isStarted ? '1' : '0'
   
-  let handHash = `${currentTopCardStr}|`
+  let handHash = `${isStarted}|${currentTopCardStr}|t:${turn}|a:${actId}|seat:${_localSeatedChairIndex}|`
   for (const [pId, hand] of globalGame.players.entries()) {
     const isSafe = globalGame.safeDeclared.has(pId) ? 'S' : 'U'
     handHash += `${pId}:${hand.length}:${isSafe};`
@@ -466,20 +624,192 @@ function clearOpponentCards() {
   spawnedOpponentCards = []
 }
 
-function spawnSingleOpponentHand(playerId: string, numCards: number) {
-  let slot = 2
-  if (globalGame) {
-    const idx = globalGame.playerOrder.indexOf(playerId)
-    if (idx !== -1) {
-      slot = idx * 2 // spread out nicely
+export function getPlayerChairIndex(playerId: string, game?: CrazyEightsGame | null): number {
+  const g = game || globalGame
+  const myId = resolvePlayerId(g)
+  const myChair = _localSeatedChairIndex >= 0 ? _localSeatedChairIndex : 0
+  if (playerId === myId) return myChair
+
+  if (!g || !g.playerOrder || g.playerOrder.length === 0) {
+    const botNum = parseInt(playerId.match(/_(\d+)$/)?.[1] || '1', 10)
+    return (myChair + botNum) % 8
+  }
+
+  const otherPlayers = g.playerOrder.filter(id => id !== myId)
+  const idx = otherPlayers.indexOf(playerId)
+  if (idx !== -1) {
+    return (myChair + 1 + idx) % 8
+  }
+  return (myChair + 1) % 8
+}
+
+interface SpawnedBotData {
+  rootEntity: Entity
+  nametagEntity: Entity
+  chairIndex: number
+  botId: string
+  personaIndex: number
+}
+let spawnedBotAvatars: Map<string, SpawnedBotData> = new Map()
+
+export function clearBotAvatars() {
+  for (const [_, data] of spawnedBotAvatars) {
+    engine.removeEntity(data.rootEntity)
+    engine.removeEntity(data.nametagEntity)
+  }
+  spawnedBotAvatars.clear()
+}
+
+export function updateBotAvatars(game: CrazyEightsGame) {
+  if (!globalHouseEntity) return
+
+  let botIds: string[] = []
+  if (game.playerOrder && game.playerOrder.length > 0) {
+    botIds = game.playerOrder.filter(id => isBotPlayer(id))
+  } else {
+    // When idle before start, seed the 7 bot personas around the table so it looks active and populated
+    botIds = ['bot_1', 'bot_2', 'bot_3', 'bot_4', 'bot_5', 'bot_6', 'bot_7']
+  }
+
+  // Remove any bots no longer in the list
+  for (const [bId, data] of spawnedBotAvatars) {
+    if (!botIds.includes(bId)) {
+      engine.removeEntity(data.rootEntity)
+      engine.removeEntity(data.nametagEntity)
+      spawnedBotAvatars.delete(bId)
     }
   }
+
+  for (let i = 0; i < botIds.length; i++) {
+    const botId = botIds[i]
+    const botNum = parseInt(botId.match(/_(\d+)$/)?.[1] || `${i + 1}`, 10)
+    const personaIdx = (botNum - 1) % BOT_PERSONAS.length
+    const persona = BOT_PERSONAS[personaIdx]
+    const chairIdx = getPlayerChairIndex(botId, game)
+
+    const angleRad = chairIdx * (Math.PI / 4)
+    const angleDeg = chairIdx * 45
+    const chairRadius = 2.2
+    const cx = chairRadius * Math.cos(angleRad)
+    const cz = chairRadius * Math.sin(angleRad)
+
+    const botX = cx * 0.92
+    const botZ = cz * 0.92
+    const botY = 0.12
+    const botRot = Quaternion.fromEulerDegrees(0, -(angleDeg + 90), 0)
+
+    let botData = spawnedBotAvatars.get(botId)
+    if (!botData) {
+      const rootEntity = engine.addEntity()
+      Transform.create(rootEntity, {
+        parent: globalHouseEntity,
+        position: Vector3.create(botX, botY, botZ),
+        rotation: botRot,
+        scale: Vector3.One()
+      })
+      AvatarShape.create(rootEntity, {
+        id: `bot_avatar_${botId}_${chairIdx}`,
+        name: '',
+        bodyShape: persona.bodyShape,
+        emotes: [],
+        wearables: persona.wearables,
+        hairColor: persona.hairColor,
+        skinColor: persona.skinColor,
+        eyeColor: persona.eyeColor,
+        expressionTriggerId: 'sittingChair1',
+        expressionTriggerTimestamp: 0
+      })
+
+      MeshCollider.setBox(rootEntity, ColliderLayer.CL_POINTER)
+      pointerEventsSystem.onPointerDown(
+        {
+          entity: rootEntity,
+          opts: { button: InputAction.IA_PRIMARY, hoverText: `🚨 Challenge ${persona.name} (Declare Check)` }
+        },
+        () => {
+          if (globalGame && globalGame.isStarted) {
+            const localId = resolvePlayerId(globalGame)
+            globalGame.challengePlayer(localId, botId)
+            update3DTable(globalGame)
+          }
+        }
+      )
+
+      const nametagEntity = engine.addEntity()
+      Transform.create(nametagEntity, {
+        parent: globalHouseEntity,
+        position: Vector3.create(botX, 1.85, botZ),
+        scale: Vector3.create(0.24, 0.24, 0.24)
+      })
+      Billboard.create(nametagEntity)
+      TextShape.create(nametagEntity, {
+        text: `🤖 ${persona.name}\n${persona.title}`,
+        fontSize: 2.8,
+        textColor: Color4.fromHexString('#00f3ff'),
+        outlineWidth: 0.15,
+        outlineColor: Color4.Black()
+      })
+
+      botData = {
+        rootEntity,
+        nametagEntity,
+        chairIndex: chairIdx,
+        botId,
+        personaIndex: personaIdx
+      }
+      spawnedBotAvatars.set(botId, botData)
+    } else {
+      if (botData.chairIndex !== chairIdx) {
+        botData.chairIndex = chairIdx
+        const mutT = Transform.getMutable(botData.rootEntity)
+        mutT.position = Vector3.create(botX, botY, botZ)
+        mutT.rotation = botRot
+
+        const mutTagT = Transform.getMutable(botData.nametagEntity)
+        mutTagT.position = Vector3.create(botX, 1.85, botZ)
+      }
+    }
+
+    const isEliminated = game.eliminatedPlayers.has(botId)
+    const isCurrentTurn = game.isStarted && game.getCurrentPlayerId() === botId
+    const hand = game.players.get(botId) || []
+    const isSafe = game.safeDeclared.has(botId)
+    const isVulnerable = !isEliminated && hand.length > 0 && hand.length <= 3
+
+    const mutTag = TextShape.getMutable(botData.nametagEntity)
+    if (isEliminated) {
+      mutTag.text = `🤖 ${persona.name}\n❌ ELIMINATED`
+      mutTag.textColor = Color4.fromHexString('#777777')
+    } else if (isCurrentTurn) {
+      mutTag.text = `🤖 ${persona.name}\n🤔 Thinking...`
+      mutTag.textColor = Color4.fromHexString('#ffd700')
+    } else if (isVulnerable && !isSafe) {
+      mutTag.text = `🚨 ${persona.name}\n${hand.length === 1 ? '1 CARD LEFT!' : `${hand.length} CARDS (UNSAFE)!`}`
+      mutTag.textColor = Color4.fromHexString('#ff2a6d')
+    } else if (isSafe) {
+      mutTag.text = `🤖 ${persona.name}\n🛡️ SAFE (${hand.length} cards)`
+      mutTag.textColor = Color4.fromHexString('#00ffaa')
+    } else {
+      const lastAct = game.lastPlayerActions.get(botId)
+      const ageSec = lastAct ? (Date.now() - lastAct.timestamp) / 1000 : 999
+      if (lastAct && ageSec < 6) {
+        mutTag.text = `🤖 ${persona.name}\n💬 ${lastAct.text}`
+        mutTag.textColor = Color4.fromHexString('#00f3ff')
+      } else {
+        mutTag.text = game.isStarted ? `🤖 ${persona.name}\n🎴 ${hand.length} cards` : `🤖 ${persona.name}\n✨ Ready`
+        mutTag.textColor = Color4.fromHexString('#b9c8dd')
+      }
+    }
+  }
+}
+
+function spawnSingleOpponentHand(playerId: string, numCards: number, chairIndex: number) {
+  const angleRad = chairIndex * (Math.PI / 4)
+  const angleDeg = chairIndex * 45
   
-  const angleRad = slot * (Math.PI / 4) + (Math.PI / 2)
-  const angleDeg = angleRad * (180 / Math.PI)
-  
-  const handCx = 1.15 * Math.cos(angleRad)
-  const handCz = 1.15 * Math.sin(angleRad)
+  const handRadius = 1.05
+  const handCx = handRadius * Math.cos(angleRad)
+  const handCz = handRadius * Math.sin(angleRad)
 
   const isSafe = !!(globalGame && globalGame.safeDeclared.has(playerId))
   const isVulnerable = numCards > 0 && numCards <= 3
@@ -495,7 +825,7 @@ function spawnSingleOpponentHand(playerId: string, numCards: number) {
       parent: globalHouseEntity,
       position: Vector3.create(handCx + shiftX, 0.791 + (i * 0.001), handCz + shiftZ),
       scale: Vector3.create(0.063, 0.001, 0.088),
-      rotation: Quaternion.fromEulerDegrees(0, -(angleDeg + 15 + (offset * 100)), 0)
+      rotation: Quaternion.fromEulerDegrees(0, -(angleDeg + 90 + (offset * 80)), 0)
     })
     MeshRenderer.setBox(cardEnt)
     Material.setPbrMaterial(cardEnt, {
@@ -558,8 +888,9 @@ function spawnOpponentCardsVisuals(game: CrazyEightsGame) {
   const myId = resolvePlayerId(game)
 
   for (const [playerId, hand] of game.players.entries()) {
-    if (playerId !== myId) {
-      spawnSingleOpponentHand(playerId, hand.length)
+    if (playerId !== myId && hand.length > 0 && !game.eliminatedPlayers.has(playerId)) {
+      const chairIdx = getPlayerChairIndex(playerId, game)
+      spawnSingleOpponentHand(playerId, hand.length, chairIdx)
     }
   }
 }
@@ -567,4 +898,5 @@ function spawnOpponentCardsVisuals(game: CrazyEightsGame) {
 export function update3DTable(game: CrazyEightsGame) {
   updateDiscardPileVisual(game)
   spawnOpponentCardsVisuals(game)
+  updateBotAvatars(game)
 }
