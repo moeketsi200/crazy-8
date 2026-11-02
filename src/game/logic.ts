@@ -3,6 +3,18 @@ import { Card, Suit, generateDeck, shuffleDeck } from './deck'
 export type PlayerId = string
 export type GameMode = 'solo' | 'multiplayer'
 
+export type GameActionRequest =
+  | { action: 'startLobby' }
+  | { action: 'startSolo' }
+  | { action: 'startMultiplayer' }
+  | { action: 'joinLobby' }
+  | { action: 'continue' }
+  | { action: 'leave' }
+  | { action: 'draw' }
+  | { action: 'play'; cardIndex: number; suit?: Suit }
+  | { action: 'declareSafe' }
+  | { action: 'challenge'; targetId: PlayerId }
+
 export const MAX_GAME_PLAYERS = 8
 export const TURN_TIME_LIMIT_MS = 60_000
 
@@ -66,6 +78,7 @@ export class CrazyEightsGame {
   public onRoundEnd?: (eliminated: PlayerId, winner?: PlayerId, scoreBreakdown?: string, roundWinner?: PlayerId) => void
   public onCardPlayed?: (playerId: PlayerId, card: Card) => void
   public onDeclareSafe?: (playerId: PlayerId) => void
+  public onClientActionRequest?: (request: GameActionRequest) => void
 
   public safeDeclared: Set<PlayerId> = new Set()
   public queuedPlayers: PlayerId[] = []
@@ -83,6 +96,10 @@ export class CrazyEightsGame {
   }
 
   public startLobby(seconds: number = 30, hostId: PlayerId = '') {
+    if (this.onClientActionRequest) {
+      this.onClientActionRequest({ action: 'startLobby' })
+      return
+    }
     const resolvedHostId = hostId || this.playerOrder.find((id) => !isBotPlayer(id)) || ''
     this.players.clear()
     this.playerOrder = []
@@ -112,6 +129,10 @@ export class CrazyEightsGame {
   }
 
   public tryJoinLobby(playerId: PlayerId): boolean {
+    if (this.onClientActionRequest) {
+      this.onClientActionRequest({ action: 'joinLobby' })
+      return true
+    }
     if (!playerId || this.isStarted || this.gameOver || this.lobbyEndTime <= Date.now()) return false
     if (this.playerOrder.includes(playerId)) return true
 
@@ -182,8 +203,8 @@ export class CrazyEightsGame {
   public deserialize(json: string) {
     try {
       const state = JSON.parse(json)
-      // Guard: do not overwrite active or valid local state with empty uninitialized data
-      if (!state || !Array.isArray(state.playerOrder) || state.playerOrder.length === 0) {
+      // The authoritative server can legitimately publish an empty lobby after players leave.
+      if (!state || !Array.isArray(state.playerOrder)) {
         return
       }
       this.players = new Map(state.players)
@@ -249,6 +270,10 @@ export class CrazyEightsGame {
   }
 
   public startGame(humanPlayers: PlayerId[], mode: GameMode, hostId: PlayerId = '') {
+    if (this.onClientActionRequest) {
+      this.onClientActionRequest({ action: mode === 'solo' ? 'startSolo' : 'startMultiplayer' })
+      return
+    }
     this.lobbyEndTime = 0
     const uniquePlayers = Array.from(new Set(humanPlayers.filter((id) => !!id && !isBotPlayer(id) && id.trim().length > 0)))
       .slice(0, MAX_GAME_PLAYERS)
@@ -318,6 +343,10 @@ export class CrazyEightsGame {
   }
 
   public removePlayer(playerId: PlayerId) {
+    if (this.onClientActionRequest) {
+      this.onClientActionRequest({ action: 'leave' })
+      return
+    }
     if (!playerId) return
     this.queuedPlayers = this.queuedPlayers.filter(p => p !== playerId)
 
@@ -379,6 +408,10 @@ export class CrazyEightsGame {
   }
 
   public startNextRound() {
+    if (this.onClientActionRequest) {
+      this.onClientActionRequest({ action: 'continue' })
+      return
+    }
     if (this.matchOver) return
     // Add any queued players who joined mid-game into the active player roster!
     if (this.queuedPlayers.length > 0) {
@@ -442,6 +475,10 @@ export class CrazyEightsGame {
   }
 
   public declareLowCards(playerId: PlayerId): boolean {
+    if (this.onClientActionRequest) {
+      this.onClientActionRequest({ action: 'declareSafe' })
+      return true
+    }
     const hand = this.players.get(playerId)
     if (this.isHandVulnerable(hand)) {
       this.safeDeclared.add(playerId)
@@ -461,6 +498,10 @@ export class CrazyEightsGame {
   }
 
   public challengePlayer(challengerId: PlayerId, targetId: PlayerId): boolean {
+    if (this.onClientActionRequest) {
+      this.onClientActionRequest({ action: 'challenge', targetId })
+      return true
+    }
     if (this.gameOver) return false
     const targetHand = this.players.get(targetId)
     if (!targetHand) return false
@@ -516,6 +557,10 @@ export class CrazyEightsGame {
   }
 
   public playCard(playerId: PlayerId, cardIndex: number, newSuitForWild?: Suit): boolean {
+    if (this.onClientActionRequest) {
+      this.onClientActionRequest({ action: 'play', cardIndex, suit: newSuitForWild })
+      return true
+    }
     const hand = this.players.get(playerId)
     if (!hand) return false
     const cardToPlay = hand[cardIndex]
@@ -578,6 +623,10 @@ export class CrazyEightsGame {
   }
 
   public drawCard(playerId: PlayerId): boolean {
+    if (this.onClientActionRequest) {
+      this.onClientActionRequest({ action: 'draw' })
+      return true
+    }
     if (this.getCurrentPlayerId() !== playerId || this.gameOver) return false
 
     this.safeDeclared.delete(playerId)

@@ -27,6 +27,7 @@ A high-stakes multiplayer **Crazy Eights** card game built for **Decentraland SD
   - **Solo and Multiplayer Modes**: The table offers a solo bot mode and a multiplayer lobby for live Decentraland players. Verify both in the deployed build before relying on them for a playtest.
   - **Low-Hand Declaration & Challenge**: Players with 1–3 cards can declare their hand count; opponents can challenge a low hand that has not declared. The one-card declaration is called "Last Call." Shared-build behavior and challenge timing still need verification.
   - **Display Name Resolution**: Displays true Decentraland avatar profile names (e.g., `Rooi`, `Cyber Bot`) in card announcements, challenges, and leaderboards instead of raw 42-character wallet hashes.
+  - **Persistent Leaderboards**: The authoritative server validates game actions and stores all-time wins, weekly wins, and rounds won in Decentraland World Storage, so rankings survive scene restarts and deployments.
 
 - **Cyber VIP Penthouse Architecture**:
   - **Ground Floor Lounge**: Holographic circular card table, Pioneer-inspired CDJ DJ console, club sound system, rules info board, and high winnings leaderboard.
@@ -73,6 +74,8 @@ npx tsc --noEmit
 # Bundle production scene
 npm run build
 ```
+
+The authoritative-server SDK branch is required for persistent storage. SDK Commands enables the World server during preview and build; deploy the scene to the configured World (`rooi.dcl.eth`) to use its persistent storage.
 
 ### Publishing to Decentraland World
 ```bash

@@ -1,89 +1,77 @@
-import { engine, Schemas, Transform } from '@dcl/sdk/ecs'
-import { syncEntity, isStateSyncronized } from '@dcl/sdk/network'
-import { CrazyEightsGame } from './logic'
-import { getPlayer } from '@dcl/sdk/src/players'
+import { engine, Schemas } from '@dcl/sdk/ecs'
+import { isServer, isStateSyncronized, syncEntity } from '@dcl/sdk/network'
+import { AUTH_SERVER_PEER_ID } from '@dcl/sdk/network/message-bus-sync'
+import { GameActionRequest, CrazyEightsGame } from './logic'
+import { sceneRoom } from '../shared/messages'
 
-// Define a custom CRDT component for synchronizing the game state
 export const SyncGameState = engine.defineComponent('game::SyncState', {
   stateJson: Schemas.String,
   updateId: Schemas.Int64,
   lastUpdater: Schemas.String
 })
 
-// Unique ID for the singleton entity that holds the game state
-enum SyncIds {
-  GAME_STATE = 1
+if (isServer()) {
+  SyncGameState.validateBeforeChange((value) => value.senderAddress === AUTH_SERVER_PEER_ID)
 }
 
-export let syncEntityInstance: any
-let localUpdateId = Date.now()
-let hasPendingLocalUpdate = false
+// Use a new id so the server does not collide with the client-owned id from older builds.
+const SERVER_GAME_STATE_ID = 2
+let serverStateEntity: number | undefined
+let localUpdateId = 0
 
-export function setupMultiplayer(gameEngine: CrazyEightsGame) {
-  // Create a singleton entity for syncing the game state
-  syncEntityInstance = engine.addEntity()
-  Transform.create(syncEntityInstance)
-  
-  SyncGameState.create(syncEntityInstance, {
-    stateJson: gameEngine.serialize(),
+export function createAuthoritativeGameState(game: CrazyEightsGame): number {
+  if (!isServer()) throw new Error('Only the authoritative server may create the shared game state.')
+
+  const entity = engine.addEntity()
+  SyncGameState.create(entity, {
+    stateJson: game.serialize(),
     updateId: Date.now(),
-    lastUpdater: ''
+    lastUpdater: 'authoritative-server'
   })
-  
-  // Register with SDK7 CRDT network
-  syncEntity(syncEntityInstance, [SyncGameState.componentId], SyncIds.GAME_STATE)
+  syncEntity(entity, [SyncGameState.componentId], SERVER_GAME_STATE_ID)
+  serverStateEntity = entity
+  return entity
+}
 
-  let hasAppliedInitialSync = false
+export function publishAuthoritativeGameState(game: CrazyEightsGame) {
+  if (!isServer() || serverStateEntity === undefined) return
+  const state = SyncGameState.getMutable(serverStateEntity)
+  state.stateJson = game.serialize()
+  state.updateId = Math.max(Date.now(), state.updateId + 1)
+  state.lastUpdater = 'authoritative-server'
+}
 
-  // System to detect remote changes to the SyncGameState component
+export function setupMultiplayer(gameEngine: CrazyEightsGame, getLocalPlayerName: () => string = () => '') {
+  if (isServer()) return
+
+  gameEngine.onClientActionRequest = (request: GameActionRequest) => {
+    const cardRequest = request.action === 'play' ? request : undefined
+    void sceneRoom.send('gameAction', {
+      action: request.action,
+      playerName: getLocalPlayerName(),
+      mode: request.action === 'startSolo' ? 'solo' : '',
+      cardIndex: cardRequest?.cardIndex ?? -1,
+      suit: cardRequest?.suit || '',
+      targetId: request.action === 'challenge' ? request.targetId : ''
+    })
+  }
+
   engine.addSystem(() => {
     if (!isStateSyncronized()) return
 
-    if (hasPendingLocalUpdate) {
-      hasPendingLocalUpdate = false
-      pushGameState(gameEngine)
-    }
+    for (const [entity] of engine.getEntitiesWith(SyncGameState)) {
+      const state = SyncGameState.getOrNull(entity)
+      if (!state || state.lastUpdater !== 'authoritative-server' || !state.stateJson || state.updateId <= localUpdateId) continue
 
-    const currentState = SyncGameState.getOrNull(syncEntityInstance)
-    if (currentState && currentState.stateJson) {
-      // Validate that stateJson is non-empty before deserializing
-      let isValidPayload = false
       try {
-        const parsed = JSON.parse(currentState.stateJson)
-        if (parsed && Array.isArray(parsed.playerOrder) && parsed.playerOrder.length > 0) {
-          isValidPayload = true
-        }
-      } catch {}
-
-      if (isValidPayload) {
-        if (currentState.updateId > localUpdateId) {
-          localUpdateId = currentState.updateId
-          gameEngine.deserialize(currentState.stateJson)
-        } else if (!hasAppliedInitialSync) {
-          localUpdateId = currentState.updateId
-          gameEngine.deserialize(currentState.stateJson)
-          hasAppliedInitialSync = true
-        }
+        const parsed = JSON.parse(state.stateJson)
+        if (!parsed || !Array.isArray(parsed.playerOrder)) continue
+        localUpdateId = state.updateId
+        gameEngine.deserialize(state.stateJson)
+      } catch (error) {
+        console.error('Failed to read authoritative game state:', error)
       }
     }
   })
-}
-
-// Helper to push our local state to the network
-export function pushGameState(gameEngine: CrazyEightsGame) {
-  if (!syncEntityInstance) return
-  if (!isStateSyncronized()) {
-    hasPendingLocalUpdate = true
-    return
-  }
-  
-  const mutableState = SyncGameState.getMutable(syncEntityInstance)
-  const now = Math.max(Date.now(), localUpdateId + 1)
-  mutableState.stateJson = gameEngine.serialize()
-  mutableState.updateId = now
-  localUpdateId = now
-  
-  const player = getPlayer()
-  mutableState.lastUpdater = player ? player.userId : 'unknown'
 }
 

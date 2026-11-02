@@ -46,7 +46,7 @@ let spawnedOpponentCards: Entity[] = []
 export let globalGame: CrazyEightsGame | null = null
 
 export function resolvePlayerId(game?: CrazyEightsGame | null): string {
-  const actualId = getPlayer()?.userId
+  const actualId = getPlayer()?.userId?.toLowerCase()
   const targetGame = game || globalGame
 
   if (!targetGame) return actualId || 'player1'
