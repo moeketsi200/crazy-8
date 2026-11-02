@@ -70,5 +70,6 @@
   },
   "worldConfiguration": {
     "name": "rooi.dcl.eth"
-  }
+  },
+  "authoritativeMultiplayer": true
 }

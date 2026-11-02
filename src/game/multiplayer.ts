@@ -16,10 +16,10 @@ if (isServer()) {
 
 // Use a new id so the server does not collide with the client-owned id from older builds.
 const SERVER_GAME_STATE_ID = 2
-let serverStateEntity: number | undefined
+let serverStateEntity: ReturnType<typeof engine.addEntity> | undefined
 let localUpdateId = 0
 
-export function createAuthoritativeGameState(game: CrazyEightsGame): number {
+export function createAuthoritativeGameState(game: CrazyEightsGame): ReturnType<typeof engine.addEntity> {
   if (!isServer()) throw new Error('Only the authoritative server may create the shared game state.')
 
   const entity = engine.addEntity()
