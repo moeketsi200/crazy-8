@@ -10,31 +10,31 @@
 - **Document status:** Reapplication draft
 - **Last updated:** October 2026
 
-**Known issue:** The previous reviewer could not get the test experience working. The cause is unknown and must be reproduced before choosing a fix.
+**Known issue:** The previous reviewer could not get the test experience working. The cause is unknown. The creator reports successfully playing a four-player game in the test world, so multiplayer worked in that session. The build/link, date, and steps from that session should be recorded, and the reviewer’s failure still needs to be reproduced or clarified. This report does not yet verify the first-time solo entry path.
 
 ## 1. Core Concept and Social Hook
 
 ### High concept
 
-Crazy 8: Last Call is a social card match played around a shared table in Decentraland. Players use familiar Crazy Eights rules, with the existing declaration-and-challenge mechanic as the moment we want to test.
+Crazy 8: Last Call is a social card match played around a shared table in Decentraland. It currently uses familiar Crazy Eights rules. The project-specific interaction to investigate is a public low-hand declaration: players with three or fewer cards can announce their count, and opponents can inspect and challenge an undeclared low hand for a two-card penalty.
 
 ### The Last Call moment
 
-The current design asks a player to declare at three cards and again at one card. The one-card announcement is called **Last Call**. If a player passes a turn without declaring, another player may challenge; a successful challenge makes the player draw two cards.
+The local implementation allows a player with one, two, or three cards to press a declaration button. The announcement is visible to the group; the one-card declaration is the dramatic **Last Call** moment. Opponents can click a low-card hand marked as undeclared. A successful challenge makes that player draw two cards; an incorrect challenge produces a notification but no listed penalty to the challenger.
 
-The current GDD does not specify a timed challenge window or a penalty for an incorrect challenge. Those behaviors must be checked in the build before they are described as rules. This V0 proposal does not add either rule.
+Important rule clarification: the current code does not implement a pass-turn declaration deadline or a timed challenge window. A challenge target appears to remain available while that player has three or fewer cards and has not declared. The GDD previously described a missed declaration after passing; that description is not supported by the current code and is removed here. Verify the shared build before treating any local behavior as shipped behavior.
 
-The design premise is that players gathered at one table can notice and react to the announcement and challenge. Playtesting will determine whether that creates meaningful interaction.
+The proposed Decentraland-specific value is the face-to-face, public table moment: opponents see the low-hand status, decide whether to challenge, and can react together over nearby voice chat. This is a design premise, not demonstrated differentiation. Playtesting must establish whether this interaction makes the familiar card game more engaging for groups.
 
 ## 2. V0 Hypothesis
 
-> For first-time groups playing at a shared Decentraland table, does the existing Last Call declaration-and-challenge moment prompt player interaction and make the group choose a rematch?
+> When first-time groups play a complete Crazy Eights round together at a shared Decentraland table, does the public low-hand declaration and challenge create observable player-to-player reactions, and do groups choose to play again?
 
 This is the question V0 will investigate. It is not yet a proven result.
 
 ## 3. Current Project Status
 
-The following systems are described in the project. Their behavior in the submitted test build has not yet been verified end-to-end.
+The following systems are described in the project. Status distinguishes code present locally from behavior reported or verified in the shared build.
 
 | Feature | Current status | Evidence needed |
 | --- | --- | --- |
@@ -42,27 +42,25 @@ The following systems are described in the project. Their behavior in the submit
 | Action cards and penalty stacking | Implemented locally; shared-build verification pending | Demonstrate actions and resolve a penalty |
 | AI bots | Implemented locally; solo-path verification pending | Start alone and finish a round without waiting for other players |
 | Chair seating and match entry | Implemented locally; first-time flow verification pending | New player can find the table and start without coaching |
-| Multiplayer sync | Implemented locally; live multiplayer verification pending | Two or more players complete a round together |
-| Three-card and Last Call declarations | Described in current design; implementation verification pending | Demonstrate a declaration and the result of a successful challenge |
+| Multiplayer sync | Implemented locally; creator reports a successful four-player game; independent/repeat verification pending | Record the build/link and session details; repeat with a fresh group and capture a complete round |
+| Low-hand declaration and challenge | Implemented locally; shared-build rules and usability verification pending | Demonstrate declaration at 3, 2, and 1 cards; identify when a challenge is allowed; demonstrate correct and incorrect challenges |
 | Rematch flow | Needs verification | Complete a round and find a clear next step |
 
-The reason the previous test did not work is not yet known. Ask the reviewer what happened, then reproduce it with a first-time visitor before deciding what to change.
+The reason the previous test did not work is not yet known. Ask the reviewer what happened, then reproduce it with a first-time visitor before deciding what to change. Record the exact build/link, test date, spawn position, visible instructions, actions attempted, and point of failure. The creator’s four-player session is evidence that a multiplayer game worked for that group; it does not establish that a first-time visitor can discover and start it without help. Verify the solo entry path and capture a complete shared round as supporting evidence.
 
 ## 4. V0 Scope
 
 ### Included
 
-- Diagnose the test-entry or match-start failure before selecting a fix.
-- Make only the changes needed for a visitor to enter and complete a round.
-- Verify the existing solo bot path, if it works in the shared build, so a reviewer arriving alone can try the game.
-- Verify a complete match with real players.
-- Observe how players respond to the current Last Call mechanic.
-- Provide a clear round result and rematch choice if the current flow needs it.
-- Run small playtest sessions with 8–10 first-time players recruited through Decentraland's `#playtesters` channel.
+- **Playable prototype gate:** reproduce and diagnose the failed test entry; verify from a fresh visitor account that the deployed link loads, the table and instructions are findable, solo mode starts, and a full round reaches a result and restart choice. Capture a short unedited recording of this flow.
+- **Multiplayer evidence:** the creator reports having played with four people successfully. Record which build/link and entry steps were used, and capture a complete shared round if available. During V0, repeat with a fresh group and record any sync, entry, turn, or completion failures.
+- **Mechanic gate:** verify declarations at 3/2/1 cards and the challenge rules in the shared build. Correct the documentation or implementation if they differ. Do not add new rules until the current mechanic is understood.
+- **Playtest:** after the gates pass, run sessions with 8–10 first-time players recruited through Decentraland's `#playtesters` channel. Observe without coaching before asking follow-up questions.
+- **Decision:** use the recorded observations to decide whether to retain, revise, or remove the declaration-and-challenge hook for the next prototype.
 
 ### Outside V0
 
-These systems may remain in the project as setting or existing work. They are not V0 development or evaluation goals:
+These systems may remain in the project as setting or existing work. They are not V0 development or evaluation goals; they must not delay the playable table prototype:
 
 - Rooftop, elevator, pool, jacuzzi, and additional venue interactions
 - Daily economy, shop, currencies, streaks, bounties, and persistent rewards
@@ -75,13 +73,13 @@ Decentraland's MVP guidance recommends validating a basic player experience thro
 
 ## 5. Core Match Loop
 
-1. A player enters the lounge and finds the table.
-2. The player starts or joins a match.
-3. Players take turns playing or drawing cards under the current rules.
-4. Players declare at low hand counts; the one-card moment is Last Call.
-5. A round ends with a winner and a clear choice to play again.
+1. A visitor enters the lounge and can find the rules and table without coaching.
+2. The visitor starts a solo game or joins a multiplayer lobby.
+3. Players take turns playing or drawing cards under the verified rules.
+4. When a hand reaches three or fewer cards, the player can declare; at one card, the announcement is Last Call. Opponents can challenge an undeclared low hand under the current implementation.
+5. The round shows its result and a clear next action.
 
-The exact start instructions will be written after the test-entry flow has been reproduced and confirmed.
+The exact player instructions and challenge timing must be updated after the deployed flow and rules have been reproduced and confirmed.
 
 ## 6. Playtest Plan
 
@@ -92,13 +90,13 @@ The exact start instructions will be written after the test-entry flow has been 
 - Share a direct link and short instructions that match the verified build.
 - Observe the first attempt without coaching; ask brief follow-up questions after the round.
 
-### Record these three outcomes
+### Record these outcomes
 
-1. How many players started and finished a round without help?
-2. Did Last Call lead to conversation, a challenge, or another player reaction?
-3. How many groups chose to play a rematch?
+1. How many first-time players entered, started, and finished a round without help? Where did others get stuck?
+2. Did a declaration or challenge occur? Did it lead to conversation, voice-chat reaction, strategy change, or another observable player response?
+3. How many groups chose a rematch, and what reason did they give?
 
-Report the observed counts and comments, such as `7/10 completed a round without help`. These pilot results are for learning; they are not a promise of broad retention or a comparison with other games.
+Report raw counts with denominators and brief anonymized observations, such as `7/10 completed a round without help` or `3/4 groups chose a rematch`. Separate observed behavior from player-reported reasons. These pilot results are for learning; they are not a promise of broad retention or a comparison with other games.
 
 ### Evidence to include with a reapplication
 
@@ -110,12 +108,12 @@ A recording supports the playable link; it does not replace it.
 
 ## 7. V0 Milestones
 
-1. **Ask and reproduce:** Request details from the reviewer and reproduce the failure with a first-time visitor.
-2. **Stabilize:** Make the smallest fix supported by the reproduction.
-3. **Playtest:** Run sessions with 8–10 first-time players and record the three outcomes above.
-4. **Report:** Summarize what worked, what needs improvement, and the next step.
+1. **Diagnose:** Request details from the reviewer and reproduce the failure using the exact deployed link and a first-time visitor.
+2. **Make it playable:** Fix the reproduced blocker, then pass the solo completion gate and capture the flow.
+3. **Verify multiplayer and rules:** Complete a shared round and document what the declaration/challenge system actually permits.
+4. **Playtest and decide:** Run the first-time sessions, report the outcomes, and state whether evidence supports keeping or changing the social hook.
 
-The V0 is complete when the shared build supports a demonstrated full match and the playtest results have been documented.
+The prototype is ready for the hypothesis test only when a fresh visitor can complete a solo round in the deployed build and two players can complete a shared round. V0 is complete when those gates, playtest results, and a keep/revise/remove decision are documented. If the build gate fails, report the blocker and do not present the social hypothesis as tested.
 
 ## 8. Later Roadmap
 

@@ -24,8 +24,8 @@ A high-stakes multiplayer **Crazy Eights** card game built for **Decentraland SD
     - **J (Reverse)**: Reverses round turn order.
     - **7 (Skip)**: Skips the next player's turn.
     - **Joker (Mega Wild)**: Forces next player to draw 4 penalty cards and changes suit.
-  - **Dynamic AI Backfill**: Play solo instantly against intelligent Cyber Bots or seat up to 6 live Decentraland players.
-  - **Declaration & Challenge System**: Declare when holding 3 cards or 1 card ("Last Card"). Opponents can hit **Challenge** to catch unannounced turns and inflict a +2 card penalty!
+  - **Solo and Multiplayer Modes**: The table offers a solo bot mode and a multiplayer lobby for live Decentraland players. Verify both in the deployed build before relying on them for a playtest.
+  - **Low-Hand Declaration & Challenge**: Players with 1–3 cards can declare their hand count; opponents can challenge a low hand that has not declared. The one-card declaration is called "Last Call." Shared-build behavior and challenge timing still need verification.
   - **Display Name Resolution**: Displays true Decentraland avatar profile names (e.g., `Rooi`, `Cyber Bot`) in card announcements, challenges, and leaderboards instead of raw 42-character wallet hashes.
 
 - **Cyber VIP Penthouse Architecture**:
@@ -41,7 +41,7 @@ A high-stakes multiplayer **Crazy Eights** card game built for **Decentraland SD
 
 ## 📖 Game Design Document (GDD)
 
-For complete game mechanics, math balance, social systems, and the V0 vs V1 technical roadmap, see the official design document:  
+For the V0 prototype gates, current status, social hypothesis, and playtest plan, see the design document:
 📄 **[design/gdd.md](design/gdd.md)**
 
 ---
