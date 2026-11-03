@@ -61,12 +61,12 @@ export function buildScoreBoard(parentHouse: Entity) {
   
   TextShape.create(scoreTextEntity, {
     text: `SCOREBOARD\n\nRound 1\nWaiting for game to end...`,
-    fontSize: 1.2,
+    fontSize: 0.9,
     textColor: Color4.fromHexString('#33FF33'),
     outlineColor: Color4.Black(),
     outlineWidth: 0.1,
     textAlign: TextAlignMode.TAM_MIDDLE_CENTER,
-    fontAutoSize: true,
+    fontAutoSize: false,
     textWrapping: true,
     width: 2.72,
     height: 1.2,
