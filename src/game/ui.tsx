@@ -13,6 +13,7 @@ let activeGame: CrazyEightsGame | null = null
 let isPlayerInHouse = false
 let isMobileRosterOpen = false
 let selectedCardIndex: number | null = null
+let isExitConfirmationOpen = false
 
 export let uiNotificationMessage = ''
 export let uiNotificationSenderId: string | null = null
@@ -1723,7 +1724,10 @@ function uiComponent() {
             justifyContent: 'center'
           }}
           uiBackground={{ color: Color4.create(0.28, 0.08, 0.10, 0.96) }}
-          onMouseDown={() => exitGame()}
+          onMouseDown={() => {
+            if (activeGame?.gameMode === 'solo') isExitConfirmationOpen = true
+            else exitGame()
+          }}
         >
           <UiEntity
             uiTransform={{ width: '100%', height: '100%' }}
@@ -1803,6 +1807,32 @@ function uiComponent() {
       )}
 
       <GameModeModal />
+      {isExitConfirmationOpen && (
+        <UiEntity
+          uiTransform={{ positionType: 'absolute', position: { top: 0, left: 0 }, width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}
+          uiBackground={{ color: Color4.fromHexString('#000000cc') }}
+        >
+          <UiEntity
+            uiTransform={{ width: 440, height: 230, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, borderWidth: 2, borderColor: Color4.fromHexString('#ff7777') }}
+            uiBackground={{ color: Color4.fromHexString('#101725ff') }}
+          >
+            <UiEntity uiTransform={{ width: '100%', height: 42, margin: { bottom: 12 }, alignItems: 'center', justifyContent: 'center' }}
+              uiText={{ value: 'EXIT SOLO GAME?', fontSize: 24, color: Color4.White(), textAlign: 'middle-center' }} />
+            <UiEntity uiTransform={{ width: '100%', height: 48, margin: { bottom: 20 }, alignItems: 'center', justifyContent: 'center' }}
+              uiText={{ value: 'The bots will finish the match without you.', fontSize: 16, color: Color4.fromHexString('#b9c8dd'), textAlign: 'middle-center' }} />
+            <UiEntity uiTransform={{ width: '100%', flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+              <UiEntity uiTransform={{ width: 150, height: 44, margin: { right: 10 }, alignItems: 'center', justifyContent: 'center' }}
+                uiBackground={{ color: Color4.fromHexString('#344054') }} onMouseDown={() => { isExitConfirmationOpen = false }}>
+                <UiEntity uiText={{ value: 'KEEP PLAYING', fontSize: 14, color: Color4.White(), textAlign: 'middle-center' }} />
+              </UiEntity>
+              <UiEntity uiTransform={{ width: 150, height: 44, margin: { left: 10 }, alignItems: 'center', justifyContent: 'center' }}
+                uiBackground={{ color: Color4.fromHexString('#b42335') }} onMouseDown={() => { isExitConfirmationOpen = false; exitGame() }}>
+                <UiEntity uiText={{ value: 'EXIT GAME', fontSize: 14, color: Color4.White(), textAlign: 'middle-center' }} />
+              </UiEntity>
+            </UiEntity>
+          </UiEntity>
+        </UiEntity>
+      )}
     </UiEntity>
   )
 }

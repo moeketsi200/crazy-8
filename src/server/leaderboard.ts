@@ -83,6 +83,7 @@ export async function initAuthoritativeServer() {
   let lastGameStateSaveAt = 0
   let autoContinueAt = 0
   let pendingBotTurn: { botId: string, executeAt: number } | null = null
+  let soloMatchAbandoned = false
 
   const loadLeaderboard = async () => {
     try {
@@ -178,7 +179,8 @@ export async function initAuthoritativeServer() {
     gameStateRevision++
   }
   game.onBotTurnStart = (botId) => {
-    pendingBotTurn = { botId, executeAt: Date.now() + BOT_TURN_DELAY_MS }
+    const delay = soloMatchAbandoned ? 80 : BOT_TURN_DELAY_MS
+    pendingBotTurn = { botId, executeAt: Date.now() + delay }
   }
   game.onRoundEnd = () => {
     leaderboardDirty = true
@@ -187,8 +189,10 @@ export async function initAuthoritativeServer() {
     gameStateDirty = true
     gameStateRevision++
     void saveActiveGame()
-    if (game.gameMode === 'solo' && !game.matchOver && game.eliminatedPlayers.has(game.gameMasterId)) {
-      autoContinueAt = Date.now() + 2_500
+    if (game.gameMode === 'solo' && !game.matchOver &&
+        (soloMatchAbandoned || game.eliminatedPlayers.has(game.gameMasterId))) {
+      // Let the result register briefly, then fast-forward abandoned solo matches.
+      autoContinueAt = Date.now() + (soloMatchAbandoned ? 150 : 2_500)
     }
   }
   setupPersistentPlayerEconomy(game)
@@ -227,6 +231,10 @@ export async function initAuthoritativeServer() {
         if (game.gameMasterId === playerId && game.gameOver && !game.matchOver) game.startNextRound()
         break
       case 'leave':
+        if (game.gameMode === 'solo' && game.players.has(playerId)) {
+          soloMatchAbandoned = true
+          if (game.gameOver && !game.matchOver) autoContinueAt = Date.now() + 150
+        }
         game.removePlayer(playerId)
         break
       case 'draw':
@@ -266,7 +274,7 @@ export async function initAuthoritativeServer() {
     if (autoContinueAt && Date.now() >= autoContinueAt) {
       autoContinueAt = 0
       if (game.gameMode === 'solo' && game.gameOver && !game.matchOver &&
-          game.eliminatedPlayers.has(game.gameMasterId)) game.startNextRound()
+          (soloMatchAbandoned || game.eliminatedPlayers.has(game.gameMasterId))) game.startNextRound()
     }
 
     if (pendingBotTurn) {
