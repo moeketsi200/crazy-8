@@ -89,7 +89,7 @@ export function setupPersistentPlayerEconomy(game: CrazyEightsGame) {
         resultJson: JSON.stringify(result)
       }, { to: [playerId] })
     } catch (error) {
-      console.warn(`[Server] Could not send profile update to ${playerId}:`, error)
+      console.error(`[Server] Could not send profile update to ${playerId}:`, error)
     }
   }
 

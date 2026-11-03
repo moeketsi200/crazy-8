@@ -20,7 +20,7 @@ const pendingRequests = new Map<number, PendingRequest>()
 
 function sendRequest(requestId: number, action: EconomyRequestAction, itemId = '', questId = '') {
   void sceneRoom.send('economyAction', { requestId, action, itemId, questId }).catch((error) => {
-    console.warn('[Economy] Could not send profile request:', error)
+    console.error('[Economy] Could not send profile request:', error)
   })
 }
 
