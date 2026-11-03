@@ -3,8 +3,6 @@ import { Color4 } from '@dcl/sdk/math'
 import {
   getProfile,
   canClaimStreak,
-  claimDailyStreak,
-  claimQuest,
   hasUnclaimedRewards,
   getIsRewardsModalOpen,
   setRewardsModalOpen,
@@ -15,12 +13,11 @@ import {
   SHOP_CATALOG,
   isItemUnlocked,
   isItemEquipped,
-  buyShopItem,
-  equipShopItem,
   getStreakReminderMessage,
   STREAK_SCHEDULE
 } from './economy'
 import type { ShopIconName } from './economy'
+import { requestEconomyAction } from './economy_sync'
 
 const ICON_ATLAS = 'assets/images/crazy8_ui_icon_atlas.png'
 const ICON_INDEX: Record<ShopIconName, number> = {
@@ -620,10 +617,12 @@ export function DailyRewardsModal() {
               }}
               onMouseDown={() => {
                 if (canClaim) {
-                  const res = claimDailyStreak()
-                  if (res.success && res.reward) {
-                    showRewardToast(`Claimed Day ${res.reward.day}: +${res.reward.chips} Chips, +${res.reward.trophies} Trophies!`)
-                  }
+                  void requestEconomyAction('claimStreak').then((res) => {
+                    const result = res.result as { reward?: { day: number; chips: number; trophies: number } } | undefined
+                    if (res.success && result?.reward) {
+                      showRewardToast(`Claimed Day ${result.reward.day}: +${result.reward.chips} Chips, +${result.reward.trophies} Trophies!`)
+                    } else if (res.message) showRewardToast(res.message)
+                  })
                 }
               }}
             >
@@ -772,10 +771,9 @@ export function DailyRewardsModal() {
                       }}
                       uiBackground={{ color: Color4.fromHexString('#059669') }}
                       onMouseDown={() => {
-                        const success = claimQuest(q.id)
-                        if (success) {
-                          showRewardToast(`Bounty Complete: +${q.rewardChips} Chips, +${q.rewardTrophies} Trophies!`)
-                        }
+                        void requestEconomyAction('claimQuest', '', q.id).then((res) => {
+                          if (res.message) showRewardToast(res.message)
+                        })
                       }}
                     >
                       <UiEntity
@@ -1040,25 +1038,21 @@ export function DailyRewardsModal() {
                         }}
                         onMouseDown={() => {
                           if (equipped) {
-                            const res = equipShopItem(item.id)
-                            showRewardToast(res.message)
+                            void requestEconomyAction('equipItem', item.id).then((res) => showRewardToast(res.message))
                             return
                           }
                           if (item.reqWins !== undefined) {
                             if (unlocked) {
-                              const res = equipShopItem(item.id)
-                              showRewardToast(res.message)
+                              void requestEconomyAction('equipItem', item.id).then((res) => showRewardToast(res.message))
                             } else {
                               showRewardToast(`Win ${item.reqWins - profile.totalWins} more matches to unlock ${item.name}!`)
                             }
                             return
                           }
                           if (unlocked) {
-                            const res = equipShopItem(item.id)
-                            showRewardToast(res.message)
+                            void requestEconomyAction('equipItem', item.id).then((res) => showRewardToast(res.message))
                           } else if (canAfford) {
-                            const res = buyShopItem(item.id)
-                            showRewardToast(res.message)
+                            void requestEconomyAction('buyItem', item.id).then((res) => showRewardToast(res.message))
                           } else {
                             showRewardToast(`Need ${item.priceChips.toLocaleString()} Chips & ${item.reqTrophies} trophies!`)
                           }

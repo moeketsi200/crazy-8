@@ -14,7 +14,7 @@ import { setupUI } from '../game/ui'
 import { buildInfoBoard, showGameButton } from '../game/info_board'
 import { buildScoreBoard, updateScoreBoardText, renderOutdoorHallOfFame } from '../game/score_board'
 import { setupMultiplayer } from '../game/multiplayer'
-import { reportGameplayAction, addChips, addTrophies } from '../game/economy'
+import { setupEconomyClient } from '../game/economy_sync'
 import { showRewardToast } from '../game/rewards_ui'
 import {
   setupVipKiosk,
@@ -25,7 +25,6 @@ import {
   setupWearableShowcases
 } from '../game/models_integration'
 import { setupWearablesSystem } from '../game/wearables'
-import { sceneRoom } from '../shared/messages'
 
 export function initClientScene() {
     // 1. Build the architectural shell (Now at 90% scale!)
@@ -66,8 +65,20 @@ export function initClientScene() {
 
     // 4.5 Set up Multiplayer Sync (now serializes with players already present)
     setupMultiplayer(gameEngine, () => getPlayer()?.name || '')
+    setupEconomyClient()
+    let lastSoloStartedRound = 0
     gameEngine.onStateSync = () => {
       update3DTable(gameEngine)
+
+      if (gameEngine.gameMode === 'solo' && gameEngine.isStarted && !gameEngine.gameOver &&
+          lastSoloStartedRound !== gameEngine.roundNumber) {
+        lastSoloStartedRound = gameEngine.roundNumber
+        const localPlayerId = resolvePlayerId(gameEngine)
+        updateScoreBoardText(gameEngine.eliminatedPlayers.has(localPlayerId)
+          ? `SOLO MATCH — ROUND ${gameEngine.roundNumber}\n\nYou are eliminated and watching. The bots are playing the remaining rounds. The overall winner will appear here.`
+          : `SOLO MATCH — ROUND ${gameEngine.roundNumber}\n\nYou are playing 7 bots. Be the last player remaining to win.`)
+      }
+
       const result = gameEngine.lastRoundResult
       if (result && result.id > lastHandledRoundResultId) {
         lastHandledRoundResultId = result.id
@@ -90,21 +101,13 @@ export function initClientScene() {
       }
 
       if (grantLocalRewards && gameEngine.playerOrder.includes(myId)) {
-        reportGameplayAction('match_finished')
-        if (result.roundWinner === myId) reportGameplayAction('round_won')
         if (result.winner === myId) {
-          reportGameplayAction('match_won')
-          if (isSolo) reportGameplayAction('solo_won')
           const chips = isSolo ? 30 : 150
           const trophies = isSolo ? 5 : 20
-          addChips(chips)
-          addTrophies(trophies)
           showRewardToast(isSolo
             ? `🏆 YOU BEAT THE BOTS! +${chips} Chips & +${trophies} Trophies!`
             : `🏆 MATCH WON! +${chips} Chips & +${trophies} Trophies!`)
         } else {
-          addChips(30)
-          addTrophies(5)
           showRewardToast(result.roundWinner === myId
             ? 'Round won! +30 Chips & +5 Trophies.'
             : 'Good game! +30 Chips & +5 Trophies.')
@@ -156,28 +159,6 @@ export function initClientScene() {
       if (!gameEngine.isStarted) return
       update3DTable(gameEngine)
       updateScoreBoardText(`SOLO MATCH — ROUND ${gameEngine.roundNumber}\n\nYou are eliminated and watching. The bots are playing the remaining rounds.\nThe overall winner will appear here.`)
-    })
-
-    // Server gameplay events keep local quests in step with the authoritative game.
-    let lastGameplayEventId = 0
-    sceneRoom.onMessage('gameplayEvent', (data) => {
-      if (data.eventId <= lastGameplayEventId) return
-      lastGameplayEventId = data.eventId
-
-      const myId = resolvePlayerId(gameEngine).toLowerCase()
-      if (data.playerId.toLowerCase() !== myId && data.playerId !== 'player1') return
-
-      if (data.event === 'cardPlayed') {
-        reportGameplayAction('card_played')
-        if (data.rank === '8' || data.cardAction === 'Wild' || data.cardAction === 'Draw4') {
-          reportGameplayAction('wild_eight')
-        }
-        if (data.cardAction === 'Draw2' || data.cardAction === 'Draw4') {
-          reportGameplayAction('inflict_draw')
-        }
-      } else if (data.event === 'declareSafe') {
-        reportGameplayAction('declare_safe')
-      }
     })
 
     // Set up the Rules Board and 3D Start Button

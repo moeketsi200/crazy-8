@@ -2,13 +2,15 @@ import { engine } from '@dcl/sdk/ecs'
 import { Storage } from '@dcl/sdk/server'
 import { isServer } from '@dcl/sdk/network'
 import { sceneRoom } from '../shared/messages'
-import { BOT_TURN_DELAY_MS, CrazyEightsGame, PlayerLeaderboardStats, isBotPlayer } from '../game/logic'
+import { BOT_TURN_DELAY_MS, CrazyEightsGame, PlayerLeaderboardStats, TURN_TIME_LIMIT_MS, isBotPlayer } from '../game/logic'
 import { Suit } from '../game/deck'
 import { getBotName } from '../game/bot_names'
 import { createAuthoritativeGameState, publishAuthoritativeGameState } from '../game/multiplayer'
+import { setupPersistentPlayerEconomy } from './player_economy'
 
 const LEADERBOARD_STORAGE_KEY = 'crazy8_leaderboard_v1'
 const LEADERBOARD_VERSION = 1
+const GAME_STATE_STORAGE_KEY = 'crazy8_active_game_v1'
 
 interface PersistedLeaderboard {
   version: number
@@ -75,7 +77,10 @@ export async function initAuthoritativeServer() {
   let lastStorageRetryAt = 0
   let lastSaveAttemptAt = 0
   let sharedStateReady = false
-  let gameplayEventId = Date.now()
+  let gameStateDirty = false
+  let gameStateRevision = 0
+  let gameStateSaveInProgress = false
+  let lastGameStateSaveAt = 0
   let autoContinueAt = 0
   let pendingBotTurn: { botId: string, executeAt: number } | null = null
 
@@ -128,11 +133,50 @@ export async function initAuthoritativeServer() {
     }
   }
 
+  const loadActiveGame = async () => {
+    try {
+      const saved = await Storage.get<string>(GAME_STATE_STORAGE_KEY)
+      if (!saved) return
+      game.deserialize(saved)
+      const currentPlayer = game.getCurrentPlayerId()
+      if (game.isStarted && currentPlayer && !isBotPlayer(currentPlayer)) {
+        game.turnDeadlineAt = Date.now() + TURN_TIME_LIMIT_MS
+      }
+      console.log(`[Server] Restored active game state for round ${game.roundNumber}.`)
+    } catch (error) {
+      console.error('[Server] Could not load the saved active game state; starting a fresh game.', error)
+    }
+  }
+
+  const saveActiveGame = async () => {
+    if (!gameStateDirty || gameStateSaveInProgress) return
+    gameStateSaveInProgress = true
+    lastGameStateSaveAt = Date.now()
+    const savingRevision = gameStateRevision
+    try {
+      const saved = await Storage.set(GAME_STATE_STORAGE_KEY, game.serialize())
+      if (saved) {
+        gameStateDirty = gameStateRevision !== savingRevision
+      } else {
+        console.error('[Server] Active game save did not persist; it will retry.')
+      }
+    } catch (error) {
+      console.error('[Server] Active game save failed; it will retry.', error)
+    } finally {
+      gameStateSaveInProgress = false
+    }
+  }
+
+  await loadActiveGame()
   await loadLeaderboard()
 
   createAuthoritativeGameState(game)
   sharedStateReady = true
-  game.onStateChanged = () => publishAuthoritativeGameState(game)
+  game.onStateChanged = () => {
+    publishAuthoritativeGameState(game)
+    gameStateDirty = true
+    gameStateRevision++
+  }
   game.onBotTurnStart = (botId) => {
     pendingBotTurn = { botId, executeAt: Date.now() + BOT_TURN_DELAY_MS }
   }
@@ -140,27 +184,18 @@ export async function initAuthoritativeServer() {
     leaderboardDirty = true
     leaderboardRevision++
     void saveLeaderboard()
+    gameStateDirty = true
+    gameStateRevision++
+    void saveActiveGame()
     if (game.gameMode === 'solo' && !game.matchOver && game.eliminatedPlayers.has(game.gameMasterId)) {
       autoContinueAt = Date.now() + 2_500
     }
   }
-  game.onCardPlayed = (playerId, card) => {
-    void sceneRoom.send('gameplayEvent', {
-      eventId: ++gameplayEventId,
-      event: 'cardPlayed',
-      playerId,
-      rank: card.rank,
-      cardAction: card.action
-    })
-  }
-  game.onDeclareSafe = (playerId) => {
-    void sceneRoom.send('gameplayEvent', {
-      eventId: ++gameplayEventId,
-      event: 'declareSafe',
-      playerId,
-      rank: '',
-      cardAction: ''
-    })
+  setupPersistentPlayerEconomy(game)
+
+  const restoredCurrentPlayer = game.getCurrentPlayerId()
+  if (game.isStarted && restoredCurrentPlayer && isBotPlayer(restoredCurrentPlayer)) {
+    pendingBotTurn = { botId: restoredCurrentPlayer, executeAt: Date.now() + BOT_TURN_DELAY_MS }
   }
 
   sceneRoom.onMessage('gameAction', (data, context) => {
@@ -217,6 +252,10 @@ export async function initAuthoritativeServer() {
 
     if (leaderboardDirty && Date.now() - lastSaveAttemptAt >= 5_000) {
       void saveLeaderboard()
+    }
+
+    if (gameStateDirty && Date.now() - lastGameStateSaveAt >= 5_000) {
+      void saveActiveGame()
     }
 
     if (game.lobbyEndTime > 0 && !game.isStarted && Date.now() >= game.lobbyEndTime) {

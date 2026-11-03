@@ -101,13 +101,13 @@ export interface PlayerProfile {
 
 function getTodayStr(): string {
   const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`
 }
 
 function getYesterdayStr(): string {
   const d = new Date()
-  d.setDate(d.getDate() - 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  d.setUTCDate(d.getUTCDate() - 1)
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
 }
 
 function generateDailyQuests(): PlayerQuest[] {
@@ -120,33 +120,112 @@ function generateDailyQuests(): PlayerQuest[] {
   }))
 }
 
-// Initial default player profile
-const profile: PlayerProfile = {
-  chips: 0,
-  trophies: 0,
-  totalWins: 0,
-  soloWins: 0,
-  roundsWon: 0,
-  loginStreak: 1,
-  lastClaimDateStr: '', // Not claimed yet today
-  equippedTitle: 'Card Rookie',
-  equippedDeck: 'deck_classic',
-  equippedAura: 'aura_none',
-  unlockedTitles: ['Card Rookie'],
-  unlockedDecks: ['deck_classic'],
-  unlockedAuras: ['aura_none'],
-  unlockedWearables: [],
-  quests: generateDailyQuests(),
-  lastQuestDateStr: getTodayStr()
+export function createDefaultProfile(): PlayerProfile {
+  return {
+    chips: 0,
+    trophies: 0,
+    totalWins: 0,
+    soloWins: 0,
+    roundsWon: 0,
+    loginStreak: 1,
+    lastClaimDateStr: '',
+    equippedTitle: 'Card Rookie',
+    equippedDeck: 'deck_classic',
+    equippedAura: 'aura_none',
+    unlockedTitles: ['Card Rookie'],
+    unlockedDecks: ['deck_classic'],
+    unlockedAuras: ['aura_none'],
+    unlockedWearables: [],
+    quests: generateDailyQuests(),
+    lastQuestDateStr: getTodayStr()
+  }
+}
+
+let profile: PlayerProfile = createDefaultProfile()
+
+export function normalizePlayerProfile(value: unknown): PlayerProfile {
+  const defaults = createDefaultProfile()
+  let candidate = value
+  if (typeof candidate === 'string') {
+    try {
+      candidate = JSON.parse(candidate)
+    } catch {
+      return defaults
+    }
+  }
+  if (!candidate || typeof candidate !== 'object') return defaults
+
+  const saved = candidate as Partial<PlayerProfile>
+  const unlockedStrings = (items: unknown, fallback: string[]) =>
+    Array.isArray(items) ? items.filter((item): item is string => typeof item === 'string') : fallback
+  const quests = Array.isArray(saved.quests)
+    ? saved.quests.filter((quest): quest is PlayerQuest =>
+      !!quest && typeof quest.id === 'string' && typeof quest.title === 'string' &&
+      typeof quest.description === 'string' && Number.isFinite(quest.target) &&
+      Number.isFinite(quest.progress) && Number.isFinite(quest.rewardChips) &&
+      Number.isFinite(quest.rewardTrophies) && typeof quest.claimed === 'boolean'
+    ).map((quest) => ({
+      ...quest,
+      target: Math.max(1, Math.floor(quest.target)),
+      progress: Math.max(0, Math.min(Math.floor(quest.progress), Math.floor(quest.target))),
+      rewardChips: Math.max(0, Math.floor(quest.rewardChips)),
+      rewardTrophies: Math.max(0, Math.floor(quest.rewardTrophies))
+    }))
+    : defaults.quests
+
+  return {
+    chips: Number.isFinite(saved.chips) ? Math.max(0, Math.floor(saved.chips!)) : defaults.chips,
+    trophies: Number.isFinite(saved.trophies) ? Math.max(0, Math.floor(saved.trophies!)) : defaults.trophies,
+    totalWins: Number.isFinite(saved.totalWins) ? Math.max(0, Math.floor(saved.totalWins!)) : defaults.totalWins,
+    soloWins: Number.isFinite(saved.soloWins) ? Math.max(0, Math.floor(saved.soloWins!)) : defaults.soloWins,
+    roundsWon: Number.isFinite(saved.roundsWon) ? Math.max(0, Math.floor(saved.roundsWon!)) : defaults.roundsWon,
+    loginStreak: Number.isFinite(saved.loginStreak) ? Math.max(1, Math.min(7, Math.floor(saved.loginStreak!))) : defaults.loginStreak,
+    lastClaimDateStr: typeof saved.lastClaimDateStr === 'string' ? saved.lastClaimDateStr : defaults.lastClaimDateStr,
+    equippedTitle: typeof saved.equippedTitle === 'string' ? saved.equippedTitle : defaults.equippedTitle,
+    equippedDeck: typeof saved.equippedDeck === 'string' ? saved.equippedDeck : defaults.equippedDeck,
+    equippedAura: typeof saved.equippedAura === 'string' ? saved.equippedAura : defaults.equippedAura,
+    equippedWearable: typeof saved.equippedWearable === 'string' ? saved.equippedWearable : undefined,
+    unlockedTitles: unlockedStrings(saved.unlockedTitles, defaults.unlockedTitles),
+    unlockedDecks: unlockedStrings(saved.unlockedDecks, defaults.unlockedDecks),
+    unlockedAuras: unlockedStrings(saved.unlockedAuras, defaults.unlockedAuras),
+    unlockedWearables: unlockedStrings(saved.unlockedWearables, defaults.unlockedWearables),
+    quests: quests.length > 0 ? quests : defaults.quests,
+    lastQuestDateStr: typeof saved.lastQuestDateStr === 'string' ? saved.lastQuestDateStr : defaults.lastQuestDateStr
+  }
+}
+
+export function rollDailyQuests(target: PlayerProfile): boolean {
+  const today = getTodayStr()
+  if (target.lastQuestDateStr !== today) {
+    target.quests = generateDailyQuests()
+    target.lastQuestDateStr = today
+    return true
+  }
+  return false
+}
+
+export function setProfileFromServer(value: unknown) {
+  const previous = profile
+  profile = normalizePlayerProfile(value)
+
+  const equippedChanges: Array<{ category: string; itemId: string; item: ShopItem }> = []
+  const addEquipped = (category: ShopItem['category'], itemId: string | undefined) => {
+    const item = SHOP_CATALOG.find((candidate) => candidate.category === category && candidate.id === itemId) ||
+      SHOP_CATALOG.find((candidate) => candidate.category === category)
+    if (item) equippedChanges.push({ category, itemId: itemId || '', item })
+  }
+
+  if (previous.equippedAura !== profile.equippedAura) addEquipped('aura', profile.equippedAura)
+  if (previous.equippedWearable !== profile.equippedWearable) addEquipped('wearable', profile.equippedWearable)
+  if (previous.equippedDeck !== profile.equippedDeck) addEquipped('deck', profile.equippedDeck)
+  if (previous.equippedTitle !== profile.equippedTitle) addEquipped('title', profile.equippedTitle)
+  for (const change of equippedChanges) {
+    cosmeticListeners.forEach((listener) => listener(change.category, change.itemId, change.item))
+  }
 }
 
 export function getProfile(): PlayerProfile {
-  // Check if quests need rolling over
-  const today = getTodayStr()
-  if (profile.lastQuestDateStr !== today) {
-    profile.quests = generateDailyQuests()
-    profile.lastQuestDateStr = today
-  }
+  rollDailyQuests(profile)
   return profile
 }
 
@@ -155,59 +234,18 @@ export function canClaimStreak(): boolean {
   return profile.lastClaimDateStr !== today
 }
 
-export function claimDailyStreak(): { success: boolean; reward?: StreakDayReward } {
-  if (!canClaimStreak()) return { success: false }
-
-  const today = getTodayStr()
-  const yesterday = getYesterdayStr()
-
-  if (profile.lastClaimDateStr === yesterday) {
-    // Consecutive day
-    profile.loginStreak = (profile.loginStreak % 7) + 1
-  } else if (profile.lastClaimDateStr === '') {
-    // First time claim
-    profile.loginStreak = 1
-  } else {
-    // Missed days - reset to day 1
-    profile.loginStreak = 1
-  }
-
-  profile.lastClaimDateStr = today
-  const reward = STREAK_SCHEDULE[profile.loginStreak - 1]
-  
-  profile.chips += reward.chips
-  profile.trophies += reward.trophies
-
-  if (reward.specialTitle && !profile.unlockedTitles.includes(reward.specialTitle)) {
-    profile.unlockedTitles.push(reward.specialTitle)
-    profile.equippedTitle = reward.specialTitle
-  }
-
-  return { success: true, reward }
-}
-
-export function claimQuest(questId: string): boolean {
-  const quest = profile.quests.find(q => q.id === questId)
-  if (!quest || quest.claimed || quest.progress < quest.target) return false
-
-  quest.claimed = true
-  profile.chips += quest.rewardChips
-  profile.trophies += quest.rewardTrophies
-  return true
-}
-
 export type GameplayAction = 'card_played' | 'wild_eight' | 'inflict_draw' | 'declare_safe' | 'match_finished' | 'match_won' | 'round_won' | 'solo_won'
 
-export function reportGameplayAction(action: GameplayAction, count: number = 1) {
+export function applyGameplayActionToProfile(target: PlayerProfile, action: GameplayAction, count: number = 1): boolean {
   let updated = false
   if (action === 'match_won') {
-    profile.totalWins += count
+    target.totalWins += count
   } else if (action === 'round_won') {
-    profile.roundsWon += count
+    target.roundsWon += count
   } else if (action === 'solo_won') {
-    profile.soloWins += count
+    target.soloWins += count
   }
-  for (const quest of profile.quests) {
+  for (const quest of target.quests) {
     if (quest.claimed) continue
 
     if (action === 'card_played' && quest.id === 'play_cards') {
@@ -233,12 +271,9 @@ export function reportGameplayAction(action: GameplayAction, count: number = 1) 
   return updated
 }
 
-export function addChips(amount: number) {
-  profile.chips += amount
-}
-
-export function addTrophies(amount: number) {
-  profile.trophies += amount
+export function grantCurrencyToProfile(target: PlayerProfile, chips: number, trophies: number) {
+  target.chips += Math.max(0, Math.floor(chips))
+  target.trophies += Math.max(0, Math.floor(trophies))
 }
 
 export function hasUnclaimedRewards(): boolean {
@@ -516,85 +551,121 @@ export function onCosmeticEquipped(listener: CosmeticChangeListener) {
   cosmeticListeners.push(listener)
 }
 
-export function buyShopItem(itemId: string): { success: boolean; message: string } {
-  const item = SHOP_CATALOG.find(i => i.id === itemId)
+export type EconomyRequestAction = 'load' | 'claimStreak' | 'claimQuest' | 'buyItem' | 'equipItem'
+
+export interface EconomyActionResult {
+  success: boolean
+  message: string
+  result?: unknown
+}
+
+function isItemUnlockedForProfile(target: PlayerProfile, itemId: string): boolean {
+  const item = SHOP_CATALOG.find(candidate => candidate.id === itemId)
+  if (!item) return false
+  if (item.category === 'deck') return target.unlockedDecks.includes(itemId)
+  if (item.category === 'aura') return target.unlockedAuras.includes(itemId)
+  if (item.category === 'title') return target.unlockedTitles.includes(item.name)
+  if (item.category === 'wearable') {
+    if (item.reqWins !== undefined && target.totalWins >= item.reqWins) return true
+    return target.unlockedWearables.includes(itemId)
+  }
+  return false
+}
+
+function claimDailyStreakForProfile(target: PlayerProfile): { success: boolean; reward?: StreakDayReward } {
+  const today = getTodayStr()
+  if (target.lastClaimDateStr === today) return { success: false }
+
+  const yesterday = getYesterdayStr()
+  if (target.lastClaimDateStr === yesterday) {
+    target.loginStreak = (target.loginStreak % 7) + 1
+  } else {
+    target.loginStreak = 1
+  }
+
+  target.lastClaimDateStr = today
+  const reward = STREAK_SCHEDULE[target.loginStreak - 1]
+  grantCurrencyToProfile(target, reward.chips, reward.trophies)
+
+  if (reward.specialTitle && !target.unlockedTitles.includes(reward.specialTitle)) {
+    target.unlockedTitles.push(reward.specialTitle)
+    target.equippedTitle = reward.specialTitle
+  }
+
+  return { success: true, reward }
+}
+
+function buyItemForProfile(target: PlayerProfile, itemId: string): EconomyActionResult {
+  const item = SHOP_CATALOG.find(candidate => candidate.id === itemId)
   if (!item) return { success: false, message: 'Item not found' }
-
-  if (isItemUnlocked(itemId)) {
-    return { success: false, message: 'Item already unlocked!' }
-  }
-
+  if (isItemUnlockedForProfile(target, itemId)) return { success: false, message: 'Item already unlocked!' }
   if (item.reqWins !== undefined) {
-    return {
-      success: false,
-      message: `Unlocked by winning matches! (${profile.totalWins}/${item.reqWins} Wins)`
-    }
+    return { success: false, message: `Unlocked by winning matches! (${target.totalWins}/${item.reqWins} Wins)` }
+  }
+  if (target.trophies < item.reqTrophies) {
+    return { success: false, message: `Need ${item.reqTrophies} Trophies to unlock! (You have ${target.trophies})` }
+  }
+  if (target.chips < item.priceChips) {
+    return { success: false, message: `Need ${item.priceChips.toLocaleString()} Chips! (You have ${target.chips.toLocaleString()})` }
   }
 
-  if (profile.trophies < item.reqTrophies) {
-    return {
-      success: false,
-      message: `Need ${item.reqTrophies} Trophies to unlock! (You have ${profile.trophies})`
-    }
-  }
-
-  if (profile.chips < item.priceChips) {
-    return {
-      success: false,
-      message: `Need ${item.priceChips.toLocaleString()} Chips! (You have ${profile.chips.toLocaleString()})`
-    }
-  }
-
-  // Deduct chips
-  profile.chips -= item.priceChips
-
+  target.chips -= item.priceChips
   if (item.category === 'deck') {
-    profile.unlockedDecks.push(itemId)
-    profile.equippedDeck = itemId
+    target.unlockedDecks.push(itemId)
+    target.equippedDeck = itemId
   } else if (item.category === 'aura') {
-    profile.unlockedAuras.push(itemId)
-    profile.equippedAura = itemId
+    target.unlockedAuras.push(itemId)
+    target.equippedAura = itemId
   } else if (item.category === 'title') {
-    profile.unlockedTitles.push(item.name)
-    profile.equippedTitle = item.name
-  } else if (item.category === 'wearable') {
-    profile.unlockedWearables.push(itemId)
-    profile.equippedWearable = itemId
+    target.unlockedTitles.push(item.name)
+    target.equippedTitle = item.name
+  } else {
+    target.unlockedWearables.push(itemId)
+    target.equippedWearable = itemId
   }
-
-  // Notify listeners
-  cosmeticListeners.forEach(fn => fn(item.category, itemId, item))
-
   return { success: true, message: `Unlocked & Equipped ${item.name}!` }
 }
 
-export function equipShopItem(itemId: string): { success: boolean; message: string } {
-  const item = SHOP_CATALOG.find(i => i.id === itemId)
+function equipItemForProfile(target: PlayerProfile, itemId: string): EconomyActionResult {
+  const item = SHOP_CATALOG.find(candidate => candidate.id === itemId)
   if (!item) return { success: false, message: 'Item not found' }
+  if (!isItemUnlockedForProfile(target, itemId)) return { success: false, message: 'Item is not unlocked yet!' }
 
-  if (!isItemUnlocked(itemId)) {
-    return { success: false, message: 'Item is not unlocked yet!' }
-  }
+  if (item.category === 'deck') target.equippedDeck = itemId
+  else if (item.category === 'aura') target.equippedAura = itemId
+  else if (item.category === 'title') target.equippedTitle = item.name
+  else if (target.equippedWearable === itemId) {
+    target.equippedWearable = undefined
+    return { success: true, message: `Unequipped ${item.name}` }
+  } else target.equippedWearable = itemId
 
-  if (item.category === 'deck') {
-    profile.equippedDeck = itemId
-  } else if (item.category === 'aura') {
-    profile.equippedAura = itemId
-  } else if (item.category === 'title') {
-    profile.equippedTitle = item.name
-  } else if (item.category === 'wearable') {
-    if (profile.equippedWearable === itemId) {
-      // Toggle unequip
-      profile.equippedWearable = undefined
-      cosmeticListeners.forEach(fn => fn(item.category, '', item))
-      return { success: true, message: `Unequipped ${item.name}` }
-    } else {
-      profile.equippedWearable = itemId
-    }
-  }
-
-  cosmeticListeners.forEach(fn => fn(item.category, itemId, item))
   return { success: true, message: `Equipped ${item.name}!` }
+}
+
+export function applyEconomyRequestToProfile(
+  target: PlayerProfile,
+  action: Exclude<EconomyRequestAction, 'load'>,
+  itemId = '',
+  questId = ''
+): EconomyActionResult {
+  rollDailyQuests(target)
+  if (action === 'claimStreak') {
+    const claimed = claimDailyStreakForProfile(target)
+    return claimed.success
+      ? { success: true, message: 'Daily streak claimed!', result: { reward: claimed.reward } }
+      : { success: false, message: 'You have already claimed today’s streak reward.' }
+  }
+  if (action === 'claimQuest') {
+    const quest = target.quests.find(candidate => candidate.id === questId)
+    if (!quest || quest.claimed || quest.progress < quest.target) {
+      return { success: false, message: 'This bounty is not ready to claim.' }
+    }
+    quest.claimed = true
+    grantCurrencyToProfile(target, quest.rewardChips, quest.rewardTrophies)
+    return { success: true, message: `Bounty Complete: +${quest.rewardChips} Chips, +${quest.rewardTrophies} Trophies!` }
+  }
+  if (action === 'buyItem') return buyItemForProfile(target, itemId)
+  return equipItemForProfile(target, itemId)
 }
 
 export function getStreakReminderMessage(): string {

@@ -10,12 +10,18 @@ export const SceneMessages = {
     suit: Schemas.String,
     targetId: Schemas.String
   }),
-  gameplayEvent: Schemas.Map({
-    eventId: Schemas.Int64,
-    event: Schemas.String,
-    playerId: Schemas.String,
-    rank: Schemas.String,
-    cardAction: Schemas.String
+  economyAction: Schemas.Map({
+    requestId: Schemas.Int64,
+    action: Schemas.String,
+    itemId: Schemas.String,
+    questId: Schemas.String
+  }),
+  economyProfile: Schemas.Map({
+    requestId: Schemas.Int64,
+    success: Schemas.Boolean,
+    message: Schemas.String,
+    profileJson: Schemas.String,
+    resultJson: Schemas.String
   })
 }
 

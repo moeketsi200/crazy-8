@@ -5,12 +5,14 @@ import { update3DTable, resolvePlayerId, sitPlayerAtOpenChair, getPlayerSeated }
 import { updateScoreBoardText } from './score_board'
 import { showRewardToast } from './rewards_ui'
 import { openGameModePrompt } from './ui'
+import { SERVER_START_TIMEOUT_MS } from './multiplayer'
 
 export let buttonEntity: Entity
 export let buttonTextEntity: Entity
 let cachedGameEngine: CrazyEightsGame | null = null
+let connectingStartedAt = 0
 
-export type GameButtonAction = 'START' | 'COUNTDOWN' | 'JOIN' | 'CONTINUE' | 'WAITING'
+export type GameButtonAction = 'START' | 'COUNTDOWN' | 'JOIN' | 'CONTINUE' | 'WAITING' | 'CONNECTING'
 let currentButtonAction: GameButtonAction = 'START'
 
 export function buildInfoBoard(parentHouse: Entity, gameEngine: CrazyEightsGame) {
@@ -81,15 +83,18 @@ function startSelectedGameMode(gameMode: GameMode) {
   const myId = resolvePlayerId(gameEngine)
   if (gameMode === 'solo') {
     gameEngine.startGame([myId], 'solo', myId)
-    update3DTable(gameEngine)
-    updateScoreBoardText('SOLO MATCH\nROUND 1\n\nYou are playing 7 bots.\nBe the last player remaining to win.\nIf you are eliminated, stay to watch the bots finish; the overall winner will appear here.')
-    showRewardToast('Solo game started! You are playing against 7 bots.')
+    connectingStartedAt = Date.now()
+    updateScoreBoardText('CONNECTING TO GAME SERVER\n\nYour solo match will start when the server is ready.')
+    showGameButton('CONNECTING TO GAME SERVER', 'CONNECTING')
+    showRewardToast('Connecting to the game server. Your solo match will start automatically.')
     return
   }
 
   gameEngine.startLobby(30, myId)
-  setButtonState('COUNTDOWN', 'JOIN LOBBY • 30s')
-  showRewardToast('Multiplayer lobby open for 30 seconds. Players must press JOIN to play.')
+  connectingStartedAt = Date.now()
+  updateScoreBoardText('CONNECTING TO GAME SERVER\n\nYour multiplayer lobby will open when the server is ready.')
+  showGameButton('CONNECTING TO GAME SERVER', 'CONNECTING')
+  showRewardToast('Connecting to the game server. Your multiplayer lobby will open automatically.')
 }
 
 function setButtonState(action: GameButtonAction, text?: string) {
@@ -123,6 +128,10 @@ function setButtonState(action: GameButtonAction, text?: string) {
       label = text || 'WAIT FOR FINAL RESULT'
       colorHex = '#596579'
       break
+    case 'CONNECTING':
+      label = text || 'CONNECTING TO GAME SERVER'
+      colorHex = '#596579'
+      break
   }
 
   TextShape.getMutable(buttonTextEntity).text = label
@@ -133,7 +142,7 @@ function handleButtonClick() {
   const gameEngine = cachedGameEngine
   if (!gameEngine) return
 
-  if (currentButtonAction === 'WAITING') return
+  if (currentButtonAction === 'WAITING' || currentButtonAction === 'CONNECTING') return
 
   if (currentButtonAction === 'START') {
     openGameModePrompt((gameMode) => startSelectedGameMode(gameMode))
@@ -183,16 +192,37 @@ function setupLobbyCountdownSystem() {
 
     const now = Date.now()
 
+    if (currentButtonAction === 'CONNECTING') {
+      if ((gameEngine.isStarted && !gameEngine.gameOver) || gameEngine.lobbyEndTime > now) {
+        connectingStartedAt = 0
+      } else if (now - connectingStartedAt >= SERVER_START_TIMEOUT_MS) {
+        connectingStartedAt = 0
+        setButtonState('START', 'START THE GAME')
+        updateScoreBoardText('GAME SERVER DID NOT RESPOND\n\nPress Start to try again.')
+        showRewardToast('The game server did not respond. Please try starting again.')
+        return
+      } else {
+        return
+      }
+    }
+
     // 1. Network-synced multiplayer join window
     if (gameEngine.lobbyEndTime > now) {
       const secondLeft = Math.ceil((gameEngine.lobbyEndTime - now) / 1000)
       if (secondLeft !== lastSecondAnnounced) {
+        if (lastSecondAnnounced === -1) {
+          updateScoreBoardText('MULTIPLAYER LOBBY\n\nLobby open for 30 seconds. Other players must press Join to play.')
+          showRewardToast('Multiplayer lobby open for 30 seconds. Players must press JOIN to play.')
+        }
         lastSecondAnnounced = secondLeft
         const joined = gameEngine.playerOrder.includes(resolvePlayerId(gameEngine))
         setButtonState('COUNTDOWN', `${joined ? 'WAITING' : 'JOIN LOBBY'} • ${secondLeft}s`)
       }
       return
     }
+
+    // Keep the start control locked until the authoritative state confirms the request.
+    if (currentButtonAction === 'CONNECTING' && (!gameEngine.isStarted || gameEngine.gameOver)) return
 
     // The host deals the shared game once the 30-second join window expires.
     if (gameEngine.lobbyEndTime > 0 && !gameEngine.isStarted) {
