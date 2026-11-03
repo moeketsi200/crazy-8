@@ -184,6 +184,23 @@ export function setupTableChips(houseEntity: Entity) {
 // ----------------------------------------------------
 const chairAuraEntities: Entity[] = []
 const chairGlowDisks: Entity[] = []
+let chairAuraBaseHex = '#00f3ff'
+let activeChairAuraIndex = -1
+
+function applyChairAuraMaterial(index: number) {
+  const disk = chairGlowDisks[index]
+  if (!disk) return
+
+  const isActive = index === activeChairAuraIndex
+  const hex = isActive ? '#ffd700' : chairAuraBaseHex
+  Material.setPbrMaterial(disk, {
+    albedoColor: Color4.fromHexString(hex),
+    emissiveColor: Color3.fromHexString(hex),
+    emissiveIntensity: isActive ? 5.0 : 2.5,
+    metallic: 0.1,
+    roughness: 0.2
+  })
+}
 
 export function setupChairAuras(houseEntity: Entity, chairPositions: { x: number; z: number }[]) {
   chairPositions.forEach((pos, idx) => {
@@ -230,19 +247,20 @@ export function setupChairAuras(houseEntity: Entity, chairPositions: { x: number
 }
 
 export function setChairAuraColor(hex: string) {
-  const col = Color4.fromHexString(hex)
-  const em = Color3.fromHexString(hex.length >= 7 ? hex.slice(0, 7) : '#00f3ff')
-  chairGlowDisks.forEach(disk => {
-    if (disk) {
-      Material.setPbrMaterial(disk, {
-        albedoColor: col,
-        emissiveColor: em,
-        emissiveIntensity: 2.5,
-        metallic: 0.1,
-        roughness: 0.2
-      })
-    }
-  })
+  chairAuraBaseHex = hex.length >= 7 ? hex.slice(0, 7) : '#00f3ff'
+  chairGlowDisks.forEach((_, index) => applyChairAuraMaterial(index))
+}
+
+export function updateActiveChairAura(chairIndex: number | null) {
+  const nextActiveIndex = chairIndex !== null && chairIndex >= 0 && chairIndex < chairGlowDisks.length
+    ? chairIndex
+    : -1
+  if (nextActiveIndex === activeChairAuraIndex) return
+
+  const previousActiveIndex = activeChairAuraIndex
+  activeChairAuraIndex = nextActiveIndex
+  if (previousActiveIndex >= 0) applyChairAuraMaterial(previousActiveIndex)
+  if (activeChairAuraIndex >= 0) applyChairAuraMaterial(activeChairAuraIndex)
 }
 
 export function updateChairAuraVisibility(seatedIndices: Set<number>) {

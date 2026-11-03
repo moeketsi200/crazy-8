@@ -17,6 +17,7 @@ export type GameActionRequest =
 
 export const MAX_GAME_PLAYERS = 8
 export const TURN_TIME_LIMIT_MS = 60_000
+export const BOT_TURN_DELAY_MS = 1_300
 
 export interface PlayerLeaderboardStats {
   playerId: PlayerId
@@ -87,6 +88,8 @@ export class CrazyEightsGame {
   public onNotification?: (message: string, senderId?: PlayerId) => void
   public lastNotification?: { id: number, message: string, senderId?: string }
   private lastProcessedNotificationId: number = 0
+  public lastCardPlay?: { id: number, playerId: PlayerId }
+  private cardPlaySequence: number = 0
 
   public lastPlayerActions: Map<PlayerId, { text: string, timestamp: number }> = new Map()
   public actionHistory: Array<{ id: number, playerId?: PlayerId, playerName: string, text: string, timestamp: number }> = []
@@ -239,6 +242,10 @@ export class CrazyEightsGame {
       roundResultSequence: this.roundResultSequence,
       safeDeclared: Array.from(this.safeDeclared),
       lastNotification: this.lastNotification,
+      lastCardPlay: this.lastCardPlay,
+      cardPlaySequence: this.cardPlaySequence,
+      lastPlayerActions: Array.from(this.lastPlayerActions.entries()),
+      actionHistory: this.actionHistory.slice(0, 25),
       lobbyEndTime: this.lobbyEndTime
     })
   }
@@ -272,6 +279,12 @@ export class CrazyEightsGame {
       this.lastRoundResult = state.lastRoundResult
       this.roundResultSequence = state.roundResultSequence || state.lastRoundResult?.id || 0
       this.safeDeclared = new Set(state.safeDeclared)
+      this.lastCardPlay = state.lastCardPlay && typeof state.lastCardPlay.playerId === 'string'
+        ? state.lastCardPlay
+        : undefined
+      this.cardPlaySequence = Math.max(this.cardPlaySequence, Number(state.cardPlaySequence) || this.lastCardPlay?.id || 0)
+      this.lastPlayerActions = new Map(state.lastPlayerActions || [])
+      this.actionHistory = Array.isArray(state.actionHistory) ? state.actionHistory.slice(0, 25) : []
       this.lobbyEndTime = state.lobbyEndTime || 0
 
       if (state.lastNotification && state.lastNotification.id && state.lastNotification.id > this.lastProcessedNotificationId) {
@@ -614,6 +627,7 @@ export class CrazyEightsGame {
 
     hand.splice(cardIndex, 1)
     this.discardPile.push(cardToPlay)
+    this.lastCardPlay = { id: ++this.cardPlaySequence, playerId }
     this.safeDeclared.delete(playerId)
 
     const pName = this.getDisplayName(playerId)

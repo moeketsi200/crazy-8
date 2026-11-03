@@ -2,8 +2,9 @@ import { engine } from '@dcl/sdk/ecs'
 import { Storage } from '@dcl/sdk/server'
 import { isServer } from '@dcl/sdk/network'
 import { sceneRoom } from '../shared/messages'
-import { CrazyEightsGame, PlayerLeaderboardStats, isBotPlayer } from '../game/logic'
+import { BOT_TURN_DELAY_MS, CrazyEightsGame, PlayerLeaderboardStats, isBotPlayer } from '../game/logic'
 import { Suit } from '../game/deck'
+import { getBotName } from '../game/bot_names'
 import { createAuthoritativeGameState, publishAuthoritativeGameState } from '../game/multiplayer'
 
 const LEADERBOARD_STORAGE_KEY = 'crazy8_leaderboard_v1'
@@ -61,7 +62,7 @@ export async function initAuthoritativeServer() {
   game.playerNameResolver = (playerId) => {
     const knownName = names.get(playerId.toLowerCase())
     if (knownName) return knownName
-    if (isBotPlayer(playerId)) return `Cyber Bot ${playerId.match(/_(\d+)$/)?.[1] || ''}`.trim()
+    if (isBotPlayer(playerId)) return getBotName(playerId)
     return playerId.startsWith('0x') && playerId.length > 10
       ? `${playerId.slice(0, 6)}...${playerId.slice(-4)}`
       : playerId
@@ -76,6 +77,7 @@ export async function initAuthoritativeServer() {
   let sharedStateReady = false
   let gameplayEventId = Date.now()
   let autoContinueAt = 0
+  let pendingBotTurn: { botId: string, executeAt: number } | null = null
 
   const loadLeaderboard = async () => {
     try {
@@ -131,6 +133,9 @@ export async function initAuthoritativeServer() {
   createAuthoritativeGameState(game)
   sharedStateReady = true
   game.onStateChanged = () => publishAuthoritativeGameState(game)
+  game.onBotTurnStart = (botId) => {
+    pendingBotTurn = { botId, executeAt: Date.now() + BOT_TURN_DELAY_MS }
+  }
   game.onRoundEnd = () => {
     leaderboardDirty = true
     leaderboardRevision++
@@ -223,6 +228,17 @@ export async function initAuthoritativeServer() {
       autoContinueAt = 0
       if (game.gameMode === 'solo' && game.gameOver && !game.matchOver &&
           game.eliminatedPlayers.has(game.gameMasterId)) game.startNextRound()
+    }
+
+    if (pendingBotTurn) {
+      const currentPlayer = game.getCurrentPlayerId()
+      if (!game.isStarted || game.gameOver || currentPlayer !== pendingBotTurn.botId || !isBotPlayer(currentPlayer || '')) {
+        pendingBotTurn = null
+      } else if (Date.now() >= pendingBotTurn.executeAt) {
+        const botId = pendingBotTurn.botId
+        pendingBotTurn = null
+        game.runBotTurn(botId)
+      }
     }
 
     game.applyTurnTimeout()

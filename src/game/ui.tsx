@@ -1,14 +1,18 @@
 import ReactEcs, { ReactEcsRenderer, UiEntity } from '@dcl/sdk/react-ecs'
 import { Color4, Vector3 } from '@dcl/sdk/math'
 import { engine, Transform } from '@dcl/sdk/ecs'
+import { isMobile } from '@dcl/sdk/platform'
 import { CrazyEightsGame, GameMode, TURN_TIME_LIMIT_MS, isBotPlayer } from './logic'
-import { update3DTable, resolvePlayerId, getPlayerSeated, setPlayerSeated, getPlayerDisplayName, getTimeSeated, standUpPlayer, exitGame, getLocalSeatedChair, sitPlayerAtOpenChair, BOT_NAMES } from './table'
+import { update3DTable, resolvePlayerId, getPlayerSeated, setPlayerSeated, getPlayerDisplayName, getPlayerChairIndex, getTimeSeated, standUpPlayer, exitGame, getLocalSeatedChair, sitPlayerAtOpenChair } from './table'
+import { getBotName } from './bot_names'
 import { getPlayer } from '@dcl/sdk/src/players'
 import { Card, Suit } from './deck'
 import { TopHudWidget, DailyRewardsModal, RewardToastBanner, updateRewardToast, showRewardToast } from './rewards_ui'
 
 let activeGame: CrazyEightsGame | null = null
 let isPlayerInHouse = false
+let isMobileRosterOpen = false
+let selectedCardIndex: number | null = null
 
 export let uiNotificationMessage = ''
 export let uiNotificationSenderId: string | null = null
@@ -16,6 +20,8 @@ export let uiNotificationTimer = 0
 
 export function setupUI(game: CrazyEightsGame) {
   activeGame = game
+  isMobileRosterOpen = false
+  selectedCardIndex = null
   ReactEcsRenderer.setUiRenderer(uiComponent)
   
   // Wire up game notifications to our UI!
@@ -76,22 +82,38 @@ function getCardBorderColor(card: Card, isPlayable: boolean): Color4 {
   return Color4.fromHexString('#00F3FF')
 }
 
-function PlayingCard(props: { key?: string|number, card: Card, isPlayable: boolean, onClick?: () => void }) {
-  const { card, isPlayable, onClick } = props
+function PlayingCard(props: {
+  key?: string|number
+  card: Card
+  isPlayable: boolean
+  isSelected?: boolean
+  mobileHand?: boolean
+  fanIndex?: number
+  onClick?: () => void
+}) {
+  const { card, isPlayable, isSelected = false, mobileHand = false, fanIndex = 0, onClick } = props
   const isJoker = card.rank === 'Joker' || card.action === 'Draw4'
   const displayRank = isJoker ? '★' : card.rank
   const rankColor = getCardRankColor(card)
-  const borderColor = getCardBorderColor(card, isPlayable)
+  const borderColor = isSelected ? Color4.fromHexString('#FFD700') : getCardBorderColor(card, isPlayable)
   const cardBg = isPlayable ? Color4.fromHexString('#0c0f16') : Color4.fromHexString('#141720')
   const suitIcon = getSuitTexture(card.suit, card.rank)
+  const cardWidth = mobileHand ? 72 : 84
+  const cardHeight = mobileHand ? 108 : 124
+  const suitIconSize = mobileHand ? 38 : 46
 
   return (
     <UiEntity
       uiTransform={{
-        width: 84,
-        height: 124,
-        margin: { left: 4, right: 4, bottom: isPlayable ? 10 : 0 },
+        width: cardWidth,
+        height: cardHeight,
+        margin: {
+          left: mobileHand ? (fanIndex === 0 ? 0 : -22) : 4,
+          right: mobileHand ? 0 : 4,
+          bottom: isSelected ? 24 : (isPlayable ? 10 : 0)
+        },
         padding: 2,
+        zIndex: isSelected ? 100 : fanIndex,
       }}
       uiBackground={{ color: borderColor }}
       onMouseDown={onClick}
@@ -108,11 +130,11 @@ function PlayingCard(props: { key?: string|number, card: Card, isPlayable: boole
       >
         {/* Top Left: Bold Rank & Mini Suit Icon */}
         <UiEntity
-          uiTransform={{ width: '100%', height: 26, flexDirection: 'row', alignItems: 'center' }}
+          uiTransform={{ width: '100%', height: mobileHand ? 22 : 26, flexDirection: 'row', alignItems: 'center' }}
         >
           <UiEntity
             uiTransform={{ width: isJoker ? 18 : 22, height: '100%' }}
-            uiText={{ value: displayRank, fontSize: isJoker ? 18 : 16, color: rankColor, textAlign: 'middle-left' }}
+            uiText={{ value: displayRank, fontSize: isJoker ? 17 : (mobileHand ? 14 : 16), color: rankColor, textAlign: 'middle-left' }}
           />
           <UiEntity
             uiTransform={{ width: 14, height: 14, margin: { left: 2 } }}
@@ -126,8 +148,8 @@ function PlayingCard(props: { key?: string|number, card: Card, isPlayable: boole
         {/* Center: Large High-Resolution Glowing Neon Suit Graphic */}
         <UiEntity
           uiTransform={{
-            width: 46,
-            height: 46,
+            width: suitIconSize,
+            height: suitIconSize,
             alignSelf: 'center',
             justifyContent: 'center',
             alignItems: 'center'
@@ -141,14 +163,14 @@ function PlayingCard(props: { key?: string|number, card: Card, isPlayable: boole
         {/* Subtitle banner for Joker */}
         {isJoker && (
           <UiEntity
-            uiTransform={{ width: '100%', height: 14, alignItems: 'center', justifyContent: 'center', positionType: 'absolute', position: { top: 78 } }}
+            uiTransform={{ width: '100%', height: 14, alignItems: 'center', justifyContent: 'center', positionType: 'absolute', position: { top: mobileHand ? 68 : 78 } }}
             uiText={{ value: '+4 WILD', fontSize: 10, color: Color4.fromHexString('#FFD700'), textAlign: 'middle-center' }}
           />
         )}
 
         {/* Bottom Right: Inverted Mini Suit Icon & Rank */}
         <UiEntity
-          uiTransform={{ width: '100%', height: 26, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}
+          uiTransform={{ width: '100%', height: mobileHand ? 22 : 26, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}
         >
           <UiEntity
             uiTransform={{ width: 14, height: 14, margin: { right: 2 } }}
@@ -159,7 +181,7 @@ function PlayingCard(props: { key?: string|number, card: Card, isPlayable: boole
           />
           <UiEntity
             uiTransform={{ width: isJoker ? 18 : 22, height: '100%' }}
-            uiText={{ value: displayRank, fontSize: isJoker ? 18 : 16, color: rankColor, textAlign: 'middle-right' }}
+            uiText={{ value: displayRank, fontSize: isJoker ? 17 : (mobileHand ? 14 : 16), color: rankColor, textAlign: 'middle-right' }}
           />
         </UiEntity>
       </UiEntity>
@@ -336,6 +358,13 @@ function TableArea() {
   )
 }
 
+function getRosterName(playerId: string, myId: string): string {
+  if (playerId === myId) return 'YOU'
+  if (isBotPlayer(playerId)) return getBotName(playerId)
+  const displayName = getPlayerDisplayName(playerId)
+  return displayName.length > 14 ? `${displayName.slice(0, 13)}…` : displayName
+}
+
 function PlayerRosterBar() {
   if (!activeGame || activeGame.playerOrder.length === 0) return null
   if (!activeGame.isStarted && activeGame.gameMode === 'idle') return null
@@ -346,6 +375,174 @@ function PlayerRosterBar() {
   const activePlayers = activeGame.playerOrder.filter(p => !activeGame?.eliminatedPlayers.has(p))
   const isLobby = !activeGame.isStarted && activeGame.lobbyEndTime > Date.now()
   const lobbySeconds = isLobby ? Math.max(0, Math.ceil((activeGame.lobbyEndTime - Date.now()) / 1000)) : 0
+
+  if (isMobile()) {
+    const isMyTurn = isLocalPlayerTurn(activeGame)
+    const activeHand = currentTurnPlayerId ? (activeGame.players.get(currentTurnPlayerId) || []) : []
+    const activeSeatNumber = currentTurnPlayerId ? getPlayerChairIndex(currentTurnPlayerId, activeGame) + 1 : 0
+    const activeName = currentTurnPlayerId ? getRosterName(currentTurnPlayerId, myId) : ''
+    const unsafeCount = activePlayers.filter((playerId) => {
+      const hand = activeGame?.players.get(playerId) || []
+      return hand.length > 0 && hand.length <= 3 && !activeGame?.safeDeclared.has(playerId)
+    }).length
+    const mobilePlayers = [...activeGame.playerOrder].sort((a, b) =>
+      getPlayerChairIndex(a, activeGame!) - getPlayerChairIndex(b, activeGame!)
+    )
+
+    return (
+      <UiEntity
+        uiTransform={{
+          positionType: 'absolute',
+          position: { top: 128, left: 0 },
+          width: '100%',
+          flexDirection: 'column',
+          alignItems: 'center'
+        }}
+      >
+        <UiEntity
+          uiTransform={{
+            width: '94%',
+            height: 46,
+            flexDirection: 'row',
+            alignItems: 'center',
+            padding: { left: 12, right: 8 },
+            borderRadius: 12,
+            borderWidth: 1.5,
+            borderColor: isMyTurn ? Color4.fromHexString('#00ffaa') : Color4.create(0, 0.95, 1, 0.55)
+          }}
+          uiBackground={{ color: Color4.create(0.04, 0.07, 0.12, 0.94) }}
+        >
+          <UiEntity
+            uiTransform={{ flexGrow: 1, height: 34, justifyContent: 'center' }}
+            uiText={{
+              value: isLobby
+                ? `LOBBY • ${activeGame.playerOrder.length}/8 • ${lobbySeconds}s`
+                : activeGame.isStarted
+                  ? `${isMyTurn ? '⚡ YOUR TURN' : '▶'}  #${activeSeatNumber} ${activeName}  ·  🎴 ${activeHand.length}`
+                  : activeGame.gameOver ? 'MATCH COMPLETE' : 'WAITING FOR PLAYERS',
+              fontSize: 13,
+              color: isMyTurn ? Color4.fromHexString('#00ffaa') : Color4.White(),
+              textAlign: 'middle-left'
+            }}
+          />
+          <UiEntity
+            uiTransform={{ width: 34, height: 34, alignItems: 'center', justifyContent: 'center', margin: { right: 4 } }}
+            uiText={{
+              value: activeGame.isStarted ? (turnDirection === 1 ? '↻' : '↺') : '•',
+              fontSize: 20,
+              color: turnDirection === 1 ? Color4.fromHexString('#ffd700') : Color4.fromHexString('#ff2a6d'),
+              textAlign: 'middle-center'
+            }}
+          />
+          <UiEntity
+            uiTransform={{
+              width: 98,
+              height: 34,
+              borderRadius: 8,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: Color4.fromHexString('#00f3ff')
+            }}
+            uiBackground={{ color: Color4.create(0.02, 0.24, 0.30, 0.95) }}
+            onMouseDown={() => { isMobileRosterOpen = !isMobileRosterOpen }}
+          >
+            <UiEntity
+              uiText={{
+                value: `${isMobileRosterOpen ? 'CLOSE' : 'PLAYERS'} ${activeGame.playerOrder.length}${unsafeCount > 0 ? `  🚨${unsafeCount}` : ''}`,
+                fontSize: 10,
+                color: Color4.White(),
+                textAlign: 'middle-center'
+              }}
+            />
+          </UiEntity>
+        </UiEntity>
+
+        {isMobileRosterOpen && (
+          <UiEntity
+            uiTransform={{
+              width: '94%',
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 6,
+              margin: { top: 4 },
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: Color4.create(0, 0.95, 1, 0.55)
+            }}
+            uiBackground={{ color: Color4.create(0.03, 0.05, 0.09, 0.97) }}
+          >
+            {mobilePlayers.map((playerId) => {
+              const hand = activeGame?.players.get(playerId) || []
+              const cardCount = hand.length
+              const isCurrent = playerId === currentTurnPlayerId
+              const isEliminated = activeGame?.eliminatedPlayers.has(playerId) || false
+              const isSafe = activeGame?.safeDeclared.has(playerId) || false
+              const isVulnerable = !isEliminated && cardCount > 0 && cardCount <= 3 && !isSafe
+              const seatNumber = getPlayerChairIndex(playerId, activeGame!) + 1
+              const statusText = isEliminated
+                ? 'ELIMINATED'
+                : isSafe ? `SAFE · ${cardCount} cards` : `${cardCount} ${cardCount === 1 ? 'card' : 'cards'}`
+
+              return (
+                <UiEntity
+                  key={playerId}
+                  uiTransform={{
+                    width: 174,
+                    height: 54,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    padding: { left: 8, right: 6 },
+                    margin: 3,
+                    borderRadius: 8,
+                    borderWidth: isCurrent ? 2 : 1,
+                    borderColor: isCurrent ? Color4.fromHexString('#00ffaa') : (isVulnerable ? Color4.fromHexString('#ff2a6d') : Color4.create(0.25, 0.32, 0.42, 0.8))
+                  }}
+                  uiBackground={{ color: isCurrent ? Color4.create(0.03, 0.20, 0.18, 0.96) : Color4.create(0.08, 0.10, 0.15, 0.96) }}
+                >
+                  <UiEntity
+                    uiTransform={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', margin: { right: 6 } }}
+                    uiBackground={{ color: isCurrent ? Color4.fromHexString('#087a62') : Color4.fromHexString('#172536') }}
+                    uiText={{ value: `${seatNumber}`, fontSize: 14, color: Color4.White(), textAlign: 'middle-center' }}
+                  />
+                  <UiEntity uiTransform={{ flexGrow: 1, height: 40, flexDirection: 'column', justifyContent: 'center' }}>
+                    <UiEntity
+                      uiTransform={{ width: '100%', height: 18 }}
+                      uiText={{ value: getRosterName(playerId, myId), fontSize: 12, color: Color4.White(), textAlign: 'middle-left' }}
+                    />
+                    <UiEntity
+                      uiTransform={{ width: '100%', height: 16 }}
+                      uiText={{
+                        value: `🎴 ${statusText}`,
+                        fontSize: 10,
+                        color: isVulnerable ? Color4.fromHexString('#ff7a91') : (isEliminated ? Color4.fromHexString('#888888') : Color4.fromHexString('#b9c8dd')),
+                        textAlign: 'middle-left'
+                      }}
+                    />
+                  </UiEntity>
+                  {isVulnerable && isMyTurn && (
+                    <UiEntity
+                      uiTransform={{ width: 46, height: 32, borderRadius: 6, alignItems: 'center', justifyContent: 'center', margin: { left: 4 } }}
+                      uiBackground={{ color: Color4.fromHexString('#c91d1d') }}
+                      onMouseDown={() => {
+                        if (!activeGame) return
+                        activeGame.challengePlayer(myId, playerId)
+                        update3DTable(activeGame)
+                      }}
+                    >
+                      <UiEntity uiText={{ value: 'CATCH', fontSize: 9, color: Color4.White(), textAlign: 'middle-center' }} />
+                    </UiEntity>
+                  )}
+                </UiEntity>
+              )
+            })}
+          </UiEntity>
+        )}
+      </UiEntity>
+    )
+  }
 
   return (
     <UiEntity
@@ -453,23 +650,17 @@ function PlayerRosterBar() {
             const isSafe = activeGame?.safeDeclared.has(pId) || false
             const isVulnerable = !isEliminated && cardCount > 0 && cardCount <= 3
             const score = activeGame?.scores.get(pId) || 0
+            const seatNumber = getPlayerChairIndex(pId, activeGame) + 1
 
             // Resolve name
             let shortName = 'Player'
             if (isMe) {
               shortName = 'YOU'
             } else if (isBot) {
-              const num = parseInt(pId.match(/_(\d+)$/)?.[1] || '1', 10)
-              shortName = BOT_NAMES[(num - 1) % BOT_NAMES.length] || `Bot ${num}`
+              shortName = getBotName(pId)
             } else {
               const dName = getPlayerDisplayName(pId)
               shortName = dName.length > 8 ? `${dName.slice(0, 7)}…` : dName
-            }
-
-            // Avatar userId
-            let avatarUserId: string | undefined = undefined
-            if (!isBot) {
-              avatarUserId = pId === 'player1' ? getPlayer()?.userId : pId
             }
 
             // Colors
@@ -525,24 +716,16 @@ function PlayerRosterBar() {
                       justifyContent: 'center',
                       margin: { right: 3 }
                     }}
-                    uiBackground={
-                      !isBot && avatarUserId
-                        ? { avatarTexture: { userId: avatarUserId } }
-                        : { color: Color4.fromHexString('#141f33') }
-                    }
+                    uiBackground={{ color: isCurrentTurn ? Color4.fromHexString('#087a62') : Color4.fromHexString('#141f33') }}
                   >
-                    {isBot && (
-                      <UiEntity
-                        uiText={{ value: '🤖', fontSize: 10, textAlign: 'middle-center' }}
-                      />
-                    )}
+                    <UiEntity uiText={{ value: `${seatNumber}`, fontSize: 9, color: Color4.White(), textAlign: 'middle-center' }} />
                   </UiEntity>
 
                   <UiEntity
                     uiTransform={{ flexGrow: 1, height: 18, justifyContent: 'center' }}
                     uiText={{
                       value: shortName,
-                      fontSize: 11,
+                      fontSize: 10,
                       color: isMe ? Color4.fromHexString('#00f3ff') : Color4.White(),
                       textAlign: 'middle-left'
                     }}
@@ -730,6 +913,7 @@ function parseNotification(msg: string, senderId?: string | null) {
 
 function TopBannerNotification() {
   if (uiNotificationMessage === '') return null
+  const mobile = isMobile()
   const parsed = parseNotification(uiNotificationMessage, uiNotificationSenderId)
   const messageText = parsed.speaker
     ? `${parsed.speaker} ${parsed.action}${parsed.highlight}${parsed.suffix}`
@@ -741,7 +925,7 @@ function TopBannerNotification() {
         positionType: 'absolute',
         position: { top: 24, left: 0 },
         width: '100%',
-        height: 72,
+        height: mobile ? 62 : 72,
         alignItems: 'center',
         justifyContent: 'center',
         flexDirection: 'row'
@@ -749,8 +933,8 @@ function TopBannerNotification() {
     >
       <UiEntity
         uiTransform={{
-          width: 560,
-          height: 72,
+          width: mobile ? 500 : 560,
+          height: mobile ? 62 : 72,
           alignItems: 'center',
           justifyContent: 'center',
           flexDirection: 'row'
@@ -766,25 +950,25 @@ function TopBannerNotification() {
             height: '100%',
             flexDirection: 'row',
             alignItems: 'center',
-            padding: { left: 22, right: 28 }
+            padding: mobile ? { left: 8, right: 12 } : { left: 22, right: 28 }
           }}
         >
           {/* Circular Avatar Container with Cyan Rim & Speech Badge */}
           <UiEntity
             uiTransform={{
-              width: 44,
-              height: 44,
+              width: mobile ? 34 : 44,
+              height: mobile ? 34 : 44,
               alignItems: 'center',
               justifyContent: 'center',
-              margin: { left: 10, right: 14 }
+              margin: mobile ? { left: 2, right: 8 } : { left: 10, right: 14 }
             }}
           >
             {/* Avatar Face (Real Snapshot) or Cyber Bot Icon */}
             <UiEntity
               uiTransform={{
-                width: 42,
-                height: 42,
-                borderRadius: 21,
+                width: mobile ? 32 : 42,
+                height: mobile ? 32 : 42,
+                borderRadius: mobile ? 16 : 21,
                 borderWidth: 1.5,
                 borderColor: Color4.fromHexString('#00f3ff'),
                 alignItems: 'center',
@@ -800,7 +984,7 @@ function TopBannerNotification() {
                 <UiEntity
                   uiText={{
                     value: parsed.icon || '🤖',
-                    fontSize: 22,
+                    fontSize: mobile ? 17 : 22,
                     textAlign: 'middle-center'
                   }}
                 />
@@ -825,15 +1009,15 @@ function TopBannerNotification() {
           {/* Keep the whole announcement in one wrapped text box so fragments cannot overlap. */}
           <UiEntity
             uiTransform={{
-              width: 430,
-              height: 54,
+              width: mobile ? 390 : 430,
+              height: mobile ? 48 : 54,
               alignItems: 'center',
               justifyContent: 'flex-start',
               margin: { right: 8 }
             }}
             uiText={{
               value: messageText,
-              fontSize: 16,
+              fontSize: mobile ? 13 : 16,
               color: parsed.isDeclaration ? Color4.fromHexString('#ffd700') : Color4.fromHexString('#ffffff'),
               textAlign: 'middle-left',
               textWrap: 'wrap',
@@ -873,6 +1057,7 @@ function getSuitBadgeTheme(suit: Suit | null): { text: Color4, border: Color4, b
 
 function GameInfoBar() {
   if (!activeGame) return null
+  const mobile = isMobile()
   if (activeGame.gameOver) {
     return (
       <UiEntity
@@ -932,9 +1117,9 @@ function GameInfoBar() {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        height: 52,
-        padding: { left: 16, right: 16, top: 4, bottom: 4 },
-        margin: { bottom: 12 },
+        height: mobile ? 42 : 52,
+        padding: mobile ? { left: 8, right: 8, top: 3, bottom: 3 } : { left: 16, right: 16, top: 4, bottom: 4 },
+        margin: { bottom: mobile ? 8 : 12 },
         borderRadius: 26,
         borderWidth: isMyTurn ? 2 : 1.5,
         borderColor: bannerBorder
@@ -942,7 +1127,7 @@ function GameInfoBar() {
       uiBackground={{ color: bannerBg }}
     >
       {/* 1. Left Status Pill: Your Turn / Opponent Turn */}
-      <UiEntity
+      {!mobile && <UiEntity
         uiTransform={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -985,27 +1170,27 @@ function GameInfoBar() {
             textAlign: 'middle-center'
           }}
         />
-      </UiEntity>
+      </UiEntity>}
 
       {/* 2. Middle: Active Required Suit Badge with Icon */}
       <UiEntity
         uiTransform={{
           flexDirection: 'row',
           alignItems: 'center',
-          padding: { left: 12, right: 14 },
-          height: 38,
+          padding: mobile ? { left: 8, right: 10 } : { left: 12, right: 14 },
+          height: mobile ? 34 : 38,
           borderRadius: 19,
           borderWidth: 1.5,
           borderColor: suitColors.border,
-          margin: { right: isBot ? 0 : 8 }
+          margin: { right: isBot ? 0 : (mobile ? 4 : 8) }
         }}
         uiBackground={{ color: suitColors.bg }}
       >
         <UiEntity
           uiTransform={{
-            width: 20,
-            height: 20,
-            margin: { right: 6 }
+            width: mobile ? 18 : 20,
+            height: mobile ? 18 : 20,
+            margin: { right: mobile ? 4 : 6 }
           }}
           uiBackground={{
             textureMode: 'stretch',
@@ -1015,7 +1200,7 @@ function GameInfoBar() {
         <UiEntity
           uiText={{
             value: `SUIT: ${(activeGame.activeSuit || 'ANY').toUpperCase()}`,
-            fontSize: 13,
+            fontSize: mobile ? 11 : 13,
             color: suitColors.text,
             textAlign: 'middle-center'
           }}
@@ -1028,8 +1213,8 @@ function GameInfoBar() {
           uiTransform={{
             flexDirection: 'row',
             alignItems: 'center',
-            padding: { left: 12, right: 12 },
-            height: 38,
+            padding: mobile ? { left: 8, right: 8 } : { left: 12, right: 12 },
+            height: mobile ? 34 : 38,
             borderRadius: 19,
             borderWidth: 1,
             borderColor: secondsRemaining <= 5 ? Color4.fromHexString('#FF2A6D') : Color4.create(0.2, 0.4, 0.6, 0.6)
@@ -1041,7 +1226,7 @@ function GameInfoBar() {
           <UiEntity
             uiText={{
               value: `⏱ ${secondsRemaining}s`,
-              fontSize: 13,
+              fontSize: mobile ? 12 : 13,
               color: secondsRemaining <= 5 ? Color4.fromHexString('#FF2A6D') : Color4.fromHexString('#00F3FF'),
               textAlign: 'middle-center'
             }}
@@ -1087,37 +1272,106 @@ function DeclareButton({ myHand }: { myHand: Card[] }) {
   )
 }
 
+function playHandCard(index: number, myHand: Card[], myId: string) {
+  if (!activeGame || !isLocalPlayerTurn(activeGame)) return
+  const card = myHand[index]
+  if (!card || !activeGame.isValidPlay(card, myId)) return
+
+  if (card.action === 'Wild' || card.action === 'Draw4') {
+    pendingWildCardIndex = index
+    selectedCardIndex = null
+    return
+  }
+
+  const success = activeGame.playCard(myId, index)
+  selectedCardIndex = null
+  if (success) update3DTable(activeGame)
+}
+
 function PlayerHandArea({ myHand }: { myHand: Card[] }) {
   if (!activeGame) return null
   const myId = resolvePlayerId(activeGame)
   const isMyTurn = isLocalPlayerTurn(activeGame)
   const isChoosingSuit = pendingWildCardIndex !== null
+  const mobile = isMobile()
+
+  if (selectedCardIndex !== null && (!isMyTurn || selectedCardIndex >= myHand.length)) {
+    selectedCardIndex = null
+  }
+
+  const selectedCard = mobile && selectedCardIndex !== null ? myHand[selectedCardIndex] : undefined
+  const selectedCanPlay = !!(selectedCard && isMyTurn && !isChoosingSuit && activeGame.isValidPlay(selectedCard, myId))
 
   return (
     <UiEntity
-      uiTransform={{ width: '100%', height: 140, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', margin: { bottom: 20 } }}
+      uiTransform={{
+        width: '100%',
+        height: mobile ? (selectedCard ? 168 : 124) : 140,
+        flexDirection: mobile ? 'column' : 'row',
+        alignItems: 'center',
+        justifyContent: mobile ? 'flex-end' : 'center',
+        margin: { bottom: mobile ? 6 : 20 }
+      }}
     >
-      {myHand.map((card, index) => {
-        const canPlay = isMyTurn && !isChoosingSuit && activeGame?.isValidPlay(card, myId)
-
-        return (
-          <PlayingCard
-            key={index}
-            card={card}
-            isPlayable={!!canPlay}
-            onClick={() => {
-              if (canPlay && activeGame) {
-                if (card.action === 'Wild' || card.action === 'Draw4') {
-                  pendingWildCardIndex = index
-                } else {
-                  const success = activeGame.playCard(myId, index)
-                  if (success) update3DTable(activeGame)
-                }
-              }
+      {mobile && selectedCard && (
+        <UiEntity
+          uiTransform={{
+            width: 170,
+            height: 32,
+            margin: { bottom: 2 },
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: selectedCanPlay ? Color4.fromHexString('#ffd700') : Color4.fromHexString('#556070'),
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+          uiBackground={{ color: selectedCanPlay ? Color4.create(0.22, 0.15, 0.02, 0.96) : Color4.create(0.10, 0.12, 0.16, 0.92) }}
+          onMouseDown={() => {
+            if (selectedCanPlay && selectedCardIndex !== null) playHandCard(selectedCardIndex, myHand, myId)
+          }}
+        >
+          <UiEntity
+            uiText={{
+              value: selectedCanPlay ? `PLAY ${selectedCard.rank.toUpperCase()}` : 'NOT PLAYABLE',
+              fontSize: 12,
+              color: selectedCanPlay ? Color4.fromHexString('#ffd700') : Color4.fromHexString('#8995a6'),
+              textAlign: 'middle-center'
             }}
           />
-        )
-      })}
+        </UiEntity>
+      )}
+
+      <UiEntity
+        uiTransform={{
+          width: '100%',
+          height: mobile ? (selectedCard ? 132 : 116) : 140,
+          flexDirection: 'row',
+          alignItems: 'flex-end',
+          justifyContent: 'center'
+        }}
+      >
+        {myHand.map((card, index) => {
+          const canPlay = isMyTurn && !isChoosingSuit && activeGame?.isValidPlay(card, myId)
+
+          return (
+            <PlayingCard
+              key={index}
+              card={card}
+              isPlayable={!!canPlay}
+              isSelected={mobile && selectedCardIndex === index}
+              mobileHand={mobile}
+              fanIndex={index}
+              onClick={() => {
+                if (mobile) {
+                  if (!isChoosingSuit) selectedCardIndex = index
+                } else if (canPlay) {
+                  playHandCard(index, myHand, myId)
+                }
+              }}
+            />
+          )
+        })}
+      </UiEntity>
     </UiEntity>
   )
 }
@@ -1158,6 +1412,7 @@ function SuitPickerModal() {
                   const myId = resolvePlayerId(activeGame)
                   activeGame.playCard(myId, pendingWildCardIndex, item.suit)
                   pendingWildCardIndex = null
+                  selectedCardIndex = null
                   update3DTable(activeGame)
                 }
               }}
@@ -1528,7 +1783,7 @@ function uiComponent() {
       {isTableActive && <TableArea />}
 
       {/* Real-Time Live Match Action Feed (Who played, drew, skipped, caught) */}
-      {(isTableActive || isInActiveGame) && <LiveMatchFeed />}
+      {!isMobile() && (isTableActive || isInActiveGame) && <LiveMatchFeed />}
 
       {/* In-Game Table Controls (STRICTLY shown only when seated) */}
       {isTableActive && (

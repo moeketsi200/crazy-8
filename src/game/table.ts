@@ -2,17 +2,18 @@ import { engine, Transform, MeshRenderer, MeshCollider, ColliderLayer, TextShape
 import { Vector3, Quaternion, Color4, Color3 } from '@dcl/sdk/math'
 import { movePlayerTo, triggerEmote, stopEmote } from '~system/RestrictedActions'
 import { getPlayer } from '@dcl/sdk/src/players'
-import { CrazyEightsGame, isBotPlayer } from './logic'
+import { BOT_TURN_DELAY_MS, CrazyEightsGame, isBotPlayer } from './logic'
+import { BOT_NAMES, getBotName } from './bot_names'
 import { buildPrimitiveChair } from './chairs'
 import { buildPrimitiveTable } from './table_visuals'
-import { setupTableChips, setupChairAuras, updateChairAuraVisibility } from './models_integration'
+import { setupTableChips, setupChairAuras, updateActiveChairAura, updateChairAuraVisibility } from './models_integration'
 import { getStreakReminderMessage } from './economy'
 import { showRewardToast } from './rewards_ui'
 
 // ==========================================
 // BOT PERSONAS & WEARABLES
 // ==========================================
-export const BOT_NAMES = ['Neo', 'Trinity', 'Satoshi', 'Roxy', 'Cipher', 'Viper', 'Jax']
+export { BOT_NAMES }
 
 export interface BotPersona {
   name: string
@@ -28,7 +29,7 @@ const BASE_URN = 'urn:decentraland:off-chain:base-avatars:'
 
 export const BOT_PERSONAS: BotPersona[] = [
   {
-    name: 'Neo',
+    name: BOT_NAMES[0],
     title: 'The Hacker',
     bodyShape: `${BASE_URN}BaseMale`,
     wearables: [
@@ -46,7 +47,7 @@ export const BOT_PERSONAS: BotPersona[] = [
     eyeColor: { r: 0.1, g: 0.2, b: 0.3 }
   },
   {
-    name: 'Trinity',
+    name: BOT_NAMES[1],
     title: 'Code Breaker',
     bodyShape: `${BASE_URN}BaseFemale`,
     wearables: [
@@ -63,7 +64,7 @@ export const BOT_PERSONAS: BotPersona[] = [
     eyeColor: { r: 0.2, g: 0.5, b: 0.6 }
   },
   {
-    name: 'Satoshi',
+    name: BOT_NAMES[2],
     title: 'Cypherpunk',
     bodyShape: `${BASE_URN}BaseMale`,
     wearables: [
@@ -80,7 +81,7 @@ export const BOT_PERSONAS: BotPersona[] = [
     eyeColor: { r: 0.3, g: 0.2, b: 0.1 }
   },
   {
-    name: 'Roxy',
+    name: BOT_NAMES[3],
     title: 'High Roller',
     bodyShape: `${BASE_URN}BaseFemale`,
     wearables: [
@@ -96,7 +97,7 @@ export const BOT_PERSONAS: BotPersona[] = [
     eyeColor: { r: 0.2, g: 0.6, b: 0.7 }
   },
   {
-    name: 'Cipher',
+    name: BOT_NAMES[4],
     title: 'Card Shark',
     bodyShape: `${BASE_URN}BaseMale`,
     wearables: [
@@ -114,7 +115,7 @@ export const BOT_PERSONAS: BotPersona[] = [
     eyeColor: { r: 0.1, g: 0.1, b: 0.1 }
   },
   {
-    name: 'Viper',
+    name: BOT_NAMES[5],
     title: 'Speed Dealer',
     bodyShape: `${BASE_URN}BaseMale`,
     wearables: [
@@ -131,7 +132,7 @@ export const BOT_PERSONAS: BotPersona[] = [
     eyeColor: { r: 0.2, g: 0.4, b: 0.2 }
   },
   {
-    name: 'Jax',
+    name: BOT_NAMES[6],
     title: 'The Pit Boss',
     bodyShape: `${BASE_URN}BaseMale`,
     wearables: [
@@ -220,10 +221,7 @@ export function resolvePlayerId(game?: CrazyEightsGame | null): string {
 export function getPlayerDisplayName(userId: string): string {
   if (!userId) return 'Player'
   if (isBotPlayer(userId)) {
-    const botNumber = parseInt(userId.match(/_(\d+)$/)?.[1] || '1', 10)
-    const persona = BOT_PERSONAS[(botNumber - 1) % BOT_PERSONAS.length]
-    const personaName = persona ? persona.name : `Bot ${botNumber}`
-    return `${personaName} (Bot ${botNumber})`
+    return getBotName(userId)
   }
   if (userId === 'player1') {
     const local = getPlayer()
@@ -343,7 +341,7 @@ export function setup3DTable(game: CrazyEightsGame, furnitureRoot: Entity) {
   game.onBotTurnStart = (botId) => {
     update3DTable(game)
     if (resolvePlayerId(game) !== game.gameMasterId) return
-    setGameTimer(1.8, () => {
+    setGameTimer(BOT_TURN_DELAY_MS / 1000, () => {
       if (resolvePlayerId(game) === game.gameMasterId) {
         game.runBotTurn(botId)
         update3DTable(game)
@@ -649,6 +647,7 @@ interface SpawnedBotData {
   chairIndex: number
   botId: string
   personaIndex: number
+  lastEmoteEventId: number
 }
 let spawnedBotAvatars: Map<string, SpawnedBotData> = new Map()
 
@@ -663,13 +662,10 @@ export function clearBotAvatars() {
 export function updateBotAvatars(game: CrazyEightsGame) {
   if (!globalHouseEntity) return
 
-  let botIds: string[] = []
-  if (game.playerOrder && game.playerOrder.length > 0) {
-    botIds = game.playerOrder.filter(id => isBotPlayer(id))
-  } else {
-    // When idle before start, seed the 7 bot personas around the table so it looks active and populated
-    botIds = ['bot_1', 'bot_2', 'bot_3', 'bot_4', 'bot_5', 'bot_6', 'bot_7']
-  }
+  // Bots are solo opponents only. Never show idle placeholder bots in the multiplayer lobby.
+  const botIds = game.gameMode === 'solo'
+    ? game.playerOrder.filter(id => isBotPlayer(id))
+    : []
 
   // Remove any bots no longer in the list
   for (const [bId, data] of spawnedBotAvatars) {
@@ -743,7 +739,7 @@ export function updateBotAvatars(game: CrazyEightsGame) {
       })
       Billboard.create(nametagEntity)
       TextShape.create(nametagEntity, {
-        text: `🤖 ${persona.name}\n${persona.title}`,
+        text: `🤖 #${chairIdx + 1} ${persona.name}\n${persona.title}`,
         fontSize: 2.8,
         textColor: Color4.fromHexString('#00f3ff'),
         outlineWidth: 0.15,
@@ -755,7 +751,8 @@ export function updateBotAvatars(game: CrazyEightsGame) {
         nametagEntity,
         chairIndex: chairIdx,
         botId,
-        personaIndex: personaIdx
+        personaIndex: personaIdx,
+        lastEmoteEventId: game.lastCardPlay?.id || 0
       }
       spawnedBotAvatars.set(botId, botData)
     } else {
@@ -770,6 +767,14 @@ export function updateBotAvatars(game: CrazyEightsGame) {
       }
     }
 
+    const lastCardPlay = game.lastCardPlay
+    if (lastCardPlay && lastCardPlay.id > botData.lastEmoteEventId) {
+      botData.lastEmoteEventId = lastCardPlay.id
+      if (lastCardPlay.playerId === botId) {
+        playBotCardThrow(botData)
+      }
+    }
+
     const isEliminated = game.eliminatedPlayers.has(botId)
     const isCurrentTurn = game.isStarted && game.getCurrentPlayerId() === botId
     const hand = game.players.get(botId) || []
@@ -778,29 +783,46 @@ export function updateBotAvatars(game: CrazyEightsGame) {
 
     const mutTag = TextShape.getMutable(botData.nametagEntity)
     if (isEliminated) {
-      mutTag.text = `🤖 ${persona.name}\n❌ ELIMINATED`
+      mutTag.text = `🤖 #${chairIdx + 1} ${persona.name}\n❌ ELIMINATED`
       mutTag.textColor = Color4.fromHexString('#777777')
     } else if (isCurrentTurn) {
-      mutTag.text = `🤖 ${persona.name}\n🤔 Thinking...`
+      mutTag.text = `🤖 #${chairIdx + 1} ${persona.name}\n🤔 Thinking...`
       mutTag.textColor = Color4.fromHexString('#ffd700')
     } else if (isVulnerable && !isSafe) {
-      mutTag.text = `🚨 ${persona.name}\n${hand.length === 1 ? '1 CARD LEFT!' : `${hand.length} CARDS (UNSAFE)!`}`
+      mutTag.text = `🚨 #${chairIdx + 1} ${persona.name}\n${hand.length === 1 ? '1 CARD LEFT!' : `${hand.length} CARDS (UNSAFE)!`}`
       mutTag.textColor = Color4.fromHexString('#ff2a6d')
     } else if (isSafe) {
-      mutTag.text = `🤖 ${persona.name}\n🛡️ SAFE (${hand.length} cards)`
+      mutTag.text = `🤖 #${chairIdx + 1} ${persona.name}\n🛡️ SAFE (${hand.length} cards)`
       mutTag.textColor = Color4.fromHexString('#00ffaa')
     } else {
       const lastAct = game.lastPlayerActions.get(botId)
       const ageSec = lastAct ? (Date.now() - lastAct.timestamp) / 1000 : 999
       if (lastAct && ageSec < 6) {
-        mutTag.text = `🤖 ${persona.name}\n💬 ${lastAct.text}`
+        mutTag.text = `🤖 #${chairIdx + 1} ${persona.name}\n💬 ${lastAct.text}`
         mutTag.textColor = Color4.fromHexString('#00f3ff')
       } else {
-        mutTag.text = game.isStarted ? `🤖 ${persona.name}\n🎴 ${hand.length} cards` : `🤖 ${persona.name}\n✨ Ready`
+        mutTag.text = game.isStarted ? `🤖 #${chairIdx + 1} ${persona.name}\n🎴 ${hand.length} cards` : `🤖 #${chairIdx + 1} ${persona.name}\n✨ Ready`
         mutTag.textColor = Color4.fromHexString('#b9c8dd')
       }
     }
   }
+}
+
+function playBotCardThrow(botData: SpawnedBotData) {
+  const expressionTimestamp = Date.now()
+  const avatar = AvatarShape.getMutable(botData.rootEntity)
+  avatar.expressionTriggerId = 'throw'
+  avatar.expressionTriggerTimestamp = expressionTimestamp
+
+  setGameTimer(0.75, () => {
+    if (spawnedBotAvatars.get(botData.botId) !== botData) return
+    const currentAvatar = AvatarShape.getMutable(botData.rootEntity)
+    if (currentAvatar.expressionTriggerId !== 'throw' ||
+        currentAvatar.expressionTriggerTimestamp !== expressionTimestamp) return
+
+    currentAvatar.expressionTriggerId = 'sittingChair1'
+    currentAvatar.expressionTriggerTimestamp = expressionTimestamp + 1
+  })
 }
 
 function spawnSingleOpponentHand(playerId: string, numCards: number, chairIndex: number) {
@@ -896,6 +918,15 @@ function spawnOpponentCardsVisuals(game: CrazyEightsGame) {
 }
 
 export function update3DTable(game: CrazyEightsGame) {
+  const seatedIndices = new Set<number>(seatedChairs.keys())
+  for (const playerId of game.playerOrder) {
+    seatedIndices.add(getPlayerChairIndex(playerId, game))
+  }
+  updateChairAuraVisibility(seatedIndices)
+
+  const activePlayerId = game.isStarted ? game.getCurrentPlayerId() : undefined
+  updateActiveChairAura(activePlayerId ? getPlayerChairIndex(activePlayerId, game) : null)
+
   updateDiscardPileVisual(game)
   spawnOpponentCardsVisuals(game)
   updateBotAvatars(game)
