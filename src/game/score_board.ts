@@ -66,8 +66,14 @@ export function buildScoreBoard(parentHouse: Entity) {
     outlineColor: Color4.Black(),
     outlineWidth: 0.1,
     textAlign: TextAlignMode.TAM_MIDDLE_CENTER,
+    fontAutoSize: true,
     textWrapping: true,
-    width: 2.8 
+    width: 2.72,
+    height: 1.2,
+    paddingTop: 0.05,
+    paddingBottom: 0.05,
+    paddingLeft: 0.06,
+    paddingRight: 0.06
   })
 
   // 2. FREESTANDING OUTDOOR BILLBOARD IN THE GRASS
