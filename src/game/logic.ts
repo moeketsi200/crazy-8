@@ -30,6 +30,7 @@ export interface PlayerLeaderboardStats {
 
 export interface RoundResult {
   id: number
+  settlementId?: string
   roundNumber: number
   eliminated: PlayerId
   winner?: PlayerId
@@ -63,6 +64,7 @@ export class CrazyEightsGame {
   public gameOver: boolean = false
   public matchOver: boolean = false
   public gameMode: GameMode | 'idle' = 'idle'
+  public matchId: string = ''
   public lobbyHostId: PlayerId = ''
   public gameMasterId: PlayerId = ''
 
@@ -198,6 +200,34 @@ export class CrazyEightsGame {
     return playerId
   }
 
+  public mergeLeaderboardStats(records: PlayerLeaderboardStats[]) {
+    for (const incoming of records) {
+      if (!incoming || typeof incoming.playerId !== 'string' || !incoming.playerId ||
+          typeof incoming.name !== 'string' || typeof incoming.weekKey !== 'string' ||
+          !Number.isFinite(incoming.gamesWon) || !Number.isFinite(incoming.weeklyWins) ||
+          !Number.isFinite(incoming.roundsWon)) continue
+
+      const playerId = incoming.playerId.toLowerCase()
+      const existing = this.leaderboardStats.get(playerId)
+      if (!existing) {
+        this.leaderboardStats.set(playerId, { ...incoming, playerId })
+        continue
+      }
+      const weekKey = existing.weekKey > incoming.weekKey ? existing.weekKey : incoming.weekKey
+      const weeklyWins = existing.weekKey === incoming.weekKey
+        ? Math.max(existing.weeklyWins, incoming.weeklyWins)
+        : weekKey === existing.weekKey ? existing.weeklyWins : incoming.weeklyWins
+      this.leaderboardStats.set(playerId, {
+        playerId,
+        name: incoming.name || existing.name,
+        gamesWon: Math.max(existing.gamesWon, incoming.gamesWon),
+        weeklyWins,
+        roundsWon: Math.max(existing.roundsWon, incoming.roundsWon),
+        weekKey
+      })
+    }
+  }
+
   public getCurrentPlayerId(): PlayerId | undefined {
     const activePlayers = this.playerOrder.filter((playerId) => !this.eliminatedPlayers.has(playerId))
     return activePlayers[this.currentTurnIndex]
@@ -230,6 +260,7 @@ export class CrazyEightsGame {
       gameOver: this.gameOver,
       matchOver: this.matchOver,
       gameMode: this.gameMode,
+      matchId: this.matchId,
       lobbyHostId: this.lobbyHostId,
       gameMasterId: this.gameMasterId,
       turnDirection: this.turnDirection,
@@ -268,6 +299,7 @@ export class CrazyEightsGame {
       this.gameOver = state.gameOver
       this.matchOver = !!state.matchOver
       this.gameMode = state.gameMode || 'idle'
+      this.matchId = typeof state.matchId === 'string' ? state.matchId : ''
       this.lobbyHostId = state.lobbyHostId || ''
       this.gameMasterId = state.gameMasterId || this.lobbyHostId
       this.turnDirection = state.turnDirection
@@ -275,7 +307,11 @@ export class CrazyEightsGame {
       this.turnDeadlineAt = state.turnDeadlineAt || 0
       this.eliminatedPlayers = new Set(state.eliminatedPlayers)
       this.scores = new Map(state.scores)
-      this.leaderboardStats = new Map(state.leaderboardStats || [])
+      const leaderboardEntries: unknown[] = Array.isArray(state.leaderboardStats) ? state.leaderboardStats : []
+      const incomingLeaderboard = leaderboardEntries
+        .map((entry) => Array.isArray(entry) ? entry[1] as PlayerLeaderboardStats : undefined)
+        .filter((entry): entry is PlayerLeaderboardStats => !!entry)
+      this.mergeLeaderboardStats(incomingLeaderboard)
       this.lastRoundResult = state.lastRoundResult
       this.roundResultSequence = state.roundResultSequence || state.lastRoundResult?.id || 0
       this.safeDeclared = new Set(state.safeDeclared)
@@ -882,6 +918,7 @@ export class CrazyEightsGame {
 
     this.lastRoundResult = {
       id: ++this.roundResultSequence,
+      settlementId: this.matchId ? `${this.matchId}:${this.roundResultSequence}` : undefined,
       roundNumber: this.roundNumber,
       eliminated: eliminatedPlayer,
       winner,

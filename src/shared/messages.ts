@@ -14,7 +14,8 @@ export const SceneMessages = {
     requestId: Schemas.Int64,
     action: Schemas.String,
     itemId: Schemas.String,
-    questId: Schemas.String
+    questId: Schemas.String,
+    settlementId: Schemas.String
   }),
   economyProfile: Schemas.Map({
     requestId: Schemas.Int64,

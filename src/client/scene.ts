@@ -14,7 +14,7 @@ import { setupUI } from '../game/ui'
 import { buildInfoBoard, showGameButton } from '../game/info_board'
 import { buildScoreBoard, updateScoreBoardText, renderOutdoorHallOfFame } from '../game/score_board'
 import { setupMultiplayer } from '../game/multiplayer'
-import { setupEconomyClient } from '../game/economy_sync'
+import { requestEconomyAction, setupEconomyClient } from '../game/economy_sync'
 import { showRewardToast } from '../game/rewards_ui'
 import {
   setupVipKiosk,
@@ -65,7 +65,10 @@ export function initClientScene() {
 
     // 4.5 Set up Multiplayer Sync (now serializes with players already present)
     setupMultiplayer(gameEngine, () => getPlayer()?.name || '')
-    setupEconomyClient()
+    setupEconomyClient((records) => {
+      gameEngine.mergeLeaderboardStats(records)
+      renderOutdoorHallOfFame(gameEngine)
+    })
     let lastSoloStartedRound = 0
     gameEngine.onStateSync = () => {
       update3DTable(gameEngine)
@@ -82,7 +85,28 @@ export function initClientScene() {
       const result = gameEngine.lastRoundResult
       if (result && result.id > lastHandledRoundResultId) {
         lastHandledRoundResultId = result.id
-        showRoundResult(result, true)
+        showRoundResult(result, false)
+        if (result.settlementId) {
+          const localPlayerId = resolvePlayerId(gameEngine)
+          if (localPlayerId.startsWith('0x')) {
+            void requestEconomyAction('claimMatchResult', '', '', result.settlementId).then((claim) => {
+              if (!claim.success) {
+                showRewardToast('Rewards are waiting for the game and storage services to reconnect.')
+                return
+              }
+              const isSolo = result.gameMode === 'solo'
+              if (result.winner === localPlayerId) {
+                showRewardToast(isSolo
+                  ? '🏆 YOU BEAT THE BOTS! +30 Chips & +5 Trophies!'
+                  : '🏆 MATCH WON! +150 Chips & +20 Trophies!')
+              } else if (result.roundWinner === localPlayerId) {
+                showRewardToast('Round won! +30 Chips & +5 Trophies.')
+              } else {
+                showRewardToast('Good game! +30 Chips & +5 Trophies.')
+              }
+            })
+          }
+        }
       }
     }
 

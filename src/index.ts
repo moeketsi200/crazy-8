@@ -5,8 +5,8 @@ import './shared/messages'
 
 export async function main() {
   if (isServer()) {
-    const { initAuthoritativeServer } = await import('./server/leaderboard')
-    await initAuthoritativeServer()
+    const { initStorageService } = await import('./server/storage')
+    initStorageService()
     return
   }
 

@@ -97,6 +97,7 @@ export interface PlayerProfile {
   unlockedWearables: string[]
   quests: PlayerQuest[]
   lastQuestDateStr: string
+  processedSettlementIds: string[]
 }
 
 function getTodayStr(): string {
@@ -137,7 +138,8 @@ export function createDefaultProfile(): PlayerProfile {
     unlockedAuras: ['aura_none'],
     unlockedWearables: [],
     quests: generateDailyQuests(),
-    lastQuestDateStr: getTodayStr()
+    lastQuestDateStr: getTodayStr(),
+    processedSettlementIds: []
   }
 }
 
@@ -190,7 +192,10 @@ export function normalizePlayerProfile(value: unknown): PlayerProfile {
     unlockedAuras: unlockedStrings(saved.unlockedAuras, defaults.unlockedAuras),
     unlockedWearables: unlockedStrings(saved.unlockedWearables, defaults.unlockedWearables),
     quests: quests.length > 0 ? quests : defaults.quests,
-    lastQuestDateStr: typeof saved.lastQuestDateStr === 'string' ? saved.lastQuestDateStr : defaults.lastQuestDateStr
+    lastQuestDateStr: typeof saved.lastQuestDateStr === 'string' ? saved.lastQuestDateStr : defaults.lastQuestDateStr,
+    processedSettlementIds: Array.isArray(saved.processedSettlementIds)
+      ? saved.processedSettlementIds.filter((id): id is string => typeof id === 'string').slice(-2_000)
+      : defaults.processedSettlementIds
   }
 }
 
@@ -552,6 +557,7 @@ export function onCosmeticEquipped(listener: CosmeticChangeListener) {
 }
 
 export type EconomyRequestAction = 'load' | 'claimStreak' | 'claimQuest' | 'buyItem' | 'equipItem'
+export type EconomyClientAction = Exclude<EconomyRequestAction, 'load'> | 'claimMatchResult'
 
 export interface EconomyActionResult {
   success: boolean

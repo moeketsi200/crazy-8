@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: crazy8-game-server
+    runtime: node
+    plan: free
+    numInstances: 1
+    buildCommand: npm install --omit=dev
+    startCommand: npm run backend:start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: 22.14.0
+      - key: CRAZY8_SETTLEMENT_TOKEN
+        sync: false

@@ -1,141 +1,129 @@
-import { engine, Schemas } from '@dcl/sdk/ecs'
-import { isServer, isStateSyncronized, syncEntity } from '@dcl/sdk/network'
-import { AUTH_SERVER_PEER_ID } from '@dcl/sdk/network/message-bus-sync'
-import { GameActionRequest, CrazyEightsGame } from './logic'
-import { sceneRoom } from '../shared/messages'
+import { engine, executeTask } from '@dcl/sdk/ecs'
+import { isServer } from '@dcl/sdk/network'
+import type { GameActionRequest, CrazyEightsGame } from './logic'
+import { GAME_SERVER_HTTP_URL } from './server_config'
 
-export const SyncGameState = engine.defineComponent('game::SyncState', {
-  stateJson: Schemas.String,
-  updateId: Schemas.Int64,
-  lastUpdater: Schemas.String,
-  serverHeartbeatAt: Schemas.Int64
-})
+export const SERVER_START_TIMEOUT_MS = 120_000
 
-if (isServer()) {
-  SyncGameState.validateBeforeChange((value) => value.senderAddress === AUTH_SERVER_PEER_ID)
+const MAX_RECONNECT_DELAY_MS = 30_000
+const HEARTBEAT_TIMEOUT_MS = 15_000
+
+interface GameServerMessage {
+  type: string
+  state?: string
+  playerId?: string
 }
 
-// Use a new id so the server does not collide with the client-owned id from older builds.
-const SERVER_GAME_STATE_ID = 2
-let serverStateEntity: ReturnType<typeof engine.addEntity> | undefined
-let localUpdateId = 0
-const HEARTBEAT_INTERVAL_MS = 2_000
-const HEARTBEAT_FRESHNESS_MS = 6_000
-export const SERVER_START_TIMEOUT_MS = 30_000
-
-export function createAuthoritativeGameState(game: CrazyEightsGame): ReturnType<typeof engine.addEntity> {
-  if (!isServer()) throw new Error('Only the authoritative server may create the shared game state.')
-
-  const entity = engine.addEntity()
-  SyncGameState.create(entity, {
-    stateJson: game.serialize(),
-    updateId: Date.now(),
-    lastUpdater: 'authoritative-server',
-    serverHeartbeatAt: Date.now()
-  })
-  syncEntity(entity, [SyncGameState.componentId], SERVER_GAME_STATE_ID)
-  serverStateEntity = entity
-
-  let lastHeartbeatAt = Date.now()
-  engine.addSystem(() => {
-    if (!isServer() || serverStateEntity !== entity) return
-    const now = Date.now()
-    if (now - lastHeartbeatAt < HEARTBEAT_INTERVAL_MS) return
-    lastHeartbeatAt = now
-    SyncGameState.getMutable(entity).serverHeartbeatAt = now
-  })
-
-  return entity
+function websocketUrl(): string {
+  return GAME_SERVER_HTTP_URL.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:')
 }
 
-export function publishAuthoritativeGameState(game: CrazyEightsGame) {
-  if (!isServer() || serverStateEntity === undefined) return
-  const state = SyncGameState.getMutable(serverStateEntity)
-  state.stateJson = game.serialize()
-  state.updateId = Math.max(Date.now(), state.updateId + 1)
-  state.lastUpdater = 'authoritative-server'
+function actionEnvelope(request: GameActionRequest) {
+  return { type: 'action', action: request }
 }
 
 export function setupMultiplayer(gameEngine: CrazyEightsGame, getLocalPlayerName: () => string = () => '') {
   if (isServer()) return
 
-  let lastSeenHeartbeat = 0
-  let hasSeenHeartbeat = false
-  let lastHeartbeatObservedAt = 0
+  let socket: WebSocket | undefined
+  let reconnectTimer: ReturnType<typeof setTimeout> | undefined
+  let reconnectDelay = 1_000
+  let lastHeartbeatAt = 0
   let pendingStartRequest: GameActionRequest | null = null
   let pendingStartRequestedAt = 0
+  let shouldReconnect = true
 
-  const isServerAlive = (): boolean => {
-    if (!isStateSyncronized()) return false
-
-    for (const [entity] of engine.getEntitiesWith(SyncGameState)) {
-      const state = SyncGameState.getOrNull(entity)
-      if (!state || state.lastUpdater !== 'authoritative-server') continue
-
-      if (!hasSeenHeartbeat) {
-        lastSeenHeartbeat = state.serverHeartbeatAt
-        hasSeenHeartbeat = true
-      } else if (state.serverHeartbeatAt !== lastSeenHeartbeat) {
-        lastSeenHeartbeat = state.serverHeartbeatAt
-        lastHeartbeatObservedAt = Date.now()
-      }
-      break
-    }
-
-    return lastHeartbeatObservedAt > 0 && Date.now() - lastHeartbeatObservedAt < HEARTBEAT_FRESHNESS_MS
+  function send(request: GameActionRequest) {
+    if (!socket || socket.readyState !== WebSocket.OPEN) return false
+    socket.send(JSON.stringify(actionEnvelope(request)))
+    return true
   }
 
-  const sendRequest = (request: GameActionRequest) => {
-    const cardRequest = request.action === 'play' ? request : undefined
-    return sceneRoom.send('gameAction', {
-      action: request.action,
-      playerName: getLocalPlayerName(),
-      mode: request.action === 'startSolo' ? 'solo' : '',
-      cardIndex: cardRequest?.cardIndex ?? -1,
-      suit: cardRequest?.suit || '',
-      targetId: request.action === 'challenge' ? request.targetId : ''
-    })
+  function requestReconnect() {
+    if (!shouldReconnect || reconnectTimer) return
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = undefined
+      executeTask(async () => {
+        await connect()
+      })
+    }, reconnectDelay)
+    reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY_MS)
+  }
+
+  async function connect() {
+    if (!shouldReconnect) return
+    try {
+      const { signedFetch } = await import('~system/SignedFetch')
+      const auth = await signedFetch({
+        url: `${GAME_SERVER_HTTP_URL}/auth`,
+        init: {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ displayName: getLocalPlayerName() })
+        }
+      })
+      if (!auth.ok) throw new Error(`Game service authentication failed (${auth.status}).`)
+
+      const credentials = JSON.parse(auth.body) as { ticket?: string }
+      if (!credentials.ticket) throw new Error('Game service did not return a connection ticket.')
+
+      const nextSocket = new WebSocket(`${websocketUrl()}/ws?ticket=${encodeURIComponent(credentials.ticket)}`)
+      socket = nextSocket
+      nextSocket.onopen = () => {
+        reconnectDelay = 1_000
+        lastHeartbeatAt = Date.now()
+        if (pendingStartRequest) {
+          const request = pendingStartRequest
+          pendingStartRequest = null
+          pendingStartRequestedAt = 0
+          send(request)
+        }
+      }
+      nextSocket.onmessage = (event) => {
+        try {
+          const message = JSON.parse(String(event.data)) as GameServerMessage
+          if (message.type === 'state' && typeof message.state === 'string') {
+            gameEngine.deserialize(message.state)
+          } else if (message.type === 'heartbeat') {
+            lastHeartbeatAt = Date.now()
+          }
+        } catch (error) {
+          console.error('[Game] Could not read the Render game server message:', error)
+        }
+      }
+      nextSocket.onerror = () => {
+        console.error('[Game] The Render game server connection encountered an error.')
+      }
+      nextSocket.onclose = () => {
+        if (socket === nextSocket) socket = undefined
+        requestReconnect()
+      }
+    } catch (error) {
+      console.error('[Game] Could not connect to the Render game server:', error)
+      requestReconnect()
+    }
   }
 
   gameEngine.onClientActionRequest = (request: GameActionRequest) => {
-    if (!isServerAlive()) {
-      if (request.action === 'startSolo' || request.action === 'startLobby') {
-        pendingStartRequest = request
-        pendingStartRequestedAt = Date.now()
-      }
-      return
+    if (send(request)) return
+    if (request.action === 'startSolo' || request.action === 'startLobby') {
+      pendingStartRequest = request
+      pendingStartRequestedAt = Date.now()
     }
-
-    void sendRequest(request)
   }
 
-  engine.addSystem(() => {
-    if (!isStateSyncronized()) return
+  executeTask(async () => {
+    await connect()
+  })
 
-    const serverAlive = isServerAlive()
+  // A silent WebSocket can survive a broken route for much longer than a turn.
+  // Closing it here lets the normal reconnect path restore the authoritative snapshot.
+  engine.addSystem(() => {
     if (pendingStartRequest && Date.now() - pendingStartRequestedAt >= SERVER_START_TIMEOUT_MS) {
       pendingStartRequest = null
       pendingStartRequestedAt = 0
-    } else if (serverAlive && pendingStartRequest) {
-      const request = pendingStartRequest
-      pendingStartRequest = null
-      pendingStartRequestedAt = 0
-      void sendRequest(request)
     }
-
-    for (const [entity] of engine.getEntitiesWith(SyncGameState)) {
-      const state = SyncGameState.getOrNull(entity)
-      if (!state || state.lastUpdater !== 'authoritative-server' || !state.stateJson || state.updateId <= localUpdateId) continue
-
-      try {
-        const parsed = JSON.parse(state.stateJson)
-        if (!parsed || !Array.isArray(parsed.playerOrder)) continue
-        localUpdateId = state.updateId
-        gameEngine.deserialize(state.stateJson)
-      } catch (error) {
-        console.error('Failed to read authoritative game state:', error)
-      }
-    }
+    if (!socket || socket.readyState !== WebSocket.OPEN || !lastHeartbeatAt) return
+    if (Date.now() - lastHeartbeatAt > HEARTBEAT_TIMEOUT_MS) socket.close()
   })
 }
-
