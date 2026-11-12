@@ -30,20 +30,167 @@ interface RenderSettlement {
   gameMode: 'solo' | 'multiplayer'
 }
 
-let renderConfig: Promise<{ baseUrl: string; token: string }> | undefined
+let renderConfig: Promise<{ baseUrl: string; token: string; storageBackend: string }> | undefined
 
 async function getRenderConfig() {
   if (!renderConfig) {
     renderConfig = Promise.all([
       EnvVar.get('CRAZY8_RENDER_URL'),
-      EnvVar.get('CRAZY8_SETTLEMENT_TOKEN')
-    ]).then(([baseUrl, token]) => ({ baseUrl: baseUrl.replace(/\/+$/, ''), token }))
+      EnvVar.get('CRAZY8_SETTLEMENT_TOKEN'),
+      EnvVar.get('CRAZY8_STORAGE_BACKEND')
+    ]).then(([baseUrl, token, storageBackend]) => ({
+      baseUrl: baseUrl.replace(/\/+$/, ''),
+      token,
+      storageBackend: storageBackend.toLowerCase()
+    }))
   }
   return renderConfig
 }
 
-async function fetchRenderSettlements(playerId: string, settlementId = ''): Promise<RenderSettlement[]> {
+interface RenderRequestInit {
+  method: 'GET' | 'POST' | 'DELETE'
+  headers?: Record<string, string>
+  body?: string
+}
+
+async function renderStorageRequest<T>(url: string, init: RenderRequestInit): Promise<T> {
   const { baseUrl, token } = await getRenderConfig()
+  if (!baseUrl || !token) throw new Error('Render storage needs CRAZY8_RENDER_URL and CRAZY8_SETTLEMENT_TOKEN.')
+  let timeout: ReturnType<typeof setTimeout> | undefined
+  try {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeout = setTimeout(() => reject(new Error('Render storage request timed out.')), 5_000)
+    })
+    const response = await Promise.race([
+      fetch(`${baseUrl}${url}`, {
+        ...init,
+        headers: { ...init.headers, Authorization: `Bearer ${token}` }
+      }),
+      timeoutPromise
+    ])
+    if (!response.ok) throw new Error(`Render storage request returned ${response.status}.`)
+    return await response.json() as T
+  } finally {
+    if (timeout) clearTimeout(timeout)
+  }
+}
+
+async function readRenderStorage(namespace: 'player' | 'scene', key: string, playerId = '') {
+  const path = namespace === 'player' ? '/internal/storage/player' : '/internal/storage/scene'
+  const query = `key=${encodeURIComponent(key)}` +
+    (namespace === 'player' ? `&playerId=${encodeURIComponent(playerId)}` : '')
+  return renderStorageRequest<{ ok?: boolean; found?: boolean; value?: unknown }>(
+    `${path}?${query}`, { method: 'GET' }
+  )
+}
+
+async function writeRenderStorage(
+  namespace: 'player' | 'scene',
+  key: string,
+  value: unknown,
+  playerId = '',
+  onlyIfMissing = false
+) {
+  const path = namespace === 'player' ? '/internal/storage/player' : '/internal/storage/scene'
+  return renderStorageRequest<{ ok?: boolean; saved?: boolean; created?: boolean }>(path, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ key, value, playerId, onlyIfMissing })
+  })
+}
+
+async function readProfileStorage(playerId: string): Promise<string | null> {
+  const { storageBackend } = await getRenderConfig()
+  if (storageBackend !== 'render') return Storage.player.get<string>(playerId, PLAYER_PROFILE_KEY)
+
+  const stored = await readRenderStorage('player', PLAYER_PROFILE_KEY, playerId)
+  if (stored.found) {
+    if (typeof stored.value !== 'string') throw new Error('Render player profile storage has an invalid value.')
+    return stored.value
+  }
+
+  const legacy = await Storage.player.get<string>(playerId, PLAYER_PROFILE_KEY)
+  if (legacy === null) return null
+  await writeRenderStorage('player', PLAYER_PROFILE_KEY, legacy, playerId, true)
+  const migrated = await readRenderStorage('player', PLAYER_PROFILE_KEY, playerId)
+  return migrated.found && typeof migrated.value === 'string' ? migrated.value : legacy
+}
+
+async function saveProfileStorage(playerId: string, profile: PlayerProfile): Promise<boolean> {
+  const { storageBackend } = await getRenderConfig()
+  if (storageBackend !== 'render') {
+    return Storage.player.set(playerId, PLAYER_PROFILE_KEY, JSON.stringify(profile))
+  }
+  const result = await writeRenderStorage('player', PLAYER_PROFILE_KEY, JSON.stringify(profile), playerId)
+  return result.ok === true && result.saved === true
+}
+
+async function readLeaderboardStorage(): Promise<{
+  version: number
+  records: PlayerLeaderboardStats[]
+  processedSettlementIds?: string[]
+} | null> {
+  const { storageBackend } = await getRenderConfig()
+  if (storageBackend !== 'render') {
+    return Storage.get<{
+      version: number
+      records: PlayerLeaderboardStats[]
+      processedSettlementIds?: string[]
+    }>(LEADERBOARD_STORAGE_KEY)
+  }
+  const stored = await readRenderStorage('scene', LEADERBOARD_STORAGE_KEY)
+  if (stored.found) {
+    if (!stored.value || typeof stored.value !== 'object' || Array.isArray(stored.value)) {
+      throw new Error('Render leaderboard storage has an invalid value.')
+    }
+    return stored.value as {
+      version: number
+      records: PlayerLeaderboardStats[]
+      processedSettlementIds?: string[]
+    }
+  }
+  const legacy = await Storage.get<{
+    version: number
+    records: PlayerLeaderboardStats[]
+    processedSettlementIds?: string[]
+  }>(LEADERBOARD_STORAGE_KEY)
+  if (legacy === null) return null
+  await writeRenderStorage('scene', LEADERBOARD_STORAGE_KEY, legacy, '', true)
+  const migrated = await readRenderStorage('scene', LEADERBOARD_STORAGE_KEY)
+  return migrated.found ? migrated.value as typeof legacy : legacy
+}
+
+async function saveLeaderboardStorage(value: {
+  version: number
+  records: PlayerLeaderboardStats[]
+  processedSettlementIds: string[]
+}): Promise<boolean> {
+  const { storageBackend } = await getRenderConfig()
+  if (storageBackend !== 'render') return Storage.set(LEADERBOARD_STORAGE_KEY, value)
+  const result = await writeRenderStorage('scene', LEADERBOARD_STORAGE_KEY, value)
+  return result.ok === true && result.saved === true
+}
+
+async function acknowledgeRenderSettlement(playerId: string, settlementId: string): Promise<boolean> {
+  const { baseUrl, token } = await getRenderConfig()
+  if (!baseUrl || !token) return false
+  const query = `playerId=${encodeURIComponent(playerId)}&settlementId=${encodeURIComponent(settlementId)}`
+  try {
+    const result = await renderStorageRequest<{ ok?: boolean; deleted?: boolean }>(
+      `/internal/settlements?${query}`, { method: 'DELETE' }
+    )
+    return result.ok === true && result.deleted === true
+  } catch (error) {
+    console.warn(`[Server] Could not acknowledge saved settlement ${settlementId}:`, error)
+    return false
+  }
+}
+
+async function fetchRenderSettlements(playerId: string, settlementId = ''): Promise<RenderSettlement[]> {
+  const { baseUrl, token, storageBackend } = await getRenderConfig()
+  if ((!baseUrl || !token) && storageBackend === 'render') {
+    throw new Error('Render storage needs CRAZY8_RENDER_URL and CRAZY8_SETTLEMENT_TOKEN.')
+  }
   if (!baseUrl || !token) return []
 
   const base = `${baseUrl}/internal/settlements`
@@ -155,11 +302,7 @@ export function setupPersistentPlayerEconomy(game?: CrazyEightsGame) {
 
   async function loadLeaderboardCache() {
     if (leaderboardCache) return leaderboardCache
-    const stored = await Storage.get<{
-      version: number
-      records: PlayerLeaderboardStats[]
-      processedSettlementIds?: string[]
-    }>(LEADERBOARD_STORAGE_KEY)
+    const stored = await readLeaderboardStorage()
     const candidate = stored && stored.version === LEADERBOARD_VERSION && Array.isArray(stored.records)
       ? stored.records.filter(isLeaderboardStat)
       : []
@@ -179,26 +322,29 @@ export function setupPersistentPlayerEconomy(game?: CrazyEightsGame) {
     return leaderboardCache
   }
 
-  async function flushLeaderboardCache() {
-    if (!leaderboardDirty || !leaderboardCache) return
-    const saved = await Storage.set(LEADERBOARD_STORAGE_KEY, {
+  async function flushLeaderboardCache(): Promise<boolean> {
+    if (!leaderboardDirty || !leaderboardCache) return true
+    const saved = await saveLeaderboardStorage({
       version: LEADERBOARD_VERSION,
       records: leaderboardCache,
       processedSettlementIds: Array.from(processedLeaderboardSettlements)
     })
-    if (saved) leaderboardDirty = false
-    else console.error('[Server] Leaderboard save did not persist; it will retry.')
+    if (saved) {
+      leaderboardDirty = false
+      return true
+    }
+    console.error('[Server] Leaderboard save did not persist; it will retry.')
+    return false
   }
 
-  async function syncLeaderboardFromSettlement(settlement: RenderSettlement) {
+  async function syncLeaderboardFromSettlement(settlement: RenderSettlement): Promise<boolean> {
     const playerId = settlement.playerId.toLowerCase()
-    if (!settlement.settlementId || !isWalletAddress(playerId) || isBotPlayer(playerId)) return
+    if (!settlement.settlementId || !isWalletAddress(playerId) || isBotPlayer(playerId)) return true
     const processedId = `${settlement.settlementId}:${playerId}`
-    await serializeLeaderboard(async () => {
+    return serializeLeaderboard(async () => {
       const records = await loadLeaderboardCache()
       if (processedLeaderboardSettlements.has(processedId)) {
-        await flushLeaderboardCache()
-        return
+        return flushLeaderboardCache()
       }
 
       const weekKey = getLeaderboardWeekKey()
@@ -206,8 +352,7 @@ export function setupPersistentPlayerEconomy(game?: CrazyEightsGame) {
       if (index === -1 && !settlement.roundWinner && !settlement.matchWinner) {
         processedLeaderboardSettlements.add(processedId)
         leaderboardDirty = true
-        await flushLeaderboardCache()
-        return
+        return flushLeaderboardCache()
       }
       const record = index === -1
         ? { playerId, name: sanitizeName(settlement.playerName) || playerId, gamesWon: 0, weeklyWins: 0, roundsWon: 0, weekKey }
@@ -230,7 +375,7 @@ export function setupPersistentPlayerEconomy(game?: CrazyEightsGame) {
         processedLeaderboardSettlements.delete(oldest)
       }
       leaderboardDirty = true
-      await flushLeaderboardCache()
+      return flushLeaderboardCache()
     })
   }
 
@@ -256,7 +401,7 @@ export function setupPersistentPlayerEconomy(game?: CrazyEightsGame) {
     const cached = profiles.get(playerId)
     if (cached) return { profile: cached, saved: !dirtyProfiles.has(playerId) }
 
-    const stored = await Storage.player.get<string>(playerId, PLAYER_PROFILE_KEY)
+    const stored = await readProfileStorage(playerId)
     const profile = stored === null ? createDefaultProfile() : normalizePlayerProfile(stored)
     const rolledQuests = rollDailyQuests(profile)
     profiles.set(playerId, profile)
@@ -270,7 +415,7 @@ export function setupPersistentPlayerEconomy(game?: CrazyEightsGame) {
 
   async function saveProfile(playerId: string, profile: PlayerProfile): Promise<boolean> {
     try {
-      const saved = await Storage.player.set(playerId, PLAYER_PROFILE_KEY, JSON.stringify(profile))
+      const saved = await saveProfileStorage(playerId, profile)
       if (saved) {
         dirtyProfiles.delete(playerId)
         return true
@@ -343,11 +488,12 @@ export function setupPersistentPlayerEconomy(game?: CrazyEightsGame) {
             return
           }
 
-          await syncLeaderboardFromSettlement(matching)
+          const leaderboardSaved = await syncLeaderboardFromSettlement(matching)
           const draft = normalizePlayerProfile(loaded.profile)
           const changed = applySettlement(draft, playerId, matching)
           if (!changed) {
             const alreadySaved = !dirtyProfiles.has(playerId)
+            if (alreadySaved && leaderboardSaved) await acknowledgeRenderSettlement(playerId, settlementId)
             let leaderboard: PlayerLeaderboardStats[] = []
             try {
               leaderboard = await getLeaderboardSnapshot()
@@ -362,6 +508,7 @@ export function setupPersistentPlayerEconomy(game?: CrazyEightsGame) {
           const saved = await saveProfile(playerId, draft)
           profiles.set(playerId, draft)
           if (saved) {
+            if (leaderboardSaved) await acknowledgeRenderSettlement(playerId, settlementId)
             let leaderboard: PlayerLeaderboardStats[] = []
             try {
               leaderboard = await getLeaderboardSnapshot()
@@ -395,13 +542,23 @@ export function setupPersistentPlayerEconomy(game?: CrazyEightsGame) {
         if (action === 'load') {
           try {
             const settlements = await fetchRenderSettlements(playerId)
-            for (const settlement of settlements) await syncLeaderboardFromSettlement(settlement)
+            let leaderboardSaved = true
+            for (const settlement of settlements) {
+              const saved = await syncLeaderboardFromSettlement(settlement)
+              leaderboardSaved = saved && leaderboardSaved
+            }
             const draft = normalizePlayerProfile(current)
             const changed = settlements.reduce((didChange, settlement) => applySettlement(draft, playerId, settlement) || didChange, false)
+            let profileSaved = !dirtyProfiles.has(playerId)
             if (changed) {
               profiles.set(playerId, draft)
-              const saved = await saveProfile(playerId, draft)
-              if (!saved) console.error(`[Server] Render settlements for ${playerId} are queued for a storage retry.`)
+              profileSaved = await saveProfile(playerId, draft)
+              if (!profileSaved) console.error(`[Server] Render settlements for ${playerId} are queued for a storage retry.`)
+            }
+            if (profileSaved && leaderboardSaved) {
+              for (const settlement of settlements) {
+                await acknowledgeRenderSettlement(playerId, settlement.settlementId)
+              }
             }
           } catch (error) {
             console.error(`[Server] Could not sync saved Render match results for ${playerId}:`, error)

@@ -4,5 +4,5 @@ import { setupPersistentPlayerEconomy } from './player_economy'
 export function initStorageService() {
   if (!isServer()) return
   setupPersistentPlayerEconomy()
-  console.log('[Server] DCL Storage profile service is ready.')
+  console.log('[Server] Player economy service initialized; CRAZY8_STORAGE_BACKEND selects DCL Storage or Render.')
 }

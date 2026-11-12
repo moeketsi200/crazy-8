@@ -12,3 +12,13 @@ services:
         value: 22.14.0
       - key: CRAZY8_SETTLEMENT_TOKEN
         sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: crazy8-storage
+          property: connectionString
+
+databases:
+  - name: crazy8-storage
+    databaseName: crazy8
+    user: crazy8
+    plan: basic-256mb

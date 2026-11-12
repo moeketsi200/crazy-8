@@ -33,7 +33,7 @@ A **100% free-to-play** multiplayer **Crazy Eights** social card game built for 
 - **Free-to-Play Progression & Retention**:
   - **Daily Quests & 7-Day Streaks**: Rotating daily gameplay objectives and consecutive-day streak bonuses awarding play-earned **Lounge Points / Arcade Credits**, **Trophies**, and unlockable titles.
   - **Play-Earned Cosmetic Unlocks**: Unlock custom holographic card decks, chair underglow auras, player titles, and lounge wearable previews solely through gameplay progression.
-  - **Persistent Weekly & All-Time Leaderboards**: Authoritative server persistence (`@dcl/sdk/server` Storage + Render settlement verification) tracks weekly wins, all-time multiplayer wins, and rounds won across restarts (bots and solo rounds excluded from competitive rankings).
+  - **Persistent Weekly & All-Time Leaderboards**: The authoritative server saves profiles and leaderboards to Decentraland Storage by default, with an optional Render Postgres backend and settlement verification for durable match rewards.
 
 - **Cyber VIP Penthouse Social Hangout**:
   - **Ground Floor Lounge**: Holographic circular card table, Pioneer-inspired CDJ DJ console, club sound system, rules info board, and live wins leaderboard.
@@ -81,7 +81,7 @@ npx tsc --noEmit
 npm run build
 ```
 
-The authoritative-server setup uses `@dcl/sdk/server` storage during preview and deployment; deploy the scene to the configured World (`rooi.dcl.eth`) to run persistent profiles and leaderboards.
+The authoritative-server setup uses `@dcl/sdk/server` Storage by default. To use Render Postgres, configure `CRAZY8_STORAGE_BACKEND=render` in the World environment and follow [RENDER_BACKEND.md](RENDER_BACKEND.md); existing Decentraland Storage profiles and leaderboard data are copied on first read.
 
 ### Publishing to Decentraland World
 ```bash

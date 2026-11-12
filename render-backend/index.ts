@@ -8,26 +8,26 @@ import { BOT_TURN_DELAY_MS, CrazyEightsGame, isBotPlayer } from '../src/game/log
 import type { GameActionRequest } from '../src/game/logic'
 import type { Suit } from '../src/game/deck'
 import { getBotName } from '../src/game/bot_names'
+import {
+  acknowledgeSettlement,
+  getDatabaseStatus,
+  getSettlements as getPersistedSettlements,
+  getStoredValue,
+  isDatabaseConfigured,
+  saveSettlements,
+  setStoredValue
+} from './persistence'
+import type { PlayerSettlement, StorageNamespace } from './persistence'
 
 const PORT = Number(process.env.PORT || 10000)
 const MAX_REQUEST_BYTES = 8 * 1024
+const MAX_STORAGE_REQUEST_BYTES = 512 * 1024
 const MAX_SETTLEMENTS = 2_000
 const HEARTBEAT_INTERVAL_MS = 2_000
 const BOT_ABANDONED_DELAY_MS = 150
 const AUTH_CHAIN_HEADERS = Array.from({ length: 10 }, (_, index) => `x-identity-auth-chain-${index}`)
   .concat(['x-identity-timestamp', 'x-identity-metadata'])
   .join(',')
-
-interface PlayerSettlement {
-  settlementId: string
-  matchId: string
-  playerId: string
-  playerName: string
-  gameMode: 'solo' | 'multiplayer'
-  actions: Array<{ action: 'card_played' | 'wild_eight' | 'inflict_draw' | 'declare_safe'; count: number }>
-  roundWinner: boolean
-  matchWinner: boolean
-}
 
 interface Ticket {
   expiresAt: number
@@ -62,19 +62,19 @@ function sendJson(response: ServerResponse, status: number, value: unknown) {
     'content-type': 'application/json; charset=utf-8',
     'content-length': Buffer.byteLength(body),
     'access-control-allow-origin': '*',
-    'access-control-allow-methods': 'GET,POST,OPTIONS',
+    'access-control-allow-methods': 'GET,POST,DELETE,OPTIONS',
     'access-control-allow-headers': `content-type,authorization,${AUTH_CHAIN_HEADERS}`
   })
   response.end(body)
 }
 
-async function readJsonBody(request: IncomingMessage): Promise<{ raw: Buffer; value: unknown }> {
+async function readJsonBody(request: IncomingMessage, maxBytes = MAX_REQUEST_BYTES): Promise<{ raw: Buffer; value: unknown }> {
   const chunks: Buffer[] = []
   let size = 0
   for await (const chunk of request) {
     const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
     size += buffer.length
-    if (size > MAX_REQUEST_BYTES) throw new Error('Request body is too large.')
+    if (size > maxBytes) throw new Error('Request body is too large.')
     chunks.push(buffer)
   }
   const raw = Buffer.concat(chunks)
@@ -99,12 +99,24 @@ function safeTokenEquals(received: string, expected: string): boolean {
   return receivedBytes.length === expectedBytes.length && timingSafeEqual(receivedBytes, expectedBytes)
 }
 
+function hasSettlementAccess(request: IncomingMessage): boolean {
+  const configuredToken = process.env.CRAZY8_SETTLEMENT_TOKEN || ''
+  const suppliedToken = (request.headers.authorization || '').replace(/^Bearer\s+/i, '')
+  return Boolean(configuredToken && safeTokenEquals(suppliedToken, configuredToken))
+}
+
+function isAllowedStorageKey(namespace: StorageNamespace, key: string): boolean {
+  return namespace === 'player'
+    ? key === 'crazy8_player_profile_v1'
+    : key === 'crazy8_leaderboard_v1'
+}
+
 async function handleHttp(request: IncomingMessage, response: ServerResponse) {
   const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`)
   if (request.method === 'OPTIONS') {
     response.writeHead(204, {
       'access-control-allow-origin': '*',
-      'access-control-allow-methods': 'GET,POST,OPTIONS',
+      'access-control-allow-methods': 'GET,POST,DELETE,OPTIONS',
       'access-control-allow-headers': `content-type,authorization,${AUTH_CHAIN_HEADERS}`
     })
     response.end()
@@ -112,7 +124,51 @@ async function handleHttp(request: IncomingMessage, response: ServerResponse) {
   }
 
   if (request.method === 'GET' && url.pathname === '/healthz') {
-    sendJson(response, 200, { ok: true, rooms: rooms.size })
+    sendJson(response, 200, {
+      ok: true,
+      rooms: rooms.size,
+      persistence: await getDatabaseStatus()
+    })
+    return
+  }
+
+  if ((request.method === 'GET' || request.method === 'POST') &&
+      (url.pathname === '/internal/storage/player' || url.pathname === '/internal/storage/scene')) {
+    const configuredToken = process.env.CRAZY8_SETTLEMENT_TOKEN || ''
+    if (!hasSettlementAccess(request)) {
+      sendJson(response, configuredToken ? 401 : 503, { ok: false, message: 'Storage access is not configured.' })
+      return
+    }
+    if (!isDatabaseConfigured()) {
+      sendJson(response, 503, { ok: false, message: 'Render Postgres is not configured.' })
+      return
+    }
+
+    const namespace: StorageNamespace = url.pathname.endsWith('/player') ? 'player' : 'scene'
+    const body = request.method === 'POST' ? (await readJsonBody(request, MAX_STORAGE_REQUEST_BYTES)).value : undefined
+    const input = isRecord(body) ? body : undefined
+    const playerId = namespace === 'player'
+      ? (request.method === 'GET' ? url.searchParams.get('playerId') || '' : String(input?.playerId || ''))
+      : ''
+    const key = request.method === 'GET' ? url.searchParams.get('key') || '' : String(input?.key || '')
+    if ((namespace === 'player' && !/^0x[a-f0-9]{40}$/i.test(playerId)) ||
+        !isAllowedStorageKey(namespace, key)) {
+      sendJson(response, 400, { ok: false, message: 'A valid storage key and player identity are required.' })
+      return
+    }
+
+    if (request.method === 'GET') {
+      const stored = await getStoredValue(namespace, playerId.toLowerCase(), key)
+      sendJson(response, 200, { ok: true, ...stored })
+      return
+    }
+    if (!input || !Object.prototype.hasOwnProperty.call(input, 'value')) {
+      sendJson(response, 400, { ok: false, message: 'A storage value is required.' })
+      return
+    }
+    const stored = await setStoredValue(namespace, playerId.toLowerCase(), key, input.value,
+      input.onlyIfMissing === true)
+    sendJson(response, 200, { ok: true, ...stored })
     return
   }
 
@@ -175,8 +231,7 @@ async function handleHttp(request: IncomingMessage, response: ServerResponse) {
 
   if (request.method === 'GET' && url.pathname.startsWith('/internal/settlements')) {
     const configuredToken = process.env.CRAZY8_SETTLEMENT_TOKEN || ''
-    const suppliedToken = (request.headers.authorization || '').replace(/^Bearer\s+/i, '')
-    if (!configuredToken || !safeTokenEquals(suppliedToken, configuredToken)) {
+    if (!hasSettlementAccess(request)) {
       sendJson(response, configuredToken ? 401 : 503, { ok: false, message: 'Settlement access is not configured.' })
       return
     }
@@ -190,11 +245,46 @@ async function handleHttp(request: IncomingMessage, response: ServerResponse) {
     const settlementId = url.pathname.startsWith('/internal/settlements/')
       ? decodeURIComponent(url.pathname.slice('/internal/settlements/'.length))
       : ''
-    const results: PlayerSettlement[] = []
+    let results: PlayerSettlement[] = []
+    if (isDatabaseConfigured()) {
+      try {
+        results = await getPersistedSettlements(playerId, settlementId)
+      } catch (error) {
+        console.error('[Render] Could not load persisted settlements; checking active rooms:', error)
+      }
+    }
     for (const room of rooms.values()) {
       results.push(...room.getSettlements(playerId, settlementId))
     }
-    sendJson(response, 200, { ok: true, settlements: results })
+    const uniqueResults = Array.from(new Map(results.map((item) => [item.settlementId, item])).values())
+    sendJson(response, 200, { ok: true, settlements: uniqueResults })
+    return
+  }
+
+  if (request.method === 'DELETE' && url.pathname === '/internal/settlements') {
+    const configuredToken = process.env.CRAZY8_SETTLEMENT_TOKEN || ''
+    if (!hasSettlementAccess(request)) {
+      sendJson(response, configuredToken ? 401 : 503, { ok: false, message: 'Settlement access is not configured.' })
+      return
+    }
+    const playerId = (url.searchParams.get('playerId') || '').toLowerCase()
+    const settlementId = url.searchParams.get('settlementId') || ''
+    if (!/^0x[a-f0-9]{40}$/i.test(playerId) || settlementId.length < 1 || settlementId.length > 160) {
+      sendJson(response, 400, { ok: false, message: 'A valid playerId and settlementId are required.' })
+      return
+    }
+    let deleted = false
+    if (isDatabaseConfigured()) {
+      try {
+        deleted = await acknowledgeSettlement(playerId, settlementId)
+      } catch (error) {
+        console.error('[Render] Could not delete persisted settlement:', error)
+      }
+    }
+    for (const room of rooms.values()) {
+      deleted = room.acknowledgeSettlement(playerId, settlementId) || deleted
+    }
+    sendJson(response, 200, { ok: true, deleted })
     return
   }
 
@@ -254,6 +344,9 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`[Render] Crazy 8 authoritative game server listening on port ${PORT}.`)
   if (!process.env.CRAZY8_SETTLEMENT_TOKEN) {
     console.warn('[Render] CRAZY8_SETTLEMENT_TOKEN is not set; DCL Storage reward claims are disabled.')
+  }
+  if (!isDatabaseConfigured()) {
+    console.warn('[Render] DATABASE_URL is not set; Postgres-backed profiles and durable settlements are disabled.')
   }
 })
 
@@ -315,6 +408,16 @@ class GameRoom {
     return result
   }
 
+  acknowledgeSettlement(playerId: string, settlementId: string): boolean {
+    const settlements = this.settlements.get(settlementId)
+    if (!settlements) return false
+    const remaining = settlements.filter((settlement) => settlement.playerId !== playerId)
+    if (remaining.length === settlements.length) return false
+    if (remaining.length) this.settlements.set(settlementId, remaining)
+    else this.settlements.delete(settlementId)
+    return true
+  }
+
   private recordAction(playerId: string, action: string) {
     const normalizedId = playerId.toLowerCase()
     const actions = this.roundActions.get(normalizedId) || new Map<string, number>()
@@ -346,6 +449,9 @@ class GameRoom {
       })
     }
     this.settlements.set(result.settlementId, records)
+    void saveSettlements(records).catch((error) => {
+      console.error(`[Render] Could not persist match settlement ${result.settlementId}:`, error)
+    })
     while (this.settlements.size > MAX_SETTLEMENTS) {
       const oldest = this.settlements.keys().next().value as string | undefined
       if (!oldest) break
