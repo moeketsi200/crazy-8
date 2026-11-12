@@ -97,12 +97,12 @@ export function initClientScene() {
               const isSolo = result.gameMode === 'solo'
               if (result.winner === localPlayerId) {
                 showRewardToast(isSolo
-                  ? '🏆 YOU BEAT THE BOTS! +30 Chips & +5 Trophies!'
-                  : '🏆 MATCH WON! +150 Chips & +20 Trophies!')
+                  ? '🏆 YOU BEAT THE BOTS! +30 Credits & +5 Trophies!'
+                  : '🏆 MATCH WON! +150 Credits & +20 Trophies!')
               } else if (result.roundWinner === localPlayerId) {
-                showRewardToast('Round won! +30 Chips & +5 Trophies.')
+                showRewardToast('Round won! +30 Credits & +5 Trophies.')
               } else {
-                showRewardToast('Good game! +30 Chips & +5 Trophies.')
+                showRewardToast('Good game! +30 Credits & +5 Trophies.')
               }
             })
           }
@@ -129,12 +129,12 @@ export function initClientScene() {
           const chips = isSolo ? 30 : 150
           const trophies = isSolo ? 5 : 20
           showRewardToast(isSolo
-            ? `🏆 YOU BEAT THE BOTS! +${chips} Chips & +${trophies} Trophies!`
-            : `🏆 MATCH WON! +${chips} Chips & +${trophies} Trophies!`)
+            ? `🏆 YOU BEAT THE BOTS! +${chips} Credits & +${trophies} Trophies!`
+            : `🏆 MATCH WON! +${chips} Credits & +${trophies} Trophies!`)
         } else {
           showRewardToast(result.roundWinner === myId
-            ? 'Round won! +30 Chips & +5 Trophies.'
-            : 'Good game! +30 Chips & +5 Trophies.')
+            ? 'Round won! +30 Credits & +5 Trophies.'
+            : 'Good game! +30 Credits & +5 Trophies.')
         }
       }
 

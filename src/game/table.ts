@@ -6,7 +6,7 @@ import { BOT_TURN_DELAY_MS, CrazyEightsGame, isBotPlayer } from './logic'
 import { BOT_NAMES, getBotName } from './bot_names'
 import { buildPrimitiveChair } from './chairs'
 import { buildPrimitiveTable } from './table_visuals'
-import { setupTableChips, setupChairAuras, updateActiveChairAura, updateChairAuraVisibility } from './models_integration'
+import { setupChairAuras, updateActiveChairAura, updateChairAuraVisibility } from './models_integration'
 import { getStreakReminderMessage } from './economy'
 import { showRewardToast } from './rewards_ui'
 
@@ -82,7 +82,7 @@ export const BOT_PERSONAS: BotPersona[] = [
   },
   {
     name: BOT_NAMES[3],
-    title: 'High Roller',
+    title: 'Confident Player',
     bodyShape: `${BASE_URN}BaseFemale`,
     wearables: [
       `${BASE_URN}eyebrows_00`,
@@ -98,7 +98,7 @@ export const BOT_PERSONAS: BotPersona[] = [
   },
   {
     name: BOT_NAMES[4],
-    title: 'Card Shark',
+    title: 'Card Strategist',
     bodyShape: `${BASE_URN}BaseMale`,
     wearables: [
       `${BASE_URN}eyebrows_00`,
@@ -116,7 +116,7 @@ export const BOT_PERSONAS: BotPersona[] = [
   },
   {
     name: BOT_NAMES[5],
-    title: 'Speed Dealer',
+    title: 'Quick Thinker',
     bodyShape: `${BASE_URN}BaseMale`,
     wearables: [
       `${BASE_URN}eyebrows_00`,
@@ -133,7 +133,7 @@ export const BOT_PERSONAS: BotPersona[] = [
   },
   {
     name: BOT_NAMES[6],
-    title: 'The Pit Boss',
+    title: 'Table Captain',
     bodyShape: `${BASE_URN}BaseMale`,
     wearables: [
       `${BASE_URN}eyebrows_00`,

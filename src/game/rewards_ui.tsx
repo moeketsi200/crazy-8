@@ -135,7 +135,7 @@ export function TopHudWidget() {
         padding: 4
       }}
     >
-      {/* 1. Chips Pill (Click to open Pro Shop) */}
+      {/* 1. Credits Pill (Click to open Cosmetics) */}
       <UiEntity
         uiTransform={{
           flexDirection: 'row',
@@ -157,7 +157,7 @@ export function TopHudWidget() {
         <UiEntity
           uiTransform={{ width: 104, height: 18 }}
           uiText={{
-            value: `${profile.chips.toLocaleString()} CHIPS`,
+            value: `${profile.chips.toLocaleString()} CREDITS`,
             fontSize: 13,
             color: Color4.fromHexString('#ffd700'),
             textAlign: 'middle-center',
@@ -408,7 +408,7 @@ export function DailyRewardsModal() {
             <UiEntity
               uiTransform={{ width: 88, height: 18 }}
               uiText={{
-                value: 'BOUNTIES',
+                value: 'QUESTS',
                 fontSize: 14,
                 color: activeTab === 'bounties' ? Color4.Black() : Color4.fromHexString('#00f3ff'),
                 textAlign: 'middle-center',
@@ -417,7 +417,7 @@ export function DailyRewardsModal() {
             />
           </UiEntity>
 
-          {/* 3. Pro Shop Tab Button */}
+          {/* 3. Cosmetics Tab Button */}
           <UiEntity
             uiTransform={{
               width: '32.5%',
@@ -440,7 +440,7 @@ export function DailyRewardsModal() {
             <UiEntity
               uiTransform={{ width: 92, height: 18 }}
               uiText={{
-                value: 'PRO SHOP',
+                value: 'COSMETICS',
                 fontSize: 14,
                 color: activeTab === 'shop' ? Color4.White() : Color4.fromHexString('#ff5588'),
                 textAlign: 'middle-center',
@@ -620,7 +620,7 @@ export function DailyRewardsModal() {
                   void requestEconomyAction('claimStreak').then((res) => {
                     const result = res.result as { reward?: { day: number; chips: number; trophies: number } } | undefined
                     if (res.success && result?.reward) {
-                      showRewardToast(`Claimed Day ${result.reward.day}: +${result.reward.chips} Chips, +${result.reward.trophies} Trophies!`)
+                      showRewardToast(`Claimed Day ${result.reward.day}: +${result.reward.chips} Credits, +${result.reward.trophies} Trophies!`)
                     } else if (res.message) showRewardToast(res.message)
                   })
                 }
@@ -817,7 +817,7 @@ export function DailyRewardsModal() {
           </UiEntity>
         )}
 
-        {/* TAB 3: VIP PRO SHOP */}
+        {/* TAB 3: COSMETICS */}
         {activeTab === 'shop' && (
           <UiEntity
             uiTransform={{
@@ -826,6 +826,17 @@ export function DailyRewardsModal() {
               alignItems: 'center'
             }}
           >
+            <UiEntity
+              uiTransform={{ width: '100%', height: 20, margin: { bottom: 4 }, justifyContent: 'center' }}
+              uiText={{
+                value: 'Free-to-play Arcade Credits — earned in-game only, no cash or MANA value',
+                fontSize: 11,
+                color: Color4.fromHexString('#94a3b8'),
+                textAlign: 'middle-center',
+                font: 'sans-serif'
+              }}
+            />
+
             {/* Sub-Category Filter Bar */}
             <UiEntity
               uiTransform={{
@@ -833,7 +844,7 @@ export function DailyRewardsModal() {
                 height: 32,
                 flexDirection: 'row',
                 justifyContent: 'center',
-                margin: { bottom: 12 }
+                margin: { bottom: 8 }
               }}
             >
               {(
@@ -1054,7 +1065,7 @@ export function DailyRewardsModal() {
                           } else if (canAfford) {
                             void requestEconomyAction('buyItem', item.id).then((res) => showRewardToast(res.message))
                           } else {
-                            showRewardToast(`Need ${item.priceChips.toLocaleString()} Chips & ${item.reqTrophies} trophies!`)
+                            showRewardToast(`Need ${item.priceChips.toLocaleString()} Credits & ${item.reqTrophies} trophies!`)
                           }
                         }}
                       >

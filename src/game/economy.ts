@@ -100,6 +100,15 @@ export interface PlayerProfile {
   processedSettlementIds: string[]
 }
 
+const LEGACY_TITLE_LABELS: Record<string, string> = {
+  'Card Shark': 'Card Strategist',
+  'High Roller': 'Veteran Player'
+}
+
+function normalizeTitleLabel(title: string): string {
+  return LEGACY_TITLE_LABELS[title] ?? title
+}
+
 function getTodayStr(): string {
   const now = new Date()
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`
@@ -160,6 +169,7 @@ export function normalizePlayerProfile(value: unknown): PlayerProfile {
   const saved = candidate as Partial<PlayerProfile>
   const unlockedStrings = (items: unknown, fallback: string[]) =>
     Array.isArray(items) ? items.filter((item): item is string => typeof item === 'string') : fallback
+  const unlockedTitles = [...new Set(unlockedStrings(saved.unlockedTitles, defaults.unlockedTitles).map(normalizeTitleLabel))]
   const quests = Array.isArray(saved.quests)
     ? saved.quests.filter((quest): quest is PlayerQuest =>
       !!quest && typeof quest.id === 'string' && typeof quest.title === 'string' &&
@@ -183,11 +193,11 @@ export function normalizePlayerProfile(value: unknown): PlayerProfile {
     roundsWon: Number.isFinite(saved.roundsWon) ? Math.max(0, Math.floor(saved.roundsWon!)) : defaults.roundsWon,
     loginStreak: Number.isFinite(saved.loginStreak) ? Math.max(1, Math.min(7, Math.floor(saved.loginStreak!))) : defaults.loginStreak,
     lastClaimDateStr: typeof saved.lastClaimDateStr === 'string' ? saved.lastClaimDateStr : defaults.lastClaimDateStr,
-    equippedTitle: typeof saved.equippedTitle === 'string' ? saved.equippedTitle : defaults.equippedTitle,
+    equippedTitle: typeof saved.equippedTitle === 'string' ? normalizeTitleLabel(saved.equippedTitle) : defaults.equippedTitle,
     equippedDeck: typeof saved.equippedDeck === 'string' ? saved.equippedDeck : defaults.equippedDeck,
     equippedAura: typeof saved.equippedAura === 'string' ? saved.equippedAura : defaults.equippedAura,
     equippedWearable: typeof saved.equippedWearable === 'string' ? saved.equippedWearable : undefined,
-    unlockedTitles: unlockedStrings(saved.unlockedTitles, defaults.unlockedTitles),
+    unlockedTitles,
     unlockedDecks: unlockedStrings(saved.unlockedDecks, defaults.unlockedDecks),
     unlockedAuras: unlockedStrings(saved.unlockedAuras, defaults.unlockedAuras),
     unlockedWearables: unlockedStrings(saved.unlockedWearables, defaults.unlockedWearables),
@@ -335,7 +345,7 @@ export const SHOP_CATALOG: ShopItem[] = [
     category: 'deck',
     priceChips: 0,
     reqTrophies: 0,
-    description: 'Standard casino midnight blue deck',
+    description: 'A classic midnight blue deck for friendly card matches',
     badgeColor: '#00f3ff',
     icon: 'cards'
   },
@@ -361,11 +371,11 @@ export const SHOP_CATALOG: ShopItem[] = [
   },
   {
     id: 'deck_dcl_holo',
-    name: 'DCL Holographic Deck',
+    name: 'Cyber Holographic Deck',
     category: 'deck',
     priceChips: 7500,
     reqTrophies: 350,
-    description: 'An elite endgame deck for true card sharks with shifting Mana crystals',
+    description: 'An endgame deck with shifting holographic crystals for devoted players',
     badgeColor: '#b026ff',
     icon: 'star'
   },
@@ -406,7 +416,7 @@ export const SHOP_CATALOG: ShopItem[] = [
   },
   {
     id: 'aura_gold',
-    name: 'Golden High-Roller Ring',
+    name: 'Golden Champion Ring',
     category: 'aura',
     priceChips: 15000,
     reqTrophies: 600,
@@ -429,7 +439,7 @@ export const SHOP_CATALOG: ShopItem[] = [
   },
   {
     id: 'title_shark',
-    name: 'Card Shark',
+    name: 'Card Strategist',
     category: 'title',
     priceChips: 500,
     reqTrophies: 30,
@@ -439,11 +449,11 @@ export const SHOP_CATALOG: ShopItem[] = [
   },
   {
     id: 'title_high_roller',
-    name: 'High Roller',
+    name: 'Veteran Player',
     category: 'title',
     priceChips: 2000,
     reqTrophies: 150,
-    description: 'Plays big stakes and never backs down',
+    description: 'Shows focus, skill, and confidence in every match',
     badgeColor: '#ffd700',
     icon: 'coin'
   },
@@ -495,11 +505,11 @@ export const SHOP_CATALOG: ShopItem[] = [
   },
   {
     id: 'wearable_high_roller_tee',
-    name: 'High Roller Tee',
+    name: 'C8 Ace Tee',
     category: 'wearable',
     priceChips: 2800,
     reqTrophies: 100,
-    description: 'Vintage off-white cream tee with 4 luxury casino suit emblems and High Roller typography',
+    description: 'Vintage off-white tee with four classic card suit emblems and C8 Ace typography',
     badgeColor: '#ffd700',
     icon: 'shirt'
   },
@@ -612,7 +622,7 @@ function buyItemForProfile(target: PlayerProfile, itemId: string): EconomyAction
     return { success: false, message: `Need ${item.reqTrophies} Trophies to unlock! (You have ${target.trophies})` }
   }
   if (target.chips < item.priceChips) {
-    return { success: false, message: `Need ${item.priceChips.toLocaleString()} Chips! (You have ${target.chips.toLocaleString()})` }
+    return { success: false, message: `Need ${item.priceChips.toLocaleString()} Credits! (You have ${target.chips.toLocaleString()})` }
   }
 
   target.chips -= item.priceChips
@@ -664,11 +674,11 @@ export function applyEconomyRequestToProfile(
   if (action === 'claimQuest') {
     const quest = target.quests.find(candidate => candidate.id === questId)
     if (!quest || quest.claimed || quest.progress < quest.target) {
-      return { success: false, message: 'This bounty is not ready to claim.' }
+      return { success: false, message: 'This quest is not ready to claim.' }
     }
     quest.claimed = true
     grantCurrencyToProfile(target, quest.rewardChips, quest.rewardTrophies)
-    return { success: true, message: `Bounty Complete: +${quest.rewardChips} Chips, +${quest.rewardTrophies} Trophies!` }
+    return { success: true, message: `Quest Complete: +${quest.rewardChips} Credits, +${quest.rewardTrophies} Trophies!` }
   }
   if (action === 'buyItem') return buyItemForProfile(target, itemId)
   return equipItemForProfile(target, itemId)
@@ -677,7 +687,7 @@ export function applyEconomyRequestToProfile(
 export function getStreakReminderMessage(): string {
   const nextDay = (profile.loginStreak % 7) + 1
   const nextReward = STREAK_SCHEDULE[nextDay - 1]
-  return `Day ${profile.loginStreak} streak active! Return tomorrow to claim Day ${nextDay} (+${nextReward.chips} chips).`
+  return `Day ${profile.loginStreak} streak active! Return tomorrow to claim Day ${nextDay} (+${nextReward.chips} Credits).`
 }
 
 // Modal open/close state

@@ -60,13 +60,13 @@ export function setupVipKiosk(houseEntity: Entity): Entity {
     ]
   })
 
-  // Pointer event to open the VIP Rewards & Bounties menu
+  // Pointer event to open the VIP Rewards & Daily Quests menu
   pointerEventsSystem.onPointerDown(
     {
       entity: kiosk,
       opts: {
         button: InputAction.IA_PRIMARY,
-        hoverText: '⭐ Open VIP Rewards & Daily Bounties ⭐'
+        hoverText: '⭐ Open VIP Rewards & Daily Quests ⭐'
       }
     },
     () => {
@@ -144,39 +144,6 @@ export function setupTrophyShowcase(houseEntity: Entity): Entity {
   )
 
   return showcaseGroup
-}
-
-// ----------------------------------------------------
-// 3. TABLE CHIP STACKS (3D Poker Chips on Felt)
-// ----------------------------------------------------
-export function setupTableChips(houseEntity: Entity) {
-  // Stack 1 (Near right side of felt)
-  const chips1 = engine.addEntity()
-  Transform.create(chips1, {
-    parent: houseEntity,
-    position: Vector3.create(0.55, 0.79, 0.35),
-    rotation: Quaternion.fromEulerDegrees(0, 25, 0),
-    scale: Vector3.create(4.0, 4.0, 4.0)
-  })
-  GltfContainer.create(chips1, {
-    src: 'assets/Models/chip_stacks.glb',
-    visibleMeshesCollisionMask: 0,
-    invisibleMeshesCollisionMask: 0
-  })
-
-  // Stack 2 (Near left side of felt)
-  const chips2 = engine.addEntity()
-  Transform.create(chips2, {
-    parent: houseEntity,
-    position: Vector3.create(-0.55, 0.79, -0.35),
-    rotation: Quaternion.fromEulerDegrees(0, -40, 0),
-    scale: Vector3.create(4.0, 4.0, 4.0)
-  })
-  GltfContainer.create(chips2, {
-    src: 'assets/Models/chip_stacks.glb',
-    visibleMeshesCollisionMask: 0,
-    invisibleMeshesCollisionMask: 0
-  })
 }
 
 // ----------------------------------------------------
@@ -372,25 +339,25 @@ export function setupWearableShowcases() {
       id: 'wearable_holo_card_tee',
       entityName: 'Holo Card Tee',
       title: '👕 HOLO CARD TEE',
-      subtitle: '🪙 1,500 CHIPS • 40 🏆'
+      subtitle: '🪙 1,500 CREDITS • 40 🏆'
     },
     {
       id: 'wearable_high_roller_tee',
       entityName: 'High Roller Tee',
-      title: '👕 HIGH ROLLER TEE',
-      subtitle: '🪙 2,800 CHIPS • 100 🏆'
+      title: '👕 C8 ACE TEE',
+      subtitle: '🪙 2,800 CREDITS • 100 🏆'
     },
     {
       id: 'wearable_crest_bomber',
       entityName: 'C8 Crest Bomber',
       title: '🧥 C8 CREST BOMBER',
-      subtitle: '⚡ 5,500 CHIPS • 250 🏆'
+      subtitle: '⚡ 5,500 CREDITS • 250 🏆'
     },
     {
       id: 'wearable_vip_club_bomber',
       entityName: 'VIP Club Bomber',
       title: '🧥 VIP CLUB BOMBER',
-      subtitle: '👑 10,000 CHIPS • 500 🏆'
+      subtitle: '👑 10,000 CREDITS • 500 🏆'
     }
   ]
 
@@ -417,7 +384,7 @@ export function setupWearableShowcases() {
       setActiveRewardsTab('shop')
       setActiveShopCategory('wearable')
       setRewardsModalOpen(true)
-      showRewardToast(`${item.title}! Check VIP Pro Shop to view and equip!`)
+      showRewardToast(`${item.title}! Open Cosmetics to view and equip!`)
     }
 
     pointerEventsSystem.onPointerDown(

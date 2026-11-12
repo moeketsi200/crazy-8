@@ -1774,7 +1774,7 @@ function uiComponent() {
       {/* Rewards Toast notification */}
       <RewardToastBanner />
 
-      {/* Daily Rewards & Bounties Modal (when opened) */}
+      {/* Daily Rewards & Quests Modal (when opened) */}
       <DailyRewardsModal />
 
       {/* Game Notifications */}

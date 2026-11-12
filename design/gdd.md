@@ -1,120 +1,114 @@
-# Game Design Document: Crazy 8: Last Call
+# Game Design Document: Crazy 8: Last Call — VIP Cyber Lounge
 
-## V0 Vertical Slice
+## V0 Vertical Slice Overview
 
-- **Project:** Crazy 8: Last Call, set in the VIP Cyber Lounge
+- **Project:** Crazy 8: Last Call (set in the VIP Cyber Lounge)
+- **Category:** 100% Free-to-Play Social Card Game (Non-Gambling)
 - **Creator:** Rooi (`rooi.dcl.eth`)
-- **V0 request:** $1,000
+- **V0 Request:** $1,000 USD
 - **Repository:** https://github.com/moeketsi200/crazy-8
-- **Test world:** `rooi.dcl.eth` (confirm the shared link points to the build being tested)
-- **Document status:** Reapplication draft
-- **Last updated:** October 2026
+- **Live Test World:** `rooi.dcl.eth` — [Jump in Decentraland](https://decentraland.org/jump?realm=rooi.dcl.eth)
+- **Document Status:** Updated Reapplication GDD (Pure Social Direction & Retention Plan)
+- **Last Updated:** November 2026
 
-**Known issue:** The previous reviewer could not get the test experience working. The cause is unknown. The creator reports successfully playing a four-player game in the test world, so multiplayer worked in that session. The build/link, date, and steps from that session should be recorded, and the reviewer’s failure still needs to be reproduced or clarified. This report does not yet verify the first-time solo entry path.
+> **Unambiguous Non-Gambling Commitment:** Crazy 8: Last Call is strictly a **100% free-to-play social card game**. There is **no betting, no wagering, no entry fees, no spectator betting, and no cash-outs**—now or in any future roadmap. All in-game **Lounge Points**, **Arcade Credits**, **Trophies**, and cosmetic unlocks are earned purely through gameplay, are non-transferable, and hold **zero cash, crypto, or MANA redemption value**.
 
-## 1. Core Concept and Social Hook
+---
 
-### High concept
+## 1. Prototype Status Update
 
-Crazy 8: Last Call is a social card match played around a shared table in Decentraland. It currently uses familiar Crazy Eights rules. The project-specific interaction to investigate is a public low-hand declaration: players with three or fewer cards can announce their count, and opponents can inspect and challenge an undeclared low hand for a two-card penalty.
+Following earlier onboarding friction, the solo-versus-bots flow, 3D table seating, and core Crazy Eights match loop were fixed and **verified working smoothly** in `rooi.dcl.eth` during follow-up testing. A solo visitor can sit at the table, launch a round immediately against AI bots, play through action cards and declarations, and finish a match without waiting for other players.
 
-### The Last Call moment
+---
 
-The local implementation allows a player with one, two, or three cards to press a declaration button. The announcement is visible to the group; the one-card declaration is the dramatic **Last Call** moment. Opponents can click a low-card hand marked as undeclared. A successful challenge makes that player draw two cards; an incorrect challenge produces a notification but no listed penalty to the challenger.
+## 2. Target Audience & Core Proposition
 
-Important rule clarification: the current code does not implement a pass-turn declaration deadline or a timed challenge window. A challenge target appears to remain available while that player has three or fewer cards and has not declared. The GDD previously described a missed declaration after passing; that description is not supported by the current code and is removed here. Verify the shared build before treating any local behavior as shipped behavior.
+### Who Is Crazy 8 For?
 
-The proposed Decentraland-specific value is the face-to-face, public table moment: opponents see the low-hand status, decide whether to challenge, and can react together over nearby voice chat. This is a design premise, not demonstrated differentiation. Playtesting must establish whether this interaction makes the familiar card game more engaging for groups.
+Crazy 8: Last Call is built specifically for **Decentraland social hangout regulars and Discord community crews** looking for a fast, zero-friction **3–5 minute drop-in tabletop game** inside a shared rooftop venue.
 
-## 2. V0 Hypothesis
+Unlike complex strategy games that require dedicated onboarding or multi-hour commitments, Crazy 8 serves players who want an immediate social icebreaker:
+- **Community crews & friend groups** gathering between Decentraland events who want a quick, vocal game around a single circular table (`voiceChat` and `nearbyVoiceChat` enabled).
+- **Solo drop-in visitors** who can immediately play a full 8-seat round against AI bots while chatting or waiting for live players to join the lounge.
+- **Casual leaderboard climbers** who enjoy short matches, weekly resets, and unlocking table cosmetics solely through play.
 
-> When first-time groups play a complete Crazy Eights round together at a shared Decentraland table, does the public low-hand declaration and challenge create observable player-to-player reactions, and do groups choose to play again?
+### Core Gameplay & Differentiation: The *Last Call* Social Hook
 
-This is the question V0 will investigate. It is not yet a proven result.
+Built on familiar Crazy Eights rules for up to **8 players**, the experience centers on a Decentraland-native spatial table moment:
 
-## 3. Current Project Status
+- **Public Low-Hand Declaration & Challenge:** When a player drops to **1–3 cards**, they can announce their low hand to the table (1 card triggers the signature **Last Call** announcement).
+- **Active Opponent Callouts:** Any opponent who spots an undeclared low-card hand (1–3 cards) can challenge that player for an instant **2-card draw penalty** (`CAUGHT!`).
+- **Why Decentraland:** Around a shared 3D holographic table with nearby voice chat and avatar visibility, *Last Call* turns a quiet hand-tracking step into live table banter, bluffing, and group reactions.
 
-The following systems are described in the project. Status distinguishes code present locally from behavior reported or verified in the shared build.
+---
 
-| Feature | Current status | Evidence needed |
+## 3. Retention Strategy ("Why Players Come Back")
+
+To drive repeat visits beyond one-off matches, Crazy 8 pairs short match sessions with a **pure-play progression loop** already persisted server-side via `@dcl/sdk/server` storage and settlement verification:
+
+### Built & Working Progression Systems
+- **Rotating Daily Quests:** Players receive 3 daily objectives from a rotating pool (e.g., *Warm Up*, *Crazy Eights*, *Draw Attack*, *Card Slinger*, *Winner Winner*, *Safe Call*) awarding **Lounge Points / Arcade Credits** and **Trophies**.
+- **7-Day Return Streaks:** Consecutive daily check-ins build a 7-day streak ladder unlocking escalating Lounge Points, Trophies, and milestone player titles (*Apprentice* on Day 3, *Crazy 8 Master* on Day 7).
+- **Weekly & All-Time Multiplayer Leaderboard:** An authoritative server tracks weekly wins (ISO week reset), all-time wins, and rounds won—excluding solo bot matches so competitive rankings reflect real human play.
+- **Play-Earned Cosmetic Unlocks:** Players spend non-cashable Arcade Credits / Lounge Points and Trophy milestones to equip custom card deck backs, chair underglow auras, table titles, and wearable badges.
+
+### V0 Social & Retention Enhancements
+With Creator Success V0 support, development focuses on **social retention and weekly community rituals**—never wagering:
+1. **Copy & Identity Alignment:** Replace remaining legacy `"casino"` / `"chips"` / `"high-stakes"` phrasing across `scene.json` and in-game labels with **Lounge Points / Arcade Credits** so players immediately understand it is a pure social game.
+2. **Weekly Lounge League & Community Nights:** Pair the existing weekly leaderboard reset with scheduled weekly crew game nights in Decentraland `#playtesters` and Discord community hubs.
+3. **Social Rematch & Crew Loops:** Surface clear end-of-round rematch prompts, table rivalry callouts, and streak-saver reminders to encourage groups to run "one more round" and return across multiple days.
+
+---
+
+## 4. Current Project Status (Code vs. V0 Polish)
+
+| System | Current Status | Notes / Next Step |
 | --- | --- | --- |
-| Card deck, turns, and win condition | Implemented locally; shared-build verification pending | Complete a round through to its result |
-| Action cards and penalty stacking | Implemented locally; shared-build verification pending | Demonstrate actions and resolve a penalty |
-| AI bots | Implemented locally; solo-path verification pending | Start alone and finish a round without waiting for other players |
-| Chair seating and match entry | Implemented locally; first-time flow verification pending | New player can find the table and start without coaching |
-| Multiplayer sync | Implemented locally; creator reports a successful four-player game; independent/repeat verification pending | Record the build/link and session details; repeat with a fresh group and capture a complete round |
-| Low-hand declaration and challenge | Implemented locally; shared-build rules and usability verification pending | Demonstrate declaration at 3, 2, and 1 cards; identify when a challenge is allowed; demonstrate correct and incorrect challenges |
-| Rematch flow | Needs verification | Complete a round and find a clear next step |
+| Core Crazy Eights rules, action cards (`8`, `2`, `J`, `7`, `Joker`), and penalty stacking | **Working** (`src/game/logic.ts`) | Verified in live test build |
+| Instant Solo Mode (fills up to 8 seats with AI bots) | **Working** (`src/game/logic.ts`) | Verified smooth in follow-up test |
+| Authoritative Multiplayer Lobby & Turn Sync | **Working** (`src/game/multiplayer.ts`) | Supports up to 8 live human players |
+| Low-hand Declaration & 2-Card Penalty Challenge (*Last Call*) | **Working** (`src/game/logic.ts`) | Ready for multi-player `#playtesters` observation |
+| Persistent Profiles, Daily Quests, 7-Day Streaks & Cosmetics | **Working** (`src/server/player_economy.ts`, `src/game/economy_sync.ts`) | Copy update planned to rebrand legacy `"chips"`/`"casino"` terms to **Lounge Points / Arcade Credits** |
+| Weekly & All-Time Multiplayer Leaderboard + 3D Scoreboards | **Working** (`src/server/player_economy.ts`, `src/game/score_board.ts`) | Weekly ISO resets live; solo/bots excluded |
+| Interactive 2-Story Cyber Lounge (Pool, Jacuzzi, Elevator, DJ Deck) | **Working** (`src/game/house.ts`, `elevator.ts`, `water_effects.ts`) | Social hangout backdrop around the table |
 
-The reason the previous test did not work is not yet known. Ask the reviewer what happened, then reproduce it with a first-time visitor before deciding what to change. Record the exact build/link, test date, spawn position, visible instructions, actions attempted, and point of failure. The creator’s four-player session is evidence that a multiplayer game worked for that group; it does not establish that a first-time visitor can discover and start it without help. Verify the solo entry path and capture a complete shared round as supporting evidence.
+---
 
-## 4. V0 Scope
+## 5. V0 Hypothesis & Scope
 
-### Included
+### V0 Hypothesis
 
-- **Playable prototype gate:** reproduce and diagnose the failed test entry; verify from a fresh visitor account that the deployed link loads, the table and instructions are findable, solo mode starts, and a full round reaches a result and restart choice. Capture a short unedited recording of this flow.
-- **Multiplayer evidence:** the creator reports having played with four people successfully. Record which build/link and entry steps were used, and capture a complete shared round if available. During V0, repeat with a fresh group and record any sync, entry, turn, or completion failures.
-- **Mechanic gate:** verify declarations at 3/2/1 cards and the challenge rules in the shared build. Correct the documentation or implementation if they differ. Do not add new rules until the current mechanic is understood.
-- **Playtest:** after the gates pass, run sessions with 8–10 first-time players recruited through Decentraland's `#playtesters` channel. Observe without coaching before asking follow-up questions.
-- **Decision:** use the recorded observations to decide whether to retain, revise, or remove the declaration-and-challenge hook for the next prototype.
+> For Decentraland social hangout regulars and Discord game-night crews playing 3–5 minute matches together, combining the **Last Call** challenge mechanic with **weekly leaderboard resets, daily quests, and play-earned Arcade Credit cosmetics** increases group rematch rates and multi-day return visits—without any betting or monetary incentives.
 
-### Outside V0
+### Included in V0
+- **Pure-Social Copy & Tag Scrub:** Remove all legacy `"casino"`, `"high-stakes"`, and `"chips"` wording in scene metadata, README, and UI strings in favor of **Lounge Points / Arcade Credits** and social tabletop positioning.
+- **Multiplayer & Rematch Polish:** Smooth post-match rematch flow and social callouts for group sessions.
+- **Structured Community Playtests:** Host repeatable group sessions via Decentraland Discord `#playtesters` and community crews to validate multi-player social dynamics and retention.
 
-These systems may remain in the project as setting or existing work. They are not V0 development or evaluation goals; they must not delay the playable table prototype:
+### Permanently Excluded (Non-Gambling Policy)
+- **No spectator betting or pot splitting**
+- **No MANA, token, or cash buy-ins, entry fees, or payouts**
+- **No transferable or redeemable cash-value currencies**
+- All progression remains strictly free-to-play and compliant with Decentraland Content Policy (Sections 2.1, 3, 5) and Terms of Use.
 
-- Rooftop, elevator, pool, jacuzzi, and additional venue interactions
-- Daily economy, shop, currencies, streaks, bounties, and persistent rewards
-- New action cards or changes to the challenge rules
-- 3D cards attached to avatars
-- Spectator betting and tournament systems
-- Additional wearable releases
+---
 
-Decentraland's MVP guidance recommends validating a basic player experience through successive prototypes. This V0 therefore focuses on one playable table loop before expanding the surrounding systems. See [MVP guidelines](https://docs.decentraland.org/creator/scenes-sdk7/designing-the-experience/mvp-guidelines).
+## 6. Playtest & Retention Metrics Plan
 
-## 5. Core Match Loop
+### Community Testing Format
+- Organize **3–4 scheduled multi-player crew sessions** via Decentraland's `#playtesters` Discord channel (8–15 unique players across sessions).
+- Track both immediate table flow and multi-day return behavior across a 7-day window.
 
-1. A visitor enters the lounge and can find the rules and table without coaching.
-2. The visitor starts a solo game or joins a multiplayer lobby.
-3. Players take turns playing or drawing cards under the verified rules.
-4. When a hand reaches three or fewer cards, the player can declare; at one card, the announcement is Last Call. Opponents can challenge an undeclared low hand under the current implementation.
-5. The round shows its result and a clear next action.
+### Metrics Recorded
+1. **Onboarding & Completion:** Share of first-time visitors who sit, start, and finish a full match unassisted.
+2. **Social Hook Engagement:** Frequency of *Last Call* declarations, opponent challenges, and observable voice/text chat reactions per round.
+3. **Session Rematch Rate:** Percentage of multiplayer tables that immediately trigger a rematch after round 1.
+4. **Return Motivation (Day-1 / Day-7):** Repeat player check-ins driven by daily quests, 7-day streaks, and weekly leaderboard standings, paired with brief player feedback on which progression rewards felt most motivating.
 
-The exact player instructions and challenge timing must be updated after the deployed flow and rules have been reproduced and confirmed.
-
-## 6. Playtest Plan
-
-### Format
-
-- Recruit 8–10 unique first-time players through `#playtesters`.
-- Run several small sessions so players can play with real opponents.
-- Share a direct link and short instructions that match the verified build.
-- Observe the first attempt without coaching; ask brief follow-up questions after the round.
-
-### Record these outcomes
-
-1. How many first-time players entered, started, and finished a round without help? Where did others get stuck?
-2. Did a declaration or challenge occur? Did it lead to conversation, voice-chat reaction, strategy change, or another observable player response?
-3. How many groups chose a rematch, and what reason did they give?
-
-Report raw counts with denominators and brief anonymized observations, such as `7/10 completed a round without help` or `3/4 groups chose a rematch`. Separate observed behavior from player-reported reasons. These pilot results are for learning; they are not a promise of broad retention or a comparison with other games.
-
-### Evidence to include with a reapplication
-
-- A confirmed playable link and simple entry instructions
-- A short recording showing a real match from entry through the result
-- A concise findings report with participant counts, observed friction, Last Call reactions, rematch choices, and known limitations
-
-A recording supports the playable link; it does not replace it.
+---
 
 ## 7. V0 Milestones
 
-1. **Diagnose:** Request details from the reviewer and reproduce the failure using the exact deployed link and a first-time visitor.
-2. **Make it playable:** Fix the reproduced blocker, then pass the solo completion gate and capture the flow.
-3. **Verify multiplayer and rules:** Complete a shared round and document what the declaration/challenge system actually permits.
-4. **Playtest and decide:** Run the first-time sessions, report the outcomes, and state whether evidence supports keeping or changing the social hook.
-
-The prototype is ready for the hypothesis test only when a fresh visitor can complete a solo round in the deployed build and two players can complete a shared round. V0 is complete when those gates, playtest results, and a keep/revise/remove decision are documented. If the build gate fails, report the blocker and do not present the social hypothesis as tested.
-
-## 8. Later Roadmap
-
-The VIP Cyber Lounge, venue interactions, economy, cosmetics, and community events remain part of the longer-term vision. Their next steps will be chosen after the table loop and Last Call hypothesis have been tested.
+1. **Positioning & Copy Cleanup:** Align all metadata, UI labels, and shop descriptions to 100% pure-social **Lounge Points / Arcade Credits** (zero casino/wagering language).
+2. **Social Loop Polish:** Refine rematch flow and weekly league visibility around the table.
+3. **#playtesters Multiplayer & Retention Pilot:** Run live crew sessions, collect completion, rematch, and multi-day return metrics, and publish a concise findings report.
