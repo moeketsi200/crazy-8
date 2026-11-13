@@ -181,7 +181,7 @@ async function acknowledgeRenderSettlement(playerId: string, settlementId: strin
     )
     return result.ok === true && result.deleted === true
   } catch (error) {
-    console.warn(`[Server] Could not acknowledge saved settlement ${settlementId}:`, error)
+    console.error(`[Server] Could not acknowledge saved settlement ${settlementId}:`, error)
     return false
   }
 }
