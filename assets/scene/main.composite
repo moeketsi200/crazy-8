@@ -1910,11 +1910,11 @@
         "0": {
           "json": {
             "name": "Crazy 8: VIP Cyber Lounge",
-            "description": "High-stakes multiplayer Crazy 8s in a luxury cyberpunk penthouse. Challenge friends or AI around an emissive holographic table with live DJ vibes, panoramic elevator, and rooftop terrace.",
+            "description": "Free-to-play social Crazy Eights with friends or AI. Challenge low hands around a holographic table, earn cosmetic rewards through play, and enjoy the rooftop cyber lounge—no betting or wagering.",
             "thumbnail": "assets/images/thumbnail.jpg",
             "categories": [
               "game",
-              "casino",
+              "social",
               "music"
             ],
             "author": "Rooi",
